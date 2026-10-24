@@ -1,6 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../main.dart';
 import '../widgets/app_top_bar.dart';
+
+/// 当前版本：每次发版时与 pubspec.yaml 一起改。
+const String appVersion = '1.4.0';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -50,9 +57,15 @@ class SettingsScreen extends StatelessWidget {
           const Text('关于',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const ListTile(
-            title: Text("Gun's Map"),
-            subtitle: Text('安卓枪械图鉴 App · v1.3.0 debug（arm64）'),
+          ListTile(
+            title: const Text("Gun's Map"),
+            subtitle: Text('安卓枪械图鉴 App · v$appVersion 正式版（arm64）'),
+          ),
+          ListTile(
+            title: const Text('检查更新'),
+            subtitle: const Text('联网查询 GitHub 最新 Release，有新版会给出下载链接'),
+            trailing: const Icon(Icons.system_update_alt),
+            onTap: () => _checkUpdate(context),
           ),
           ListTile(
             title: const Text('数据说明'),
@@ -76,5 +89,130 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// 检查更新：只用 Dart 核心库查 GitHub 最新 Release，不引第三方包。
+  Future<void> _checkUpdate(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('正在检查更新…'),
+          ],
+        ),
+      ),
+    );
+    try {
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 10);
+      final request = await client.getUrl(Uri.parse(
+          'https://api.github.com/repos/wangtao969/guns-map/releases/latest'));
+      request.headers.set('Accept', 'application/vnd.github+json');
+      request.headers.set('User-Agent', 'GunsMap');
+      final response =
+          await request.close().timeout(const Duration(seconds: 15));
+      final body = await response.transform(utf8.decoder).join();
+      client.close();
+      if (response.statusCode != 200) {
+        throw HttpException('HTTP ${response.statusCode}');
+      }
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      final tag = (data['tag_name'] as String?) ?? '';
+      final latest = tag.replaceFirst(RegExp(r'^v'), '').split('-').first;
+      final notes = (data['body'] as String?) ?? '';
+      String? apkUrl;
+      for (final a in (data['assets'] as List? ?? [])) {
+        final asset = a as Map;
+        final name = (asset['name'] as String?) ?? '';
+        if (name.endsWith('.apk')) {
+          apkUrl = asset['browser_download_url'] as String?;
+          break;
+        }
+      }
+      final link =
+          apkUrl ?? (data['html_url'] as String? ?? 'https://github.com/wangtao969/guns-map/releases');
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      if (latest.isEmpty || _compareVersions(latest, appVersion) <= 0) {
+        if (!context.mounted) return;
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('已是最新版本'),
+            content: Text('当前版本 v$appVersion 已是最新。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('好的'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+      final shownNotes =
+          notes.length > 500 ? '${notes.substring(0, 500)}…' : notes;
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text('发现新版本 v$latest'),
+          content: SingleChildScrollView(
+            child: Text(shownNotes.isEmpty ? '去 Release 页查看更新说明。' : shownNotes),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('关闭'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: link));
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('下载链接已复制，去浏览器粘贴打开即可')),
+                );
+              },
+              child: const Text('复制下载链接'),
+            ),
+          ],
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('检查失败'),
+          content: const Text('没能连上 GitHub，请检查网络后重试。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('好的'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  /// 版本号比较：1.4.0 这种三段数字，返回负数表示 a 更旧。
+  int _compareVersions(String a, String b) {
+    final pa = a.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final pb = b.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    for (var i = 0; i < 3; i++) {
+      final x = i < pa.length ? pa[i] : 0;
+      final y = i < pb.length ? pb[i] : 0;
+      if (x != y) return x.compareTo(y);
+    }
+    return 0;
   }
 }
