@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
 import '../haptics.dart';
+import '../i18n.dart';
 import '../models.dart';
 import '../widgets/category_silhouette.dart';
 import '../widgets/app_top_bar.dart';
@@ -59,7 +60,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
               ),
               child: TextField(
                 decoration: InputDecoration(
-                  hintText: '搜索枪械、厂商、口径…',
+                  hintText: tr('search_gun_hint'),
                   hintStyle: TextStyle(color: grey),
                   prefixIcon: Icon(Icons.search, color: bronze),
                   border: InputBorder.none,
@@ -98,7 +99,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 ),
             ],
             if (_query.isEmpty) ...[
-              Text('枪械品类',
+              Text(tr('gun_categories'),
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -151,17 +152,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          Text(c,
+                          Text(trCategory(c),
                               style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
                                   color: ink)),
+                          if (localeNotifier.value != localeEn)
                           Text(categoryEn[c] ?? '',
                               style: TextStyle(color: grey, fontSize: 11)),
                           const SizedBox(height: 2),
-                          Text('$count 支在售',
+                          Text(countText(count),
                               style: TextStyle(color: grey, fontSize: 12)),
-                          Text('原型：${categoryPrototype[c] ?? ''}',
+                          Text('${tr('prototype_prefix')}${categoryPrototype[c] ?? ''}',
                               style: TextStyle(color: grey, fontSize: 10)),
                         ],
                       ),
@@ -171,7 +173,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
               ),
               // 停售名枪鉴赏：首页下方的大类入口。
               const SizedBox(height: 24),
-              Text('停售名枪鉴赏',
+              Text(tr('legends'),
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
+import '../i18n.dart';
 
 /// 名枪详情：规格 + 历史与关联事件故事。
 class LegendDetailScreen extends StatelessWidget {
@@ -32,7 +33,7 @@ class LegendDetailScreen extends StatelessWidget {
               child: Image.asset(l.image!, fit: BoxFit.contain),
             ),
             const SizedBox(height: 4),
-            Text('图片来源：Wikimedia Commons，遵循原图许可',
+            Text(tr('image_credit'),
                 style: TextStyle(color: grey, fontSize: 11)),
           ],
           const SizedBox(height: 16),
@@ -40,7 +41,7 @@ class LegendDetailScreen extends StatelessWidget {
           _row('口径', l.caliber),
           _row('生产年份', l.years),
           const SizedBox(height: 20),
-          const Text('历史与故事',
+          Text(tr('legend_story'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(l.story, style: const TextStyle(fontSize: 15, height: 1.6)),

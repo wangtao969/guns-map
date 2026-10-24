@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
 import '../haptics.dart';
+import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
 import 'legend_detail_screen.dart';
 
@@ -22,7 +23,7 @@ class LegendListScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('停售名枪鉴赏',
+                Text(tr('legends'),
                     style: TextStyle(
                         fontSize: 20, fontWeight: FontWeight.bold)),
                 Text('共 ${legends.length} 支',

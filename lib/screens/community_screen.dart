@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
 
 /// 社区板块：本地动态 + 本地账号（注册 / 登录）。
@@ -11,6 +13,7 @@ class CommunityPost {
   final String authorNickname;
   final String authorId;
   final Color authorColor;
+  final Uint8List? authorAvatar;
   CommunityPost({
     required this.title,
     required this.content,
@@ -18,21 +21,49 @@ class CommunityPost {
     required this.authorNickname,
     required this.authorId,
     required this.authorColor,
+    this.authorAvatar,
   });
 }
 
-/// 本地账号：昵称、ID、密码、头像颜色。ID 注册后不可改。
+/// 本地账号：昵称、ID、密码、头像颜色或上传头像。ID 注册后不可改。
+/// 上传头像只保存在内存里（与账号体系一样，本次打开期间有效）。
 class CommunityAccount {
   String nickname;
   final String id;
   final String password;
   Color avatarColor;
+  Uint8List? avatarBytes;
   CommunityAccount({
     required this.nickname,
     required this.id,
     required this.password,
     required this.avatarColor,
+    this.avatarBytes,
   });
+}
+
+/// 头像显示：有上传头像用图片，没有则用颜色圆 + 昵称首字。
+Widget communityAvatar({
+  required Uint8List? bytes,
+  required Color color,
+  required String nickname,
+  required double radius,
+}) {
+  if (bytes != null) {
+    return CircleAvatar(
+      backgroundImage: MemoryImage(bytes),
+      radius: radius,
+    );
+  }
+  return CircleAvatar(
+    backgroundColor: color,
+    foregroundColor: Colors.white,
+    radius: radius,
+    child: Text(
+      nickname.isEmpty ? '枪' : nickname.characters.first,
+      style: TextStyle(fontSize: radius * 0.75),
+    ),
+  );
 }
 
 class CommunityScreen extends StatefulWidget {
@@ -71,6 +102,65 @@ class _CommunityScreenState extends State<CommunityScreen> {
     return '${n.month}月${n.day}日 ${n.hour.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')}';
   }
 
+  /// 原生选图：走 gunsmap/pick_image 通道调系统相册，原生侧缩放到 512px 内再回传。
+  /// 没装相册应用或用户没选图时返回 null。
+  static const _pickImageChannel = MethodChannel('gunsmap/pick_image');
+
+  Future<Uint8List?> _pickAvatar() async {
+    try {
+      final bytes = await _pickImageChannel.invokeMethod<Uint8List>('pickImage');
+      if (bytes == null || bytes.isEmpty) return null;
+      return bytes;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 注册/编辑资料共用的头像行：上传图片预览 + 上传按钮，已上传时可改回颜色头像。
+  Widget _avatarPickerRow({
+    required Uint8List? picked,
+    required Color color,
+    required String nickname,
+    required StateSetter setDialogState,
+    required ValueChanged<Uint8List?> onPicked,
+  }) {
+    return Row(
+      children: [
+        communityAvatar(
+            bytes: picked, color: color, nickname: nickname, radius: 24),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final bytes = await _pickAvatar();
+                  if (bytes == null) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(tr('pick_failed'))),
+                      );
+                    }
+                    return;
+                  }
+                  setDialogState(() => onPicked(bytes));
+                },
+                icon: const Icon(Icons.photo_library_outlined, size: 18),
+                label: Text(tr('upload_avatar')),
+              ),
+              if (picked != null)
+                TextButton(
+                  onPressed: () => setDialogState(() => onPicked(null)),
+                  child: Text(tr('use_color_avatar')),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   /// 注册：昵称、ID、密码、确认密码；ID 不可重复，注册成功自动登录。
   Future<void> _register() async {
     final nickCtrl = TextEditingController();
@@ -78,18 +168,19 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final passCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
     var color = _avatarColors.first;
+    Uint8List? pickedAvatar;
     String? error;
     final ok = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (_, setDialogState) => AlertDialog(
-          title: const Text('注册账号'),
+          title: Text(tr('register_title')),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('头像颜色'),
+                Text(tr('avatar_color')),
                 const SizedBox(height: 8),
                 Row(
                   children: _avatarColors.map((c) {
@@ -120,19 +211,27 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     );
                   }).toList(),
                 ),
+                const SizedBox(height: 12),
+                _avatarPickerRow(
+                  picked: pickedAvatar,
+                  color: color,
+                  nickname: nickCtrl.text,
+                  setDialogState: setDialogState,
+                  onPicked: (b) => pickedAvatar = b,
+                ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: nickCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '昵称',
+                  decoration: InputDecoration(
+                    labelText: tr('nickname_label'),
                     border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: idCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'ID（登录用，不可重复）',
+                  decoration: InputDecoration(
+                    labelText: tr('id_login_hint'),
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -140,8 +239,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 TextField(
                   controller: passCtrl,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: '密码',
+                  decoration: InputDecoration(
+                    labelText: tr('password_label'),
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -149,8 +248,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 TextField(
                   controller: confirmCtrl,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: '确认密码',
+                  decoration: InputDecoration(
+                    labelText: tr('confirm_password'),
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -164,7 +263,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('取消'),
+              child: Text(tr('cancel')),
             ),
             TextButton(
               onPressed: () {
@@ -174,11 +273,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 final confirm = confirmCtrl.text;
                 String? e;
                 if (nick.isEmpty || id.isEmpty || pass.isEmpty) {
-                  e = '昵称、ID、密码都不能为空';
+                  e = tr('err_empty');
                 } else if (pass != confirm) {
-                  e = '两次密码不一致';
+                  e = tr('err_mismatch');
                 } else if (_accounts.any((a) => a.id == id)) {
-                  e = '这个 ID 已经被注册了';
+                  e = tr('err_dup');
                 }
                 if (e != null) {
                   setDialogState(() => error = e);
@@ -189,12 +288,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   id: id,
                   password: pass,
                   avatarColor: color,
+                  avatarBytes: pickedAvatar,
                 );
                 _accounts.add(account);
                 _current = account;
                 Navigator.of(dialogContext).pop(true);
               },
-              child: const Text('注册'),
+              child: Text(tr('register')),
             ),
           ],
         ),
@@ -216,14 +316,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (_, setDialogState) => AlertDialog(
-          title: const Text('登录'),
+          title: Text(tr('login')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: idCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'ID',
+                decoration: InputDecoration(
+                  labelText: tr('id_field'),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -231,8 +331,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
               TextField(
                 controller: passCtrl,
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: '密码',
+                decoration: InputDecoration(
+                  labelText: tr('password_label'),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -245,7 +345,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('取消'),
+              child: Text(tr('cancel')),
             ),
             TextButton(
               onPressed: () {
@@ -256,13 +356,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   if (a.id == id && a.password == pass) found = a;
                 }
                 if (found == null) {
-                  setDialogState(() => error = 'ID 或密码不对');
+                  setDialogState(() => error = tr('err_login'));
                   return;
                 }
                 _current = found;
                 Navigator.of(dialogContext).pop(true);
               },
-              child: const Text('登录'),
+              child: Text(tr('login')),
             ),
           ],
         ),
@@ -279,16 +379,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
     if (account == null) return;
     final nickCtrl = TextEditingController(text: account.nickname);
     var color = account.avatarColor;
+    Uint8List? pickedAvatar = account.avatarBytes;
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (_, setDialogState) => AlertDialog(
-          title: const Text('编辑资料'),
+          title: Text(tr('edit_profile')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('头像颜色'),
+              Text(tr('avatar_color')),
               const SizedBox(height: 8),
               Row(
                 children: _avatarColors.map((c) {
@@ -318,27 +419,35 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   );
                 }).toList(),
               ),
+              const SizedBox(height: 12),
+              _avatarPickerRow(
+                picked: pickedAvatar,
+                color: color,
+                nickname: nickCtrl.text,
+                setDialogState: setDialogState,
+                onPicked: (b) => pickedAvatar = b,
+              ),
               const SizedBox(height: 16),
               TextField(
                 controller: nickCtrl,
-                decoration: const InputDecoration(
-                  labelText: '昵称',
+                decoration: InputDecoration(
+                  labelText: tr('nickname_label'),
                   border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
-              Text('ID：${account.id}（注册后不可改）',
+              Text('${tr('id_field')}：${account.id}${tr('id_fixed_suffix')}',
                   style: const TextStyle(color: Colors.grey, fontSize: 12)),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('取消'),
+              child: Text(tr('cancel')),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('保存'),
+              child: Text(tr('save')),
             ),
           ],
         ),
@@ -350,6 +459,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           account.nickname = nickCtrl.text.trim();
         }
         account.avatarColor = color;
+        account.avatarBytes = pickedAvatar;
       });
     }
     nickCtrl.dispose();
@@ -359,26 +469,26 @@ class _CommunityScreenState extends State<CommunityScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('发帖需要先登录'),
-        content: const Text('登录已有账号，或者注册一个新账号。'),
+        title: Text(tr('login_required_title')),
+        content: Text(tr('login_required_body')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
+            child: Text(tr('cancel')),
           ),
           TextButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
               _login();
             },
-            child: const Text('登录'),
+            child: Text(tr('login')),
           ),
           TextButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
               _register();
             },
-            child: const Text('注册'),
+            child: Text(tr('register')),
           ),
         ],
       ),
@@ -390,16 +500,19 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
     final current = _current;
-    return Scaffold(
+    // 语言切换时整页重译。
+    return ValueListenableBuilder<String>(
+      valueListenable: localeNotifier,
+      builder: (_, __, ___) => Scaffold(
       appBar: const GunsMapAppBar(),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('社区',
+          Text(tr('tab_community'),
               style:
                   const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text('本地账号与动态仅保存在本机当次有效，暂未联网同步；后续接后端后账号体系直接沿用。',
+          Text(tr('community_note'),
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 12),
           // 账号区：未登录显示登录/注册，已登录显示资料卡。
@@ -410,22 +523,22 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('你还没有登录',
+                    Text(tr('not_logged'),
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text('登录后才能发帖，账号只保存在本机。',
+                    Text(tr('not_logged_sub'),
                         style: TextStyle(color: grey, fontSize: 12)),
                     const SizedBox(height: 12),
                     Row(
                       children: [
                         ElevatedButton(
                           onPressed: _login,
-                          child: const Text('登录'),
+                          child: Text(tr('login')),
                         ),
                         const SizedBox(width: 8),
                         OutlinedButton(
                           onPressed: _register,
-                          child: const Text('注册'),
+                          child: Text(tr('register')),
                         ),
                       ],
                     ),
@@ -439,16 +552,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 padding: const EdgeInsets.all(14),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      backgroundColor: current.avatarColor,
-                      foregroundColor: Colors.white,
+                    communityAvatar(
+                      bytes: current.avatarBytes,
+                      color: current.avatarColor,
+                      nickname: current.nickname,
                       radius: 24,
-                      child: Text(
-                        current.nickname.isEmpty
-                            ? '枪'
-                            : current.nickname.characters.first,
-                        style: const TextStyle(fontSize: 18),
-                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -459,18 +567,18 @@ class _CommunityScreenState extends State<CommunityScreen> {
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold, fontSize: 16)),
                           const SizedBox(height: 2),
-                          Text('ID：${current.id}',
+                          Text('${tr('id_field')}：${current.id}',
                               style: TextStyle(color: grey, fontSize: 12)),
                         ],
                       ),
                     ),
                     TextButton(
                       onPressed: _editProfile,
-                      child: const Text('编辑资料'),
+                      child: Text(tr('edit_profile')),
                     ),
                     TextButton(
                       onPressed: () => setState(() => _current = null),
-                      child: const Text('退出'),
+                      child: Text(tr('logout')),
                     ),
                   ],
                 ),
@@ -487,13 +595,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 }
               },
               icon: const Icon(Icons.edit_outlined),
-              label: const Text('发一条动态'),
+              label: Text(tr('post_new')),
             ),
           if (_composing) ...[
             TextField(
               controller: _titleCtrl,
-              decoration: const InputDecoration(
-                labelText: '标题',
+              decoration: InputDecoration(
+                labelText: tr('post_title_label'),
                 border: OutlineInputBorder(),
               ),
             ),
@@ -501,8 +609,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
             TextField(
               controller: _contentCtrl,
               maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: '内容',
+              decoration: InputDecoration(
+                labelText: tr('post_content_label'),
                 border: OutlineInputBorder(),
               ),
             ),
@@ -522,25 +630,26 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           0,
                           CommunityPost(
                             title: _titleCtrl.text.trim().isEmpty
-                                ? '无标题'
+                                ? tr('post_no_title')
                                 : _titleCtrl.text.trim(),
                             content: _contentCtrl.text.trim(),
                             time: _now(),
                             authorNickname: author.nickname,
                             authorId: author.id,
                             authorColor: author.avatarColor,
+                            authorAvatar: author.avatarBytes,
                           ));
                       _titleCtrl.clear();
                       _contentCtrl.clear();
                       _composing = false;
                     });
                   },
-                  child: const Text('发布'),
+                  child: Text(tr('publish')),
                 ),
                 const SizedBox(width: 8),
                 TextButton(
                   onPressed: () => setState(() => _composing = false),
-                  child: const Text('取消'),
+                  child: Text(tr('cancel')),
                 ),
               ],
             ),
@@ -554,9 +663,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   children: [
                     Icon(Icons.forum_outlined, size: 48, color: grey),
                     const SizedBox(height: 12),
-                    Text('还没有动态', style: TextStyle(color: grey)),
+                    Text(tr('no_posts'), style: TextStyle(color: grey)),
                     const SizedBox(height: 4),
-                    Text('登录后发一条动态，聊聊你的枪械与复装心得',
+                    Text(tr('no_posts_sub'),
                         style: TextStyle(color: grey, fontSize: 12)),
                   ],
                 ),
@@ -571,16 +680,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     children: [
                       Row(
                         children: [
-                          CircleAvatar(
-                            backgroundColor: p.authorColor,
-                            foregroundColor: Colors.white,
+                          communityAvatar(
+                            bytes: p.authorAvatar,
+                            color: p.authorColor,
+                            nickname: p.authorNickname,
                             radius: 16,
-                            child: Text(
-                              p.authorNickname.isEmpty
-                                  ? '枪'
-                                  : p.authorNickname.characters.first,
-                              style: const TextStyle(fontSize: 13),
-                            ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -590,7 +694,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                 Text(p.authorNickname,
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold)),
-                                Text('ID：${p.authorId}',
+                                Text('${tr('id_field')}：${p.authorId}',
                                     style: TextStyle(
                                         color: grey, fontSize: 11)),
                               ],
@@ -613,6 +717,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 ),
               )),
         ],
+      ),
       ),
     );
   }

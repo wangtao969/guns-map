@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'haptics.dart';
+import 'i18n.dart';
 import 'screens/catalog_screen.dart';
 import 'screens/accessories_screen.dart';
 import 'screens/reloading_screen.dart';
@@ -30,7 +31,9 @@ class FirearmsApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeModeNotifier,
-      builder: (_, mode, __) => MaterialApp(
+      builder: (_, mode, __) => ValueListenableBuilder<String>(
+        valueListenable: localeNotifier,
+        builder: (_, ___, ____) => MaterialApp(
         title: "Gun's Map",
         themeMode: mode,
       theme: ThemeData.light().copyWith(
@@ -71,7 +74,8 @@ class FirearmsApp extends StatelessWidget {
               displayColor: _nightInk,
             ),
         ),
-        home: const HomePage(),
+        home: HomePage(),
+        ),
       ),
     );
   }
@@ -86,18 +90,12 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _index = 0;
-  static const _pages = [
-    CatalogScreen(),
-    AccessoriesScreen(),
-    ReloadingScreen(),
-    CommunityScreen(),
-  ];
 
   static const _tabs = [
-    (Icons.grid_view_rounded, Icons.grid_view_rounded, '图鉴'),
-    (Icons.handyman_outlined, Icons.handyman_rounded, '配件'),
-    (Icons.science_outlined, Icons.science_rounded, '复装'),
-    (Icons.forum_outlined, Icons.forum_rounded, '社区'),
+    (Icons.grid_view_rounded, Icons.grid_view_rounded, 'tab_catalog'),
+    (Icons.handyman_outlined, Icons.handyman_rounded, 'tab_accessories'),
+    (Icons.science_outlined, Icons.science_rounded, 'tab_reloading'),
+    (Icons.forum_outlined, Icons.forum_rounded, 'tab_community'),
   ];
 
   @override
@@ -105,7 +103,18 @@ class _HomePageState extends State<HomePage> {
     // 状态栏底色跟随主题背景不透明，内容滑到顶部时不再透出变色。
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
-    return AnnotatedRegion<SystemUiOverlayStyle>(
+    // 页面每次构建时新建实例（不用 const），语言切换时当前页才能重译；
+    // 元素复用保证 State 不丢，社区当次数据不会因切语言清空。
+    final pages = [
+      CatalogScreen(),
+      AccessoriesScreen(),
+      ReloadingScreen(),
+      CommunityScreen(),
+    ];
+    // 语言切换时重建导航（含底部 Tab 文案）；各页内部另有自己的语言监听。
+    return ValueListenableBuilder<String>(
+      valueListenable: localeNotifier,
+      builder: (_, __, ___) => AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: theme.scaffoldBackgroundColor,
         statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
@@ -118,7 +127,7 @@ class _HomePageState extends State<HomePage> {
         body: Padding(
           // 给悬浮导航留出空间，避免遮住各页底部内容。
           padding: const EdgeInsets.only(bottom: 96),
-          child: _pages[_index],
+          child: pages[_index],
         ),
         bottomNavigationBar: _FloatingNavBar(
           index: _index,
@@ -127,6 +136,7 @@ class _HomePageState extends State<HomePage> {
             setState(() => _index = i);
           },
         ),
+      ),
       ),
     );
   }
@@ -176,7 +186,7 @@ class _FloatingNavBar extends StatelessWidget {
                     Expanded(child: _NavItem(
                       icon: _HomePageState._tabs[i].$1,
                       activeIcon: _HomePageState._tabs[i].$2,
-                      label: _HomePageState._tabs[i].$3,
+                      label: tr(_HomePageState._tabs[i].$3),
                       selected: index == i,
                       onTap: () => onTap(i),
                     )),

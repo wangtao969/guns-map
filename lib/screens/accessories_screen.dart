@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
 import '../haptics.dart';
+import '../i18n.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
 
@@ -57,9 +58,9 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(12, 12, 12, 4),
-            child: Text('厂商',
+            child: Text(tr('vendor'),
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
           SingleChildScrollView(
@@ -68,7 +69,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
             child: Row(
               children: [
                 ChoiceChip(
-                  label: const Text('全部'),
+                  label: Text(tr('all')),
                   selected: _vendor == null,
                   onSelected: (_) => setState(() => _vendor = null),
                 ),
@@ -91,7 +92,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
             child: Row(
               children: [
                 ChoiceChip(
-                  label: const Text('全部类型'),
+                  label: Text(tr('all_types')),
                   selected: _type == null,
                   onSelected: (_) => setState(() => _type = null),
                 ),
@@ -108,9 +109,9 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(12, 4, 12, 4),
-            child: Text('按品类',
+            child: Text(tr('by_category'),
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
           SingleChildScrollView(
@@ -119,7 +120,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
             child: Row(
               children: [
                 ChoiceChip(
-                  label: const Text('全部品类'),
+                  label: Text(tr('all_categories')),
                   selected: _category == null,
                   onSelected: (_) => setState(() => _category = null),
                 ),
@@ -220,21 +221,21 @@ class AccessoryDetailScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Text(item.description),
           const SizedBox(height: 20),
-          Text('售价', style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
+          Text(tr('price'), style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
           const SizedBox(height: 4),
-          Text(item.price ?? '暂未收录',
+          Text(item.price ?? tr('not_listed'),
               style: TextStyle(color: item.price == null ? grey : null)),
           const SizedBox(height: 20),
-          Text('购买渠道',
+          Text(tr('channel'),
               style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
           const SizedBox(height: 4),
-          Text('${item.vendor}官网或授权经销商'),
+          Text('${item.vendor}${tr('channel_vendor_suffix')}'),
           const SizedBox(height: 20),
-          Text('适配枪械（${item.fitGuns.length}款）',
+          Text(fitGunsText(item.fitGuns.length),
               style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
           const SizedBox(height: 4),
           if (item.fitGuns.isEmpty)
-            Text('通用配件，未绑定具体枪型', style: TextStyle(color: grey)),
+            Text(tr('generic_unbound'), style: TextStyle(color: grey)),
           if (item.fitGuns.isNotEmpty)
             Text(item.fitGuns.join('、'),
                 style: TextStyle(color: grey, fontSize: 13)),

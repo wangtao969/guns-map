@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
 
 /// 意见反馈：应用内填写 + 联系邮箱。
@@ -71,7 +72,7 @@ if (!opened) {
 await Clipboard.setData(
 const ClipboardData(text: 'Toryphoto77@gmail.com'));
 ScaffoldMessenger.of(context).showSnackBar(
-const SnackBar(content: Text('没有找到邮箱应用，邮箱地址已复制')),
+SnackBar(content: Text(tr('no_mail_app'))),
 );
 }
 }
@@ -80,7 +81,7 @@ void _submit() {
 final content = _contentCtrl.text.trim();
 if (content.isEmpty) {
 ScaffoldMessenger.of(context).showSnackBar(
-const SnackBar(content: Text('请先写反馈内容')),
+SnackBar(content: Text(tr('feedback_empty'))),
 );
 return;
 }
@@ -96,8 +97,22 @@ time: _now(),
 _contentCtrl.clear();
 });
 ScaffoldMessenger.of(context).showSnackBar(
-const SnackBar(content: Text('反馈已记录在本机，可点复制发出去')),
+SnackBar(content: Text(tr('feedback_saved'))),
 );
+}
+
+
+String _typeLabel(String t) {
+switch (t) {
+case '功能建议':
+return tr('feedback_type_feature');
+case '内容纠错':
+return tr('feedback_type_content');
+case '闪退报错':
+return tr('feedback_type_crash');
+default:
+return tr('feedback_type_other');
+}
 }
 
 @override
@@ -109,30 +124,30 @@ appBar: const GunsMapAppBar(),
 body: ListView(
 padding: const EdgeInsets.all(16),
 children: [
-const Text('意见反馈',
+Text(tr('feedback'),
 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
 const SizedBox(height: 4),
-Text('暂未接后端，反馈只保存在本机当次有效；点复制后可以发到聊天里或用邮箱发到 Toryphoto77@gmail.com。',
+Text(tr('feedback_note'),
 style: TextStyle(color: grey, fontSize: 12)),
 const SizedBox(height: 16),
 Card(
 child: ListTile(
 leading: const Icon(Icons.mail_outlined),
-title: const Text('邮箱反馈'),
-subtitle: const Text('Toryphoto77@gmail.com · 点此直接跳转手机邮箱应用'),
+title: Text(tr('feedback_mail')),
+subtitle: Text(tr('feedback_mail_sub')),
 trailing: const Icon(Icons.open_in_new, size: 18),
 onTap: _openMailApp,
 ),
 ),
 const SizedBox(height: 16),
-const Text('反馈类型',
+Text(tr('feedback_type'),
 style: TextStyle(fontWeight: FontWeight.bold)),
 const SizedBox(height: 8),
 Wrap(
 spacing: 8,
 children: _types
 .map((t) => ChoiceChip(
-label: Text(t),
+label: Text(_typeLabel(t)),
 selected: _type == t,
 onSelected: (_) => setState(() => _type = t),
 ))
@@ -142,9 +157,9 @@ const SizedBox(height: 16),
 TextField(
 controller: _contentCtrl,
 maxLines: 6,
-decoration: const InputDecoration(
-labelText: '反馈内容',
-hintText: '比如：哪个页面有问题、哪条数据不对、想要什么功能',
+decoration: InputDecoration(
+labelText: tr('feedback_content_label'),
+hintText: tr('feedback_content_hint'),
 border: OutlineInputBorder(),
 ),
 ),
@@ -152,20 +167,20 @@ const SizedBox(height: 12),
 TextField(
 controller: _emailCtrl,
 keyboardType: TextInputType.emailAddress,
-decoration: const InputDecoration(
-labelText: '联系邮箱（可选）',
-hintText: '填你的邮箱，方便回复你',
+decoration: InputDecoration(
+labelText: tr('feedback_email_label'),
+hintText: tr('feedback_email_hint'),
 border: OutlineInputBorder(),
 ),
 ),
 const SizedBox(height: 16),
 ElevatedButton(
 onPressed: _submit,
-child: const Text('提交反馈'),
+child: Text(tr('feedback_submit')),
 ),
 if (_submitted.isNotEmpty)...[
 const SizedBox(height: 24),
-const Text('已提交的反馈',
+Text(tr('feedback_submitted'),
 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
 const SizedBox(height: 8),
 ..._submitted.map((f) => Card(
@@ -188,12 +203,12 @@ await Clipboard.setData(
 ClipboardData(text: f.shareText));
 if (!context.mounted) return;
 ScaffoldMessenger.of(context).showSnackBar(
-const SnackBar(
-content: Text('反馈内容已复制')),
+SnackBar(
+content: Text(tr('feedback_copied'))),
 );
 },
 icon: const Icon(Icons.copy, size: 16),
-label: const Text('复制'),
+label: Text(tr('copy')),
 ),
 ],
 ),
@@ -201,7 +216,7 @@ const SizedBox(height: 4),
 Text(f.content),
 if (f.email.isNotEmpty)...[
 const SizedBox(height: 4),
-Text('联系邮箱：${f.email}',
+Text('${tr('feedback_email_prefix')}${f.email}',
 style: TextStyle(color: grey, fontSize: 12)),
 ],
 ],

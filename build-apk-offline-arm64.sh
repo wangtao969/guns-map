@@ -125,14 +125,22 @@ mkdir -p "$BUILD_DIR/android/app/src/main/kotlin/com/example/firearms_catalog"
 cat > "$BUILD_DIR/android/app/src/main/kotlin/com/example/firearms_catalog/MainActivity.kt" <<'KOTEOF'
 package com.example.firearms_catalog
 
+import android.app.Activity
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.provider.MediaStore
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayOutputStream
 
 class MainActivity : FlutterActivity() {
     private val mailChannel = "gunsmap/mailto"
+    private val pickChannel = "gunsmap/pick_image"
+    private val pickRequestCode = 1001
+    private var pendingPickResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -156,8 +164,70 @@ class MainActivity : FlutterActivity() {
                     result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, pickChannel)
+            .setMethodCallHandler { call, result ->
+                if (call.method == "pickImage") {
+                    if (pendingPickResult != null) {
+                        result.success(null)
+                        return@setMethodCallHandler
+                    }
+                    pendingPickResult = result
+                    try {
+                        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                        startActivityForResult(intent, pickRequestCode)
+                    } catch (e: Exception) {
+                        pendingPickResult = null
+                        result.success(null)
+                    }
+                } else {
+                    result.notImplemented()
+                }
+            }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != pickRequestCode) return
+        val pending = pendingPickResult
+        pendingPickResult = null
+        if (pending == null) return
+        try {
+            if (resultCode != Activity.RESULT_OK) {
+                pending.success(null)
+                return
+            }
+            val uri: Uri = data?.data ?: run {
+                pending.success(null)
+                return
+            }
+            val stream = contentResolver.openInputStream(uri) ?: run {
+                pending.success(null)
+                return
+            }
+            val original = BitmapFactory.decodeStream(stream)
+            stream.close()
+            if (original == null) {
+                pending.success(null)
+                return
+            }
+            val maxSide = 512
+            val w = original.width
+            val h = original.height
+            val scale = if (w > h) maxSide.toFloat() / w else maxSide.toFloat() / h
+            val bitmap = if (scale < 1f) {
+                Bitmap.createScaledBitmap(original, (w * scale).toInt(), (h * scale).toInt(), true)
+            } else {
+                original
+            }
+            val out = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            pending.success(out.toByteArray())
+        } catch (e: Exception) {
+            pending.success(null)
+        }
     }
 }
+
 KOTEOF
 echo "MainActivity mailto channel patched"
 

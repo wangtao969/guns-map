@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
 import '../haptics.dart';
+import '../i18n.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
 import 'suppliers_screen.dart';
@@ -76,14 +77,14 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
-          const Card(
+          Card(
             color: Color(0xFF4A1500),
             child: Padding(
               padding: EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('⚠ 安全警告',
+                  Text('⚠ ${tr('safety_warn')}',
                       style: TextStyle(
                           color: Colors.redAccent,
                           fontWeight: FontWeight.bold,
@@ -103,15 +104,15 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
           ),
           const SizedBox(height: 16),
           // 板块一：子弹口径图鉴。
-          const Text('子弹口径图鉴',
+          Text(tr('caliber_atlas'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text('弹头直径、弹壳长度与最大全弹长均为 SAAMI/CIP 标准值，点卡片进详情看弹头、售价与适配枪械。',
+          Text(tr('atlas_note'),
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 8),
           TextField(
             decoration: InputDecoration(
-              hintText: '搜口径或弹头，如 338、XTP、曳光',
+              hintText: tr('search_caliber_hint'),
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _query.isEmpty
                   ? null
@@ -138,7 +139,7 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
                 .toList(),
           ),
           const SizedBox(height: 4),
-          Text('共 ${atlas.length} 条口径',
+          Text(atlasCountText(atlas.length),
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 8),
           GridView.builder(
@@ -189,10 +190,10 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
           ),
           const SizedBox(height: 16),
           // 板块二：子弹复装（狙击口径）。
-          const Text('子弹复装 · 狙击口径',
+          Text(tr('sniper_title'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text('狙击弹售价高、自己复装最划算，本板块只收狙击步枪常用口径，按口径分组。',
+          Text(tr('sniper_note'),
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 8),
           ...sniper.map((c) {
@@ -220,7 +221,7 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
                   if (loads.isNotEmpty) ...[
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-                      child: Text('装药表（公开手册数据）',
+                      child: Text(tr('loads_title'),
                           style: TextStyle(
                               fontWeight: FontWeight.bold, color: bronze)),
                     ),
@@ -233,14 +234,14 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
           }),
           const SizedBox(height: 16),
           // 板块三：入口区，不再平铺长列表。
-          const Text('更多',
+          Text(tr('more'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
             child: ListTile(
               leading: const Icon(Icons.storefront_outlined),
-              title: const Text('组件供应商'),
-              subtitle: Text('弹头、弹壳、火药、底火供应商 · 共 ${reloadComponents.length} 条',
+              title: Text(tr('suppliers')),
+              subtitle: Text(suppliersCountText(reloadComponents.length),
                   style: TextStyle(color: grey, fontSize: 12)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.push(
@@ -252,8 +253,8 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
           Card(
             child: ListTile(
               leading: const Icon(Icons.assignment_outlined),
-              title: const Text('复装记录 · SOP 执行'),
-              subtitle: Text('按 SOP 步骤打勾，记下每次复装的实际参数',
+              title: Text(tr('sop_title')),
+              subtitle: Text(tr('sop_sub'),
                   style: TextStyle(color: grey, fontSize: 12)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.push(
@@ -314,7 +315,7 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
               if (l.velocity != null) _loadRow('初速', l.velocity!),
               if (l.pressure != null) _loadRow('膛压', l.pressure!),
               const SizedBox(height: 4),
-              Text('来源：${l.source}',
+              Text('${tr('source_prefix')}${l.source}',
                   style: const TextStyle(color: Colors.grey, fontSize: 12)),
             ],
           ),
@@ -359,16 +360,16 @@ class CaliberDetailScreen extends StatelessWidget {
           _detailRow('常用弹头重', info.bulletWeightRange),
           _detailRow('用途', info.use),
           const SizedBox(height: 16),
-          Text('工厂弹售价',
+          Text(tr('factory_price'),
               style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
           const SizedBox(height: 4),
           Text(info.factoryPrice ?? '暂未收录',
               style: TextStyle(color: info.factoryPrice == null ? grey : null)),
-          Text('美国零售参考价，随商家批次浮动',
+          Text(tr('factory_price_note'),
               style: TextStyle(color: grey, fontSize: 12)),
           if (info.bullets.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('常见弹头（${info.bullets.length}款）',
+            Text(bulletsText(info.bullets.length),
                 style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
             const SizedBox(height: 4),
             ...info.bullets.map((b) => Padding(
@@ -378,11 +379,11 @@ class CaliberDetailScreen extends StatelessWidget {
                 )),
           ],
           const SizedBox(height: 16),
-          Text('适配枪械（${info.fitGuns.length}款）',
+          Text(fitGunsText(info.fitGuns.length),
               style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
           const SizedBox(height: 4),
           if (info.fitGuns.isEmpty)
-            Text('本 App 图鉴中暂无该口径枪械',
+            Text(tr('no_guns_for_caliber'),
                 style: TextStyle(color: grey)),
           if (info.fitGuns.isNotEmpty)
             Text(info.fitGuns.join('、'),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
 import '../widgets/app_top_bar.dart';
+import '../i18n.dart';
 
 /// 复装记录：按 SOP 一步步打勾执行，并记下每次复装的实际参数。
 /// 记录仅保存在本次打开期间，退出后不保留；正式记录请同步记在纸质复装日志上。
@@ -118,7 +119,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
             child: const Text('重置 SOP 打勾'),
           ),
           const SizedBox(height: 16),
-          const Text('安全红线',
+          Text(tr('safety_rules'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
@@ -139,7 +140,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text('记一条复装',
+          Text(tr('log_new'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
@@ -256,7 +257,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 16),
               child: Center(
-                  child: Text('还没有记录', style: TextStyle(color: grey))),
+                  child: Text(tr('no_logs'), style: TextStyle(color: grey))),
             ),
           ..._logs.map((l) => Card(
                 margin: const EdgeInsets.only(bottom: 10),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
 import '../haptics.dart';
+import '../i18n.dart';
 import '../models.dart';
 import '../widgets/category_silhouette.dart';
 import '../widgets/app_top_bar.dart';
@@ -103,7 +104,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context),
-                              child: const Text('知道了'),
+                              child: Text(tr('got_it')),
                             ),
                           ],
                         ),
@@ -129,7 +130,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
               const Text('左右拖动旋转查看',
                   style: TextStyle(color: Colors.grey)),
               const Spacer(),
-              const Text('自动旋转'),
+              Text(tr('auto_rotate')),
               Switch(
                 value: _autoRotate,
                 onChanged: (v) => setState(() => _autoRotate = v),
@@ -146,7 +147,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
                 spacing: 6,
                 children: _assembled
                     .map((a) => Chip(
-                        label: Text('已装配：$a'),
+                        label: Text('${tr('assembled_prefix')}$a'),
                         backgroundColor: Colors.amber.withOpacity(0.2)))
                     .toList(),
               ),
@@ -167,7 +168,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
                   style: const TextStyle(color: Colors.grey, fontSize: 14)),
             ),
           const SizedBox(height: 12),
-          const Text('参数',
+          Text(tr('params'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           _spec('口径', gun.caliber),
           _spec('枪机方式', gun.action),
@@ -178,12 +179,12 @@ class _GunDetailScreenState extends State<GunDetailScreen>
           _spec('产地', gun.origin),
           _spec('年份', gun.year),
           const SizedBox(height: 12),
-          const Text('简介',
+          Text(tr('intro'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text(gun.description),
           const SizedBox(height: 12),
-          const Text('适配弹药',
+          Text(tr('ammo_fit'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           Wrap(
             spacing: 6,
@@ -206,7 +207,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('工厂弹售价',
+                  Text(tr('factory_price'),
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
@@ -231,16 +232,16 @@ class _GunDetailScreenState extends State<GunDetailScreen>
             },
           ),
           const SizedBox(height: 12),
-          const Text('可选配件',
+          Text(tr('accessories_pick'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ...gun.accessories.map((a) => ListTile(
                 title: Text(a),
                 trailing: _assembled.contains(a)
-                    ? const Text('已装配', style: TextStyle(color: Colors.amber))
+                    ? Text(tr('assembled'), style: TextStyle(color: Colors.amber))
                     : TextButton(
                         onPressed: () =>
                             setState(() => _assembled.add(a)),
-                        child: const Text('装配预览'),
+                        child: Text(tr('preview')),
                       ),
                 onTap: () {
                   tapHaptic();

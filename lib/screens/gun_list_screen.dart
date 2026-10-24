@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
 import '../haptics.dart';
+import '../i18n.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
 import 'gun_detail_screen.dart';
@@ -28,7 +29,7 @@ class GunListScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(category,
+                Text(trCategory(category),
                     style: const TextStyle(
                         fontSize: 20, fontWeight: FontWeight.bold)),
                 Text(
@@ -59,7 +60,7 @@ class GunListScreen extends StatelessWidget {
                 ),
                 title: Text(vendor,
                     style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('${models.length} 款在售',
+                subtitle: Text(modelsCountText(models.length),
                     style: const TextStyle(color: Color(0xFF9A917F))),
                 children: models
                     .map((g) => ListTile(

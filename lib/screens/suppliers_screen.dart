@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
 import '../widgets/app_top_bar.dart';
+import '../i18n.dart';
 
 /// 组件供应商子页：从复装页独立出来，避免长列表挡住下面内容。
 class SuppliersScreen extends StatefulWidget {
@@ -44,7 +45,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
             child: Row(
               children: [
                 ChoiceChip(
-                  label: const Text('全部'),
+                  label: Text(tr('all')),
                   selected: _kind == null,
                   onSelected: (_) => setState(() => _kind = null),
                 ),

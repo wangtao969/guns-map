@@ -4,12 +4,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../haptics.dart';
+import '../i18n.dart';
 import '../main.dart';
 import '../widgets/app_top_bar.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '1.5.0';
+const String appVersion = '1.5.1';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -19,12 +20,15 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
-    return Scaffold(
+    // 语言切换时整页重译。
+    return ValueListenableBuilder<String>(
+      valueListenable: localeNotifier,
+      builder: (_, __, ___) => Scaffold(
       appBar: const GunsMapAppBar(showSettingsButton: false),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('主题',
+          Text(tr('theme'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           ValueListenableBuilder<ThemeMode>(
@@ -32,61 +36,83 @@ class SettingsScreen extends StatelessWidget {
             builder: (_, mode, __) => RadioGroup<ThemeMode>(
               groupValue: mode,
               onChanged: (v) => themeModeNotifier.value = v!,
-              child: const Column(
+              child: Column(
                 children: [
                   RadioListTile<ThemeMode>(
-                    title: Text('跟随系统'),
-                    subtitle: Text('白天米白，夜晚黑底白字'),
+                    title: Text(tr('theme_system')),
+                    subtitle: Text(tr('theme_system_sub')),
                     value: ThemeMode.system,
                   ),
                   RadioListTile<ThemeMode>(
-                    title: Text('浅色'),
-                    subtitle: Text('始终使用米白主题'),
+                    title: Text(tr('theme_light')),
+                    subtitle: Text(tr('theme_light_sub')),
                     value: ThemeMode.light,
                   ),
                   RadioListTile<ThemeMode>(
-                    title: Text('深色'),
-                    subtitle: Text('始终使用黑底白字主题'),
+                    title: Text(tr('theme_dark')),
+                    subtitle: Text(tr('theme_dark_sub')),
                     value: ThemeMode.dark,
                   ),
                 ],
               ),
             ),
           ),
-          Text('主题选择仅在本次打开期间生效，重启后恢复跟随系统。',
+          Text(tr('theme_note'),
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 24),
-          const Text('震动反馈',
+          Text(tr('haptics'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           ValueListenableBuilder<bool>(
             valueListenable: hapticsEnabledNotifier,
             builder: (_, enabled, __) => SwitchListTile(
-              title: const Text('卡片与导航震动'),
-              subtitle: const Text('点击卡片、切换底部导航时轻震一下'),
+              title: Text(tr('haptics_title')),
+              subtitle: Text(tr('haptics_sub')),
               value: enabled,
               onChanged: (v) => hapticsEnabledNotifier.value = v,
             ),
           ),
-          Text('震动开关仅在本次打开期间生效，重启后恢复开启。',
+          Text(tr('haptics_note'),
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 24),
-          const Text('关于',
+          Text(tr('language'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          ValueListenableBuilder<String>(
+            valueListenable: localeNotifier,
+            builder: (_, locale, __) => RadioGroup<String>(
+              groupValue: locale,
+              onChanged: (v) => localeNotifier.value = v!,
+              child: Column(
+                children: [
+                  for (final entry in localeNames.entries)
+                    RadioListTile<String>(
+                      title: Text(entry.value),
+                      value: entry.key,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Text(tr('language_note'),
+              style: TextStyle(color: grey, fontSize: 12)),
+          const SizedBox(height: 24),
+          Text(tr('about'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           ListTile(
             title: const Text("Gun's Map"),
-            subtitle: Text('安卓枪械图鉴 App · v$appVersion 正式版（arm64）'),
+            subtitle: Text('${tr('version_prefix')}v$appVersion${tr('version_suffix')}'),
           ),
           ListTile(
-            title: const Text('检查更新'),
-            subtitle: const Text('联网查询 GitHub 最新 Release，有新版会给出下载链接'),
+            title: Text(tr('check_update')),
+            subtitle: Text(tr('check_update_sub')),
             trailing: const Icon(Icons.system_update_alt),
             onTap: () => _checkUpdate(context),
           ),
           ListTile(
-            title: const Text('意见反馈'),
-            subtitle: const Text('应用内填写反馈，可留联系邮箱'),
+            title: Text(tr('feedback')),
+            subtitle: Text(tr('feedback_sub')),
             trailing: const Icon(Icons.feedback_outlined),
             onTap: () => Navigator.push(
               context,
@@ -94,9 +120,9 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           ListTile(
-            title: const Text('数据说明'),
+            title: Text(tr('data_note')),
             subtitle: Text(
-              '图鉴与配件数据为公开资料整理；装药数据引自 Hornady、Speer、Nosler、Hodgdon、Vihtavuori、Lyman 等公开手册，各条标注出处；枪械与组件价格为 2026 年 10 月美国零售参考价，随时变动。',
+              tr('data_note_body'),
               style: TextStyle(color: grey, fontSize: 13),
             ),
           ),
@@ -109,10 +135,11 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Center(
-            child: Text('GitHub 账号',
+            child: Text(tr('id_account'),
                 style: TextStyle(color: grey, fontSize: 11)),
           ),
         ],
+      ),
       ),
     );
   }
@@ -122,12 +149,12 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
+      builder: (_) => AlertDialog(
         content: Row(
           children: [
             CircularProgressIndicator(),
             SizedBox(width: 16),
-            Text('正在检查更新…'),
+            Text(tr('checking')),
           ],
         ),
       ),
@@ -168,12 +195,12 @@ class SettingsScreen extends StatelessWidget {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text('已是最新版本'),
-            content: Text('当前版本 v$appVersion 已是最新。'),
+            title: Text(tr('latest_title')),
+            content: Text('${tr('latest_body_prefix')}$appVersion${tr('latest_body_suffix')}'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('好的'),
+                child: Text(tr('ok')),
               ),
             ],
           ),
@@ -186,14 +213,14 @@ class SettingsScreen extends StatelessWidget {
       showDialog(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: Text('发现新版本 v$latest'),
+          title: Text('${tr('new_title_prefix')}$latest'),
           content: SingleChildScrollView(
-            child: Text(shownNotes.isEmpty ? '去 Release 页查看更新说明。' : shownNotes),
+            child: Text(shownNotes.isEmpty ? tr('new_empty') : shownNotes),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('关闭'),
+              child: Text(tr('close')),
             ),
             TextButton(
               onPressed: () async {
@@ -202,10 +229,10 @@ class SettingsScreen extends StatelessWidget {
                 Navigator.of(dialogContext).pop();
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('下载链接已复制，去浏览器粘贴打开即可')),
+                  SnackBar(content: Text(tr('copied'))),
                 );
               },
-              child: const Text('复制下载链接'),
+              child: Text(tr('copy_link')),
             ),
           ],
         ),
@@ -217,12 +244,12 @@ class SettingsScreen extends StatelessWidget {
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('检查失败'),
-          content: const Text('没能连上 GitHub，请检查网络后重试。'),
+          title: Text(tr('check_failed')),
+          content: Text(tr('check_failed_body')),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('好的'),
+              child: Text(tr('ok')),
             ),
           ],
         ),
