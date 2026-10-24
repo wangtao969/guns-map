@@ -105,7 +105,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 1.25,
+                  childAspectRatio: 1.05,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
@@ -154,6 +154,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           const SizedBox(height: 2),
                           Text('$count 支在售',
                               style: TextStyle(color: grey, fontSize: 12)),
+                          Text('原型：${categoryPrototype[c] ?? ''}',
+                              style: TextStyle(color: grey, fontSize: 10)),
                         ],
                       ),
                     ),

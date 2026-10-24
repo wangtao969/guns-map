@@ -21,8 +21,11 @@ class GunsMapAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Text(
         "Gun's Map",
         style: TextStyle(
-          fontSize: 21,
-          fontWeight: FontWeight.bold,
+          // 无衬线现代简洁体：Android 系统默认无衬线 Roboto，加粗字重。
+          fontFamily: 'Roboto',
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.3,
           color: ink,
         ),
       ),

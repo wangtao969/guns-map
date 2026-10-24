@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../models.dart';
 import '../widgets/app_top_bar.dart';
 
 class AccessoriesScreen extends StatefulWidget {
@@ -12,20 +13,29 @@ class AccessoriesScreen extends StatefulWidget {
 class _AccessoriesScreenState extends State<AccessoriesScreen> {
   String? _vendor;
   String? _type;
-  String? _gun;
+  String? _category;
+
+  /// 配件按品类分：从适配枪型反查其品类，不再按具体型号筛。
+  Set<String> _accessoryCategories(AccessoryItem a) {
+    final cats = <String>{};
+    for (final name in a.fitGuns) {
+      for (final g in guns) {
+        if (g.name == name) cats.add(g.category);
+      }
+    }
+    return cats;
+  }
 
   @override
   Widget build(BuildContext context) {
     final types = accessories.map((a) => a.type).toSet().toList();
-    final gunNames = accessories
-        .expand((a) => a.fitGuns)
-        .toSet()
-        .toList()
-      ..sort();
     final list = accessories.where((a) {
       if (_vendor != null && a.vendor != _vendor) return false;
       if (_type != null && a.type != _type) return false;
-      if (_gun != null && !a.fitGuns.contains(_gun)) return false;
+      if (_category != null &&
+          !_accessoryCategories(a).contains(_category)) {
+        return false;
+      }
       return true;
     }).toList();
     return Scaffold(
@@ -86,7 +96,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
           const SizedBox(height: 8),
           const Padding(
             padding: EdgeInsets.fromLTRB(12, 4, 12, 4),
-            child: Text('按枪械',
+            child: Text('按品类',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
           SingleChildScrollView(
@@ -95,17 +105,17 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
             child: Row(
               children: [
                 ChoiceChip(
-                  label: const Text('全部枪械'),
-                  selected: _gun == null,
-                  onSelected: (_) => setState(() => _gun = null),
+                  label: const Text('全部品类'),
+                  selected: _category == null,
+                  onSelected: (_) => setState(() => _category = null),
                 ),
-                ...gunNames.map((g) => Padding(
+                ...categories.map((c) => Padding(
                       padding: const EdgeInsets.only(left: 6),
                       child: ChoiceChip(
-                        label: Text(g),
-                        selected: _gun == g,
-                        onSelected: (_) =>
-                            setState(() => _gun = _gun == g ? null : g),
+                        label: Text(c),
+                        selected: _category == c,
+                        onSelected: (_) => setState(
+                            () => _category = _category == c ? null : c),
                       ),
                     )),
               ],

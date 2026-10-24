@@ -2,26 +2,34 @@ import 'package:flutter/material.dart';
 import '../data.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
+import 'suppliers_screen.dart';
+import 'reload_log_screen.dart';
 
-class ReloadingScreen extends StatefulWidget {
+/// 复装页三个板块：
+/// 一、子弹口径图鉴（口径 + 弹壳长度 + 全弹长）；
+/// 二、子弹复装（只做狙击步枪常用口径，实际复装以贵价狙击弹为主）；
+/// 三、入口区：组件供应商与复装记录 SOP 各进一个子页，不再用长列表挡内容。
+class ReloadingScreen extends StatelessWidget {
   const ReloadingScreen({super.key});
 
-  @override
-  State<ReloadingScreen> createState() => _ReloadingScreenState();
-}
-
-class _ReloadingScreenState extends State<ReloadingScreen> {
-  String? _kind;
+  /// 狙击步枪常用复装口径。
+  static const _sniperCalibers = {
+    '.308 Winchester',
+    '6.5 Creedmoor',
+    '.300 Winchester Magnum',
+    '.338 Lapua Magnum',
+    '.300 PRC',
+    '.50 BMG',
+  };
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
     final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
-    final kinds = ['弹头', '弹壳', '火药', '底火'];
-    final components = _kind == null
-        ? reloadComponents
-        : reloadComponents.where((c) => c.kind == _kind).toList();
+    final sniper = reloadCalibers
+        .where((c) => _sniperCalibers.contains(c.caliber))
+        .toList();
     return Scaffold(
       appBar: const GunsMapAppBar(),
       body: ListView(
@@ -53,8 +61,12 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          const Text('口径参考',
+          // 板块一：子弹口径图鉴。
+          const Text('子弹口径图鉴',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text('弹头直径、弹壳长度与最大全弹长均为 SAAMI/CIP 标准值。',
+              style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 8),
           ...caliberInfos.map((c) => Card(
                 margin: const EdgeInsets.only(bottom: 10),
@@ -63,6 +75,8 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   children: [
                     _infoRow('弹头直径', c.bulletDiameter),
+                    _infoRow('弹壳长度', c.caseLength),
+                    _infoRow('最大全弹长', c.maxOal),
                     _infoRow('常用弹头重', c.bulletWeightRange),
                     _infoRow('用途', c.use),
                     Padding(
@@ -91,10 +105,14 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
                 ),
               )),
           const SizedBox(height: 16),
-          const Text('复装组件与装药表',
+          // 板块二：子弹复装（狙击口径）。
+          const Text('子弹复装 · 狙击口径',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text('狙击弹售价高、自己复装最划算，本板块只收狙击步枪常用口径，按口径分组。',
+              style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 8),
-          ...reloadCalibers.map((c) {
+          ...sniper.map((c) {
             final loads =
                 reloadLoads.where((l) => l.caliber == c.caliber).toList();
             return Card(
@@ -107,14 +125,6 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
                   _section('弹壳', c.cases, bronze),
                   _section('火药', c.powders, bronze),
                   _section('底火', c.primers, bronze),
-                  if (c.caliber == '.223 Remington')
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-                      child: Text(
-                        '注意：本节为 .223 Remington 手册数据，不可直接套用于 5.56×45mm NATO 弹膛。',
-                        style: TextStyle(color: Colors.amber),
-                      ),
-                    ),
                   if (loads.isEmpty)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -138,85 +148,37 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
             );
           }),
           const SizedBox(height: 16),
-          // 组件供应商：弹头 / 弹壳 / 火药 / 底火四个分类。
-          const Text('组件供应商',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text('价格为 2026 年 10 月查到的美国零售参考价，仅供参考；价格与手册装药数据分开展示，不要混淆。',
-              style: TextStyle(color: grey, fontSize: 12)),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                ChoiceChip(
-                  label: const Text('全部'),
-                  selected: _kind == null,
-                  onSelected: (_) => setState(() => _kind = null),
-                ),
-                ...kinds.map((k) => Padding(
-                      padding: const EdgeInsets.only(left: 6),
-                      child: ChoiceChip(
-                        label: Text(k),
-                        selected: _kind == k,
-                        onSelected: (_) =>
-                            setState(() => _kind = _kind == k ? null : k),
-                      ),
-                    )),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          ...components.map((c) => Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  title: Text('${c.vendor} ${c.name}'),
-                  subtitle:
-                      Text('${c.spec}\n${c.feature}\n参考价：${c.price}'),
-                  trailing: Chip(label: Text(c.kind)),
-                  isThreeLine: true,
-                ),
-              )),
-          const SizedBox(height: 16),
-          // 复装流程 SOP：单独的分类。
-          const Text('复装流程 SOP',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          ...reloadSopSteps.asMap().entries.map((e) => Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: bronze,
-                    foregroundColor: dark
-                        ? const Color(0xFF121110)
-                        : Colors.white,
-                    child: Text('${e.key + 1}'),
-                  ),
-                  title: Text(e.value),
-                ),
-              )),
-          const SizedBox(height: 16),
-          const Text('安全红线',
+          // 板块三：入口区，不再平铺长列表。
+          const Text('更多',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
-            color: const Color(0xFF4A1500),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: reloadSafetyRules
-                    .map((r) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Text('· $r',
-                              style:
-                                  const TextStyle(color: Colors.amber)),
-                        ))
-                    .toList(),
+            child: ListTile(
+              leading: const Icon(Icons.storefront_outlined),
+              title: const Text('组件供应商'),
+              subtitle: Text('弹头、弹壳、火药、底火供应商 · 共 ${reloadComponents.length} 条',
+                  style: TextStyle(color: grey, fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SuppliersScreen()),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.assignment_outlined),
+              title: const Text('复装记录 · SOP 执行'),
+              subtitle: Text('按 SOP 步骤打勾，记下每次复装的实际参数',
+                  style: TextStyle(color: grey, fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReloadLogScreen()),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12),

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// 品类剪影图标：在 100×44 的画布上用曲线画出各类型枪械的侧面剪影，
-/// 扳机护圈以描边圆环表现，比实心多边形更贴近真实枪形。
+/// 品类剪影图标：每个品类对应一支真实代表枪型，用实心填充画出侧面轮廓。
+/// 不再用描边圆环画扳机护圈（之前那种悬空的细环就是“丝带状”观感的来源），
+/// 护圈改为与底把相连的实心环（外框 + 镂空内孔一次成型）。
 class CategorySilhouette extends StatelessWidget {
   final String category;
   final double width;
@@ -27,6 +28,18 @@ class CategorySilhouette extends StatelessWidget {
   }
 }
 
+/// 各品类剪影的真实原型枪型，卡片上同步标注，杜绝“乱用模型”。
+const Map<String, String> categoryPrototype = {
+  '手枪': 'Glock 17',
+  '步枪': 'M4 卡宾枪',
+  '精确射手步枪': 'SVD',
+  '狙击步枪': 'AWM',
+  '反器材步枪': 'Barrett M82A1',
+  '冲锋枪': 'MP5',
+  '机枪': 'M249 SAW',
+  '霰弹枪': 'Remington 870',
+};
+
 Path _rrect(double x, double y, double w, double h, [double r = 2]) {
   return Path()..addRRect(RRect.fromLTRBR(x, y, x + w, y + h, Radius.circular(r)));
 }
@@ -35,37 +48,12 @@ Path _rect(double x, double y, double w, double h) {
   return Path()..addRect(Rect.fromLTWH(x, y, w, h));
 }
 
-/// 通用步枪下半身：机匣 + 弯枪托 + 弯弹匣 + 握把 + 护圈。
-List<Path> _rifleLower(double stockX, double receiverX, double receiverW) {
-  return [
-    _rrect(receiverX, 14, receiverW, 10, 2),
-    // 弯枪托
-    Path()
-      ..moveTo(receiverX, 14)
-      ..quadraticBezierTo(stockX + 8, 16, stockX + 2, 20)
-      ..lineTo(stockX + 2, 29)
-      ..quadraticBezierTo(stockX + 10, 30, receiverX, 27)
-      ..close(),
-    // 弯弹匣
-    Path()
-      ..moveTo(receiverX + 10, 24)
-      ..lineTo(receiverX + 19, 24)
-      ..quadraticBezierTo(receiverX + 17, 31, receiverX + 14, 37)
-      ..lineTo(receiverX + 8, 37)
-      ..quadraticBezierTo(receiverX + 8, 31, receiverX + 10, 24)
-      ..close(),
-    // 握把
-    Path()
-      ..moveTo(receiverX + 2, 24)
-      ..lineTo(receiverX + 9, 24)
-      ..quadraticBezierTo(receiverX + 8, 30, receiverX + 6, 34)
-      ..lineTo(receiverX, 34)
-      ..close(),
-  ];
-}
-
-List<Path> _guard(double x, double y, double w, double h) {
-  return [_rrect(x, y, w, h, 3)];
+/// 实心扳机护圈环：外框与内孔用 evenOdd 一次画出，环体与底把相连不悬空。
+Path _guardRing(double x, double y, double w, double h) {
+  return Path()
+    ..fillType = PathFillType.evenOdd
+    ..addRRect(RRect.fromLTRBR(x, y, x + w, y + h, const Radius.circular(3)))
+    ..addRect(Rect.fromLTWH(x + 3, y + 3, w - 6, h - 6));
 }
 
 class _SilhouettePainter extends CustomPainter {
@@ -79,223 +67,230 @@ class _SilhouettePainter extends CustomPainter {
     final fill = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
-    final stroke = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final (fills, strokes) = _shapes(category);
-    for (final p in fills) {
+    for (final p in _shapes(category)) {
       canvas.drawPath(p, fill);
-    }
-    for (final p in strokes) {
-      canvas.drawPath(p, stroke);
     }
   }
 
-  (List<Path>, List<Path>) _shapes(String c) {
+  List<Path> _shapes(String c) {
     switch (c) {
       case '手枪':
-        return (
-          [
-            _rrect(8, 11, 54, 9, 2), // 套筒
-            _rect(14, 8, 6, 3), // 照门
-            _rect(56, 8, 3, 3), // 准星
-            _rect(12, 20, 44, 4), // 底把
-            // 弯握把
-            Path()
-              ..moveTo(38, 20)
-              ..lineTo(54, 20)
-              ..quadraticBezierTo(53, 30, 49, 41)
-              ..lineTo(37, 41)
-              ..quadraticBezierTo(36, 30, 38, 20)
-              ..close(),
-          ],
-          _guard(22, 20, 12, 9),
-        );
+        // Glock 17：方正套筒、方形护圈、无外露击锤、握把大倾角。
+        return [
+          _rrect(10, 10, 52, 9, 2), // 套筒
+          _rect(14, 7, 5, 3), // 照门
+          _rect(58, 7, 3, 3), // 准星
+          _rect(12, 19, 46, 4), // 底把
+          Path() // 握把
+            ..moveTo(36, 19)
+            ..lineTo(52, 19)
+            ..quadraticBezierTo(51, 30, 47, 41)
+            ..lineTo(35, 41)
+            ..quadraticBezierTo(34, 30, 36, 19)
+            ..close(),
+          _guardRing(20, 19, 13, 10),
+          _rect(27, 22, 2, 6), // 扳机
+        ];
       case '步枪':
-        return (
-          [
-            _rect(64, 18, 33, 2.5), // 枪管
-            _rect(92, 14, 2, 4), // 准星
-            _rrect(36, 16, 28, 7, 1.5), // 护木
-            ..._rifleLower(4, 18, 20),
-          ],
-          _guard(24, 22, 10, 8),
-        );
+        // M4 卡宾枪：提把、A2 准星、圆护木、弯弹匣、伸缩枪托。
+        return [
+          _rect(66, 18, 28, 2.5), // 枪管
+          _rect(93, 17, 3, 4.5), // 消焰器
+          _rect(87, 13, 2, 5), // A2 准星柱
+          _rect(85, 17, 6, 2),
+          _rrect(40, 15, 28, 8, 2), // 圆护木
+          _rrect(20, 10, 22, 3, 1.5), // 提把
+          _rect(20, 13, 3, 3),
+          _rect(39, 13, 3, 3),
+          _rrect(18, 16, 24, 8, 2), // 机匣
+          Path() // 弯弹匣
+            ..moveTo(30, 24)
+            ..lineTo(37, 24)
+            ..quadraticBezierTo(36, 31, 32, 38)
+            ..lineTo(26, 38)
+            ..quadraticBezierTo(26, 31, 30, 24)
+            ..close(),
+          _rrect(4, 15, 14, 9, 1), // 伸缩枪托
+          _rrect(2, 14, 3, 11, 1), // 托底板
+          Path() // 握把
+            ..moveTo(20, 24)
+            ..lineTo(27, 24)
+            ..quadraticBezierTo(26, 30, 24, 34)
+            ..lineTo(18, 34)
+            ..close(),
+          _guardRing(24, 24, 10, 8),
+        ];
       case '精确射手步枪':
-        return (
-          [
-            _rrect(30, 7, 22, 5, 2.5), // 瞄准镜
-            _rect(34, 12, 3, 3),
-            _rect(45, 12, 3, 3),
-            _rect(62, 18, 35, 2.5), // 枪管
-            _rrect(36, 16, 27, 7, 1.5),
-            ..._rifleLower(4, 18, 20),
-            // 脚架
-            Path()
-              ..moveTo(56, 23)
-              ..lineTo(58, 23)
-              ..lineTo(64, 35)
-              ..lineTo(62, 35)
-              ..close(),
-            Path()
-              ..moveTo(56, 23)
-              ..lineTo(58, 23)
-              ..lineTo(52, 35)
-              ..lineTo(50, 35)
-              ..close(),
-          ],
-          _guard(24, 22, 10, 8),
-        );
+        // SVD：PSO 瞄准镜、长枪管、大弯弹匣、拇指孔枪托轮廓。
+        return [
+          _rrect(28, 6, 24, 5, 2.5), // PSO 瞄准镜
+          _rect(32, 11, 3, 3),
+          _rect(44, 11, 3, 3),
+          _rect(64, 18, 32, 2), // 长枪管
+          _rect(94, 16, 3, 5), // 制退器
+          _rrect(30, 15, 34, 8, 2), // 机匣护木
+          Path() // 大弯弹匣
+            ..moveTo(40, 23)
+            ..lineTo(47, 23)
+            ..quadraticBezierTo(46, 31, 41, 38)
+            ..lineTo(35, 38)
+            ..quadraticBezierTo(35, 31, 40, 23)
+            ..close(),
+          Path() // 枪托
+            ..moveTo(30, 15)
+            ..quadraticBezierTo(12, 16, 4, 20)
+            ..lineTo(4, 29)
+            ..quadraticBezierTo(14, 30, 30, 26)
+            ..close(),
+          _guardRing(26, 23, 10, 8),
+        ];
       case '狙击步枪':
-        return (
-          [
-            _rrect(28, 7, 26, 5, 2.5), // 大瞄准镜
-            _rect(32, 12, 3, 3),
-            _rect(46, 12, 3, 3),
-            _rect(64, 18, 34, 2.5), // 长枪管
-            _rect(93, 14, 2, 4),
-            _rrect(38, 16, 27, 7, 1.5),
-            ..._rifleLower(6, 20, 20),
-            // 贴腮板
-            _rrect(8, 12, 12, 3, 1.5),
-            // 脚架
-            Path()
-              ..moveTo(58, 23)
-              ..lineTo(60, 23)
-              ..lineTo(66, 35)
-              ..lineTo(64, 35)
-              ..close(),
-            Path()
-              ..moveTo(58, 23)
-              ..lineTo(60, 23)
-              ..lineTo(54, 35)
-              ..lineTo(52, 35)
-              ..close(),
-          ],
-          _guard(26, 22, 10, 8),
-        );
+        // AWM：大物镜瞄准镜、重枪管、旋转后拉枪机、可调贴腮枪托、脚架。
+        return [
+          _rrect(26, 6, 24, 5, 2.5), // 瞄准镜
+          _rrect(48, 5, 6, 7, 2), // 大物镜
+          _rect(30, 11, 3, 3),
+          _rect(42, 11, 3, 3),
+          _rect(62, 17, 32, 3), // 重枪管
+          _rect(92, 15, 4, 6), // 制退器
+          _rrect(32, 15, 30, 8, 2), // 机匣
+          _rect(44, 23, 7, 7), // 可拆弹匣
+          _rect(36, 23, 2, 4), // 枪机拉柄
+          _rrect(33, 27, 5, 3, 1.5), // 拉柄球头
+          Path() // 贴腮枪托
+            ..moveTo(32, 15)
+            ..quadraticBezierTo(12, 13, 5, 18)
+            ..lineTo(5, 28)
+            ..quadraticBezierTo(14, 29, 32, 25)
+            ..close(),
+          _rrect(8, 11, 12, 3, 1.5), // 可调贴腮板
+          Path() // 脚架
+            ..moveTo(56, 23)
+            ..lineTo(58, 23)
+            ..lineTo(64, 36)
+            ..lineTo(62, 36)
+            ..close(),
+          Path()
+            ..moveTo(56, 23)
+            ..lineTo(58, 23)
+            ..lineTo(52, 36)
+            ..lineTo(50, 36)
+            ..close(),
+          _guardRing(28, 23, 10, 8),
+        ];
       case '反器材步枪':
-        return (
-          [
-            _rrect(26, 7, 20, 5, 2.5), // 瞄准镜
-            _rect(30, 12, 3, 3),
-            _rect(40, 12, 3, 3),
-            _rect(52, 17, 38, 4), // 粗长枪管
-            _rrect(90, 14, 9, 10, 1.5), // 制退器
-            _rrect(34, 15, 20, 9, 1.5), // 护木
-            ..._rifleLower(4, 18, 20),
-            // 脚架
-            Path()
-              ..moveTo(52, 24)
-              ..lineTo(54, 24)
-              ..lineTo(60, 36)
-              ..lineTo(58, 36)
-              ..close(),
-            Path()
-              ..moveTo(52, 24)
-              ..lineTo(54, 24)
-              ..lineTo(48, 36)
-              ..lineTo(46, 36)
-              ..close(),
-          ],
-          _guard(24, 22, 10, 8),
-        );
+        // Barrett M82A1：巨型制退器、粗长枪管、大弹匣、脚架。
+        return [
+          _rrect(24, 6, 22, 5, 2.5), // 瞄准镜
+          _rect(28, 11, 3, 3),
+          _rect(38, 11, 3, 3),
+          _rect(52, 16, 38, 4), // 粗长枪管
+          _rrect(88, 13, 10, 10, 1.5), // 箭形制退器
+          _rrect(30, 14, 26, 10, 2), // 机匣
+          _rect(38, 24, 8, 10), // 大弹匣
+          Path() // 枪托
+            ..moveTo(30, 14)
+            ..quadraticBezierTo(10, 16, 4, 20)
+            ..lineTo(4, 29)
+            ..quadraticBezierTo(12, 30, 30, 26)
+            ..close(),
+          Path() // 握把
+            ..moveTo(22, 24)
+            ..lineTo(29, 24)
+            ..quadraticBezierTo(28, 30, 26, 34)
+            ..lineTo(20, 34)
+            ..close(),
+          Path() // 脚架
+            ..moveTo(50, 24)
+            ..lineTo(52, 24)
+            ..lineTo(58, 36)
+            ..lineTo(56, 36)
+            ..close(),
+          Path()
+            ..moveTo(50, 24)
+            ..lineTo(52, 24)
+            ..lineTo(46, 36)
+            ..lineTo(44, 36)
+            ..close(),
+          _guardRing(24, 24, 10, 8),
+        ];
       case '冲锋枪':
-        return (
-          [
-            _rect(62, 18, 28, 3), // 枪管
-            _rrect(52, 16, 12, 7, 1.5), // 护罩
-            _rrect(24, 15, 32, 10, 2), // 机匣
-            // 折叠枪托
-            Path()
-              ..moveTo(24, 17)
-              ..lineTo(8, 17)
-              ..lineTo(8, 23)
-              ..lineTo(24, 23)
-              ..close(),
-            // 直弹匣
-            Path()
-              ..moveTo(32, 25)
-              ..lineTo(38, 25)
-              ..lineTo(37, 39)
-              ..lineTo(31, 39)
-              ..close(),
-            // 握把
-            Path()
-              ..moveTo(22, 25)
-              ..lineTo(29, 25)
-              ..quadraticBezierTo(28, 31, 26, 35)
-              ..lineTo(20, 35)
-              ..close(),
-          ],
-          _guard(24, 22, 9, 8),
-        );
+        // MP5：罩式准星、方机匣、直弹匣、伸缩枪托拉杆。
+        return [
+          _rect(66, 18, 26, 3), // 枪管
+          _rect(88, 14, 2, 7), // 罩式准星
+          _rect(91, 14, 2, 7),
+          _rect(88, 14, 5, 2),
+          _rrect(50, 15, 16, 8, 2), // 护木
+          _rrect(22, 14, 32, 10, 2), // 机匣
+          _rect(6, 16, 16, 2), // 伸缩托拉杆
+          _rect(6, 21, 16, 2),
+          _rrect(4, 15, 3, 8, 1), // 托底板
+          _rect(32, 24, 6, 14), // 直弹匣
+          Path() // 握把
+            ..moveTo(22, 24)
+            ..lineTo(29, 24)
+            ..quadraticBezierTo(28, 30, 26, 34)
+            ..lineTo(20, 34)
+            ..close(),
+          _guardRing(24, 24, 9, 8),
+        ];
       case '机枪':
-        return (
-          [
-            _rect(62, 16, 30, 3), // 枪管
-            _rrect(20, 14, 44, 10, 2), // 机匣
-            // 弹箱
-            Path()
-              ..moveTo(28, 24)
-              ..lineTo(42, 24)
-              ..lineTo(42, 32)
-              ..quadraticBezierTo(35, 35, 28, 32)
-              ..close(),
-            // 弯枪托
-            Path()
-              ..moveTo(20, 14)
-              ..quadraticBezierTo(10, 16, 6, 20)
-              ..lineTo(6, 29)
-              ..quadraticBezierTo(12, 30, 20, 27)
-              ..close(),
-            // 脚架
-            Path()
-              ..moveTo(54, 24)
-              ..lineTo(56, 24)
-              ..lineTo(62, 36)
-              ..lineTo(60, 36)
-              ..close(),
-            Path()
-              ..moveTo(54, 24)
-              ..lineTo(56, 24)
-              ..lineTo(48, 36)
-              ..lineTo(46, 36)
-              ..close(),
-          ],
-          [
-            _rrect(30, 9, 18, 5, 2.5), // 提把（描边环）
-            ..._guard(24, 22, 9, 8),
-          ],
-        );
+        // M249 SAW：提把、弹箱、两脚架、重枪管。
+        return [
+          _rect(62, 15, 30, 3), // 枪管
+          _rrect(40, 10, 16, 3, 1.5), // 提把
+          _rect(40, 13, 3, 3),
+          _rect(53, 13, 3, 3),
+          _rrect(18, 13, 46, 11, 2), // 机匣
+          Path() // 弹箱
+            ..moveTo(26, 24)
+            ..lineTo(42, 24)
+            ..lineTo(42, 32)
+            ..quadraticBezierTo(34, 35, 26, 32)
+            ..close(),
+          Path() // 枪托
+            ..moveTo(18, 13)
+            ..quadraticBezierTo(8, 15, 4, 19)
+            ..lineTo(4, 28)
+            ..quadraticBezierTo(10, 29, 18, 26)
+            ..close(),
+          Path() // 脚架
+            ..moveTo(54, 24)
+            ..lineTo(56, 24)
+            ..lineTo(62, 36)
+            ..lineTo(60, 36)
+            ..close(),
+          Path()
+            ..moveTo(54, 24)
+            ..lineTo(56, 24)
+            ..lineTo(48, 36)
+            ..lineTo(46, 36)
+            ..close(),
+          _guardRing(24, 24, 9, 8),
+        ];
       case '霰弹枪':
-        return (
-          [
-            _rrect(48, 16, 48, 5, 2), // 粗枪管
-            _rect(92, 13, 2, 3), // 珠状准星
-            _rect(48, 22, 32, 4), // 弹仓管
-            _rrect(42, 22, 12, 5, 1.5), // 泵柄
-            _rrect(20, 15, 30, 10, 2), // 机匣
-            // 弯枪托
-            Path()
-              ..moveTo(20, 15)
-              ..quadraticBezierTo(10, 17, 5, 21)
-              ..lineTo(5, 30)
-              ..quadraticBezierTo(12, 31, 20, 27)
-              ..close(),
-            // 握把
-            Path()
-              ..moveTo(24, 25)
-              ..lineTo(31, 25)
-              ..quadraticBezierTo(30, 31, 28, 35)
-              ..lineTo(22, 35)
-              ..close(),
-          ],
-          _guard(26, 22, 9, 8),
-        );
+        // Remington 870：泵动护木、弹仓管、珠状准星、木质枪托轮廓。
+        return [
+          _rrect(46, 15, 48, 5, 2), // 枪管
+          _rect(92, 12, 2, 3), // 珠状准星
+          _rect(46, 21, 30, 4), // 弹仓管
+          _rrect(40, 20, 14, 6, 1.5), // 泵动护木
+          _rrect(18, 14, 30, 11, 2), // 机匣
+          Path() // 枪托
+            ..moveTo(18, 14)
+            ..quadraticBezierTo(8, 16, 3, 20)
+            ..lineTo(3, 29)
+            ..quadraticBezierTo(10, 30, 18, 27)
+            ..close(),
+          Path() // 握把
+            ..moveTo(24, 25)
+            ..lineTo(31, 25)
+            ..quadraticBezierTo(30, 31, 28, 35)
+            ..lineTo(22, 35)
+            ..close(),
+          _guardRing(24, 25, 9, 8),
+        ];
       default:
         return _shapes('手枪');
     }

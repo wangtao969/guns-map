@@ -79,6 +79,10 @@ class CaliberInfo {
   final String caliber;
   final String bulletDiameter;
   final String bulletWeightRange;
+  /// 弹壳长度（SAAMI/CIP 标准值）。
+  final String caseLength;
+  /// 最大全弹长 OAL（SAAMI/CIP 标准值）。
+  final String maxOal;
   final String use;
   final List<String> fitGuns;
 
@@ -86,6 +90,8 @@ class CaliberInfo {
     required this.caliber,
     required this.bulletDiameter,
     required this.bulletWeightRange,
+    required this.caseLength,
+    required this.maxOal,
     required this.use,
     required this.fitGuns,
   });

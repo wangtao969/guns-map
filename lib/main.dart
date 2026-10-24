@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'screens/catalog_screen.dart';
 import 'screens/accessories_screen.dart';
 import 'screens/reloading_screen.dart';
+import 'screens/community_screen.dart';
 
 /// 主题选择状态：设置页写入，MaterialApp 监听切换。
 /// 仅本次打开期间生效，不做持久化。
@@ -88,12 +89,14 @@ class _HomePageState extends State<HomePage> {
     CatalogScreen(),
     AccessoriesScreen(),
     ReloadingScreen(),
+    CommunityScreen(),
   ];
 
   static const _tabs = [
     (Icons.grid_view_rounded, Icons.grid_view_rounded, '图鉴'),
     (Icons.handyman_outlined, Icons.handyman_rounded, '配件'),
     (Icons.science_outlined, Icons.science_rounded, '复装'),
+    (Icons.forum_outlined, Icons.forum_rounded, '社区'),
   ];
 
   @override

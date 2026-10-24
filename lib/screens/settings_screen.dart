@@ -52,7 +52,7 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 8),
           const ListTile(
             title: Text("Gun's Map"),
-            subtitle: Text('安卓枪械图鉴 App · v1.2.0 debug（arm64）'),
+            subtitle: Text('安卓枪械图鉴 App · v1.3.0 debug（arm64）'),
           ),
           ListTile(
             title: const Text('数据说明'),
@@ -60,6 +60,18 @@ class SettingsScreen extends StatelessWidget {
               '图鉴与配件数据为公开资料整理；装药数据引自 Hornady、Speer、Nosler、Hodgdon、Vihtavuori、Lyman 等公开手册，各条标注出处；枪械与组件价格为 2026 年 10 月美国零售参考价，随时变动。',
               style: TextStyle(color: grey, fontSize: 13),
             ),
+          ),
+          const SizedBox(height: 32),
+          const Divider(),
+          const SizedBox(height: 8),
+          Center(
+            child: Text('ID：wangtao969',
+                style: TextStyle(color: grey, fontSize: 13)),
+          ),
+          const SizedBox(height: 4),
+          Center(
+            child: Text('GitHub 账号',
+                style: TextStyle(color: grey, fontSize: 11)),
           ),
         ],
       ),
