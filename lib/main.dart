@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'haptics.dart';
 import 'screens/catalog_screen.dart';
 import 'screens/accessories_screen.dart';
 import 'screens/reloading_screen.dart';
@@ -121,7 +122,10 @@ class _HomePageState extends State<HomePage> {
         ),
         bottomNavigationBar: _FloatingNavBar(
           index: _index,
-          onTap: (i) => setState(() => _index = i),
+          onTap: (i) {
+            tapHaptic();
+            setState(() => _index = i);
+          },
         ),
       ),
     );

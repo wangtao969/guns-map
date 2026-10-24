@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../data.dart';
+import '../haptics.dart';
 import '../models.dart';
 import '../widgets/category_silhouette.dart';
 import '../widgets/app_top_bar.dart';
@@ -189,6 +191,46 @@ class _GunDetailScreenState extends State<GunDetailScreen>
                 gun.ammo.map((a) => Chip(label: Text(a))).toList(),
           ),
           const SizedBox(height: 12),
+          Builder(
+            builder: (context) {
+              // 工厂弹售价：按本枪适配弹药口径，从口径图鉴取已核实的参考价。
+              final priced = <({String caliber, String price})>[];
+              for (final a in gun.ammo) {
+                for (final c in caliberInfos) {
+                  if (c.caliber == a && c.factoryPrice != null) {
+                    priced.add((caliber: a, price: c.factoryPrice!));
+                  }
+                }
+              }
+              if (priced.isEmpty) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('工厂弹售价',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  ...priced.map((p) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                                width: 110,
+                                child: Text(p.caliber,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold))),
+                            Expanded(child: Text(p.price)),
+                          ],
+                        ),
+                      )),
+                  const Text('美国零售参考价，随商家与批次浮动，以下单时标价为准。',
+                      style: TextStyle(color: Colors.grey, fontSize: 12)),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 12),
           const Text('可选配件',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ...gun.accessories.map((a) => ListTile(
@@ -200,13 +242,16 @@ class _GunDetailScreenState extends State<GunDetailScreen>
                             setState(() => _assembled.add(a)),
                         child: const Text('装配预览'),
                       ),
-                onTap: () => setState(() {
-                  if (_assembled.contains(a)) {
-                    _assembled.remove(a);
-                  } else {
-                    _assembled.add(a);
-                  }
-                }),
+                onTap: () {
+                  tapHaptic();
+                  setState(() {
+                    if (_assembled.contains(a)) {
+                      _assembled.remove(a);
+                    } else {
+                      _assembled.add(a);
+                    }
+                  });
+                },
               )),
         ],
       ),

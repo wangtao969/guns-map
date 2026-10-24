@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../haptics.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
 import 'suppliers_screen.dart';
 import 'reload_log_screen.dart';
 
 /// 复装页三个板块：
-/// 一、子弹口径图鉴（口径 + 弹壳长度 + 全弹长）；
+/// 一、子弹口径图鉴（可搜索、可按弹种分组，卡片标题直接显示关键尺寸）；
 /// 二、子弹复装（只做狙击步枪常用口径，实际复装以贵价狙击弹为主）；
 /// 三、入口区：组件供应商与复装记录 SOP 各进一个子页，不再用长列表挡内容。
-class ReloadingScreen extends StatelessWidget {
+class ReloadingScreen extends StatefulWidget {
   const ReloadingScreen({super.key});
+
+  @override
+  State<ReloadingScreen> createState() => _ReloadingScreenState();
+}
+
+class _ReloadingScreenState extends State<ReloadingScreen> {
+  String _query = '';
+  String _group = '全部';
 
   /// 狙击步枪常用复装口径。
   static const _sniperCalibers = {
@@ -18,9 +27,34 @@ class ReloadingScreen extends StatelessWidget {
     '6.5 Creedmoor',
     '.300 Winchester Magnum',
     '.338 Lapua Magnum',
+    '.338 Norma Magnum',
     '.300 PRC',
     '.50 BMG',
   };
+
+  static const _pistolCalibers = {
+    '9×19mm',
+    '.45 ACP',
+    '.380 ACP',
+    '.38 Special',
+    '.357 Magnum',
+    '.44 Magnum',
+    '.22 LR',
+  };
+
+  static String _atlasGroup(CaliberInfo c) {
+    final n = c.caliber;
+    if (n.contains('霰弹')) return '霰弹';
+    if (_pistolCalibers.contains(n)) return '手枪弹';
+    if (n.contains('Magnum') ||
+        n.contains('PRC') ||
+        n.contains('CheyTac') ||
+        n.contains('.50 BMG') ||
+        n.contains('7mm Remington')) {
+      return '马格南';
+    }
+    return '步枪弹';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +64,13 @@ class ReloadingScreen extends StatelessWidget {
     final sniper = reloadCalibers
         .where((c) => _sniperCalibers.contains(c.caliber))
         .toList();
+    final q = _query.trim().toLowerCase();
+    final atlas = caliberInfos.where((c) {
+      if (_group != '全部' && _atlasGroup(c) != _group) return false;
+      if (q.isEmpty) return true;
+      if (c.caliber.toLowerCase().contains(q)) return true;
+      return c.bullets.any((b) => b.toLowerCase().contains(q));
+    }).toList();
     return Scaffold(
       appBar: const GunsMapAppBar(),
       body: ListView(
@@ -65,45 +106,87 @@ class ReloadingScreen extends StatelessWidget {
           const Text('子弹口径图鉴',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text('弹头直径、弹壳长度与最大全弹长均为 SAAMI/CIP 标准值。',
+          Text('弹头直径、弹壳长度与最大全弹长均为 SAAMI/CIP 标准值，点卡片进详情看弹头、售价与适配枪械。',
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 8),
-          ...caliberInfos.map((c) => Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ExpansionTile(
-                  title: Text(c.caliber,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  children: [
-                    _infoRow('弹头直径', c.bulletDiameter),
-                    _infoRow('弹壳长度', c.caseLength),
-                    _infoRow('最大全弹长', c.maxOal),
-                    _infoRow('常用弹头重', c.bulletWeightRange),
-                    _infoRow('用途', c.use),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('适配枪械',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, color: bronze)),
-                          const SizedBox(height: 4),
-                          if (c.fitGuns.isEmpty)
-                            Text('本 App 图鉴中暂无该口径枪械',
-                                style: TextStyle(color: grey)),
-                          if (c.fitGuns.isNotEmpty)
-                            Wrap(
-                              spacing: 6,
-                              children: c.fitGuns
-                                  .map((g) => Chip(label: Text(g)))
-                                  .toList(),
-                            ),
-                        ],
-                      ),
+          TextField(
+            decoration: InputDecoration(
+              hintText: '搜口径或弹头，如 338、XTP、曳光',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _query.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () => setState(() => _query = ''),
                     ),
-                  ],
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
+            onChanged: (v) => setState(() => _query = v),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            children: ['全部', '手枪弹', '步枪弹', '马格南', '霰弹']
+                .map((g) => FilterChip(
+                      label: Text(g),
+                      selected: _group == g,
+                      onSelected: (_) => setState(() => _group = g),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 4),
+          Text('共 ${atlas.length} 条口径',
+              style: TextStyle(color: grey, fontSize: 12)),
+          const SizedBox(height: 8),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 0.92,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: atlas.length,
+            itemBuilder: (context, i) {
+              final c = atlas[i];
+              return Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              )),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () {
+                    tapHaptic();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => CaliberDetailScreen(info: c)),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(c.caliber,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13)),
+                        const Spacer(),
+                        Text('弹头 ${c.bulletDiameter}',
+                            style: TextStyle(color: grey, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
           const SizedBox(height: 16),
           // 板块二：子弹复装（狙击口径）。
           const Text('子弹复装 · 狙击口径',
@@ -120,6 +203,7 @@ class ReloadingScreen extends StatelessWidget {
               child: ExpansionTile(
                 title: Text(c.caliber,
                     style: const TextStyle(fontWeight: FontWeight.bold)),
+                onExpansionChanged: (_) => tapHaptic(),
                 children: [
                   _section('弹头', c.bullets, bronze),
                   _section('弹壳', c.cases, bronze),
@@ -193,18 +277,6 @@ class ReloadingScreen extends StatelessWidget {
     );
   }
 
-  Widget _infoRow(String k, String v) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-        child: Row(
-          children: [
-            SizedBox(
-                width: 80,
-                child: Text(k, style: const TextStyle(color: Colors.grey))),
-            Expanded(child: Text(v)),
-          ],
-        ),
-      );
-
   Widget _section(String title, List<String> items, Color bronze) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         child: Column(
@@ -255,6 +327,78 @@ class ReloadingScreen extends StatelessWidget {
           children: [
             SizedBox(
                 width: 72,
+                child: Text(k, style: const TextStyle(color: Colors.grey))),
+            Expanded(child: Text(v)),
+          ],
+        ),
+      );
+}
+
+/// 口径详情：点三列小卡片进来，尺寸、弹头、售价、适配枪械都在这里。
+class CaliberDetailScreen extends StatelessWidget {
+  final CaliberInfo info;
+  const CaliberDetailScreen({super.key, required this.info});
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
+    final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
+    return Scaffold(
+      appBar: const GunsMapAppBar(),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(info.caliber,
+              style:
+                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          _detailRow('弹头直径', info.bulletDiameter),
+          _detailRow('弹壳长度', info.caseLength),
+          _detailRow('最大全弹长', info.maxOal),
+          _detailRow('常用弹头重', info.bulletWeightRange),
+          _detailRow('用途', info.use),
+          const SizedBox(height: 16),
+          Text('工厂弹售价',
+              style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
+          const SizedBox(height: 4),
+          Text(info.factoryPrice ?? '暂未收录',
+              style: TextStyle(color: info.factoryPrice == null ? grey : null)),
+          Text('美国零售参考价，随商家批次浮动',
+              style: TextStyle(color: grey, fontSize: 12)),
+          if (info.bullets.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('常见弹头（${info.bullets.length}款）',
+                style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
+            const SizedBox(height: 4),
+            ...info.bullets.map((b) => Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text('· $b',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                )),
+          ],
+          const SizedBox(height: 16),
+          Text('适配枪械（${info.fitGuns.length}款）',
+              style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
+          const SizedBox(height: 4),
+          if (info.fitGuns.isEmpty)
+            Text('本 App 图鉴中暂无该口径枪械',
+                style: TextStyle(color: grey)),
+          if (info.fitGuns.isNotEmpty)
+            Text(info.fitGuns.join('、'),
+                style: TextStyle(color: grey, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String k, String v) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+                width: 80,
                 child: Text(k, style: const TextStyle(color: Colors.grey))),
             Expanded(child: Text(v)),
           ],

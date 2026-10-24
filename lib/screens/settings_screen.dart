@@ -3,11 +3,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../haptics.dart';
 import '../main.dart';
 import '../widgets/app_top_bar.dart';
+import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '1.4.0';
+const String appVersion = '1.5.0';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -54,6 +56,21 @@ class SettingsScreen extends StatelessWidget {
           Text('主题选择仅在本次打开期间生效，重启后恢复跟随系统。',
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 24),
+          const Text('震动反馈',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          ValueListenableBuilder<bool>(
+            valueListenable: hapticsEnabledNotifier,
+            builder: (_, enabled, __) => SwitchListTile(
+              title: const Text('卡片与导航震动'),
+              subtitle: const Text('点击卡片、切换底部导航时轻震一下'),
+              value: enabled,
+              onChanged: (v) => hapticsEnabledNotifier.value = v,
+            ),
+          ),
+          Text('震动开关仅在本次打开期间生效，重启后恢复开启。',
+              style: TextStyle(color: grey, fontSize: 12)),
+          const SizedBox(height: 24),
           const Text('关于',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
@@ -66,6 +83,15 @@ class SettingsScreen extends StatelessWidget {
             subtitle: const Text('联网查询 GitHub 最新 Release，有新版会给出下载链接'),
             trailing: const Icon(Icons.system_update_alt),
             onTap: () => _checkUpdate(context),
+          ),
+          ListTile(
+            title: const Text('意见反馈'),
+            subtitle: const Text('应用内填写反馈，可留联系邮箱'),
+            trailing: const Icon(Icons.feedback_outlined),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FeedbackScreen()),
+            ),
           ),
           ListTile(
             title: const Text('数据说明'),

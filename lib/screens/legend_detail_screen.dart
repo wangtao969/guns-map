@@ -25,6 +25,16 @@ class LegendDetailScreen extends StatelessWidget {
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: grey)),
+          if (l.image != null) ...[
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(l.image!, fit: BoxFit.contain),
+            ),
+            const SizedBox(height: 4),
+            Text('图片来源：Wikimedia Commons，遵循原图许可',
+                style: TextStyle(color: grey, fontSize: 11)),
+          ],
           const SizedBox(height: 16),
           _row('厂商', l.vendor),
           _row('口径', l.caliber),

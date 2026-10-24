@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../haptics.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
 
@@ -24,6 +25,19 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
       }
     }
     return cats;
+  }
+
+  /// 卡片上只显示适配口径：从适配枪型反查口径并去重。
+  List<String> _accessoryCalibers(AccessoryItem a) {
+    final cals = <String>[];
+    for (final name in a.fitGuns) {
+      for (final g in guns) {
+        if (g.name == name && !cals.contains(g.caliber)) {
+          cals.add(g.caliber);
+        }
+      }
+    }
+    return cals;
   }
 
   @override
@@ -123,19 +137,107 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: ListView.builder(
+            child: GridView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 1.35,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
               itemCount: list.length,
               itemBuilder: (context, i) {
                 final a = list[i];
-                return ListTile(
-                  title: Text(a.name),
-                  subtitle: Text(
-                      '${a.vendor} · ${a.description}\n适配：${a.fitGuns.join('、')}'),
-                  trailing: Chip(label: Text(a.type)),
+                final cals = _accessoryCalibers(a);
+                return Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () {
+                      tapHaptic();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                AccessoryDetailScreen(item: a)),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(a.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold)),
+                          const Spacer(),
+                          Text(
+                            cals.isEmpty ? '通用' : cals.join(' · '),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 );
               },
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 配件详情：点卡片进来才能看到适配枪械、售价与购买渠道。
+class AccessoryDetailScreen extends StatelessWidget {
+  final AccessoryItem item;
+  const AccessoryDetailScreen({super.key, required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
+    final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
+    return Scaffold(
+      appBar: const GunsMapAppBar(),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(item.name,
+              style:
+                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text('${item.vendor} · ${item.type}',
+              style: TextStyle(color: grey)),
+          const SizedBox(height: 12),
+          Text(item.description),
+          const SizedBox(height: 20),
+          Text('售价', style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
+          const SizedBox(height: 4),
+          Text(item.price ?? '暂未收录',
+              style: TextStyle(color: item.price == null ? grey : null)),
+          const SizedBox(height: 20),
+          Text('购买渠道',
+              style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
+          const SizedBox(height: 4),
+          Text('${item.vendor}官网或授权经销商'),
+          const SizedBox(height: 20),
+          Text('适配枪械（${item.fitGuns.length}款）',
+              style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
+          const SizedBox(height: 4),
+          if (item.fitGuns.isEmpty)
+            Text('通用配件，未绑定具体枪型', style: TextStyle(color: grey)),
+          if (item.fitGuns.isNotEmpty)
+            Text(item.fitGuns.join('、'),
+                style: TextStyle(color: grey, fontSize: 13)),
         ],
       ),
     );

@@ -121,6 +121,49 @@ cp -r "$WORK/lib" "$BUILD_DIR/lib"
 rm -rf "$BUILD_DIR/assets"
 cp -r "$WORK/assets" "$BUILD_DIR/assets"
 rm -rf "$BUILD_DIR/test"
+# ---- 邮箱跳转原生通道：反馈页点邮箱行直接拉起手机邮箱应用 ----
+# Flutter 模板的 MainActivity 只有一行，这里换成带 MethodChannel 的版本
+#（gunsmap/mailto → ACTION_SENDTO + mailto），不引第三方包。
+mkdir -p "$BUILD_DIR/android/app/src/main/kotlin/com/example/firearms_catalog"
+cat > "$BUILD_DIR/android/app/src/main/kotlin/com/example/firearms_catalog/MainActivity.kt" <<'KOTEOF'
+package com.example.firearms_catalog
+
+import android.content.Intent
+import android.net.Uri
+import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
+
+class MainActivity : FlutterActivity() {
+    private val mailChannel = "gunsmap/mailto"
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, mailChannel)
+            .setMethodCallHandler { call, result ->
+                if (call.method == "openMail") {
+                    val email = call.argument<String>("email") ?: ""
+                    val subject = call.argument<String>("subject") ?: ""
+                    val body = call.argument<String>("body") ?: ""
+                    val uri = Uri.parse("mailto:$email").buildUpon()
+                        .appendQueryParameter("subject", subject)
+                        .appendQueryParameter("body", body)
+                        .build()
+                    try {
+                        startActivity(Intent(Intent.ACTION_SENDTO, uri))
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                } else {
+                    result.notImplemented()
+                }
+            }
+    }
+}
+KOTEOF
+echo "MainActivity mailto channel patched"
+
 
 # ---- 改名：显示名 Gun's Map（内部包名 firearms_catalog 不动）----
 # ---- 启动图标：核对 icon / roundIcon（模板缺 roundIcon 时补上）----
@@ -130,6 +173,10 @@ p = "/home/hatch/workspace/firearms-app-build/android/app/src/main/AndroidManife
 s = open(p).read()
 s = re.sub(r'android:label="[^"]*"', 'android:label="Gun\'s Map"', s, count=1)
 s = re.sub(r'android:icon="[^"]*"', 'android:icon="@mipmap/ic_launcher"', s, count=1)
+# 正式版检查更新要联网：Flutter 模板只在 debug/profile 清单里放 INTERNET
+# 权限，main 清单没有，release 包联网会直接失败，这里补上。
+if 'android.permission.INTERNET' not in s:
+    s = s.replace('<application', '    <uses-permission android:name="android.permission.INTERNET"/>\n    <application', 1)
 if 'android:roundIcon=' not in s:
     s = s.replace('android:icon="@mipmap/ic_launcher"',
                   'android:icon="@mipmap/ic_launcher"\n        android:roundIcon="@mipmap/ic_launcher_round"', 1)

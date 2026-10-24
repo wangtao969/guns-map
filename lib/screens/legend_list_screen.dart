@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../haptics.dart';
 import '../widgets/app_top_bar.dart';
 import 'legend_detail_screen.dart';
 
@@ -43,16 +44,25 @@ class LegendListScreen extends StatelessWidget {
             child: ListTile(
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: l.image != null
+                  ? Image.asset(l.image!,
+                      width: 90, fit: BoxFit.contain)
+                  : const Icon(Icons.image_not_supported,
+                      size: 36, color: Color(0xFF9A917F)),
               title: Text(l.name,
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text(
                   '${l.nameEn} · ${l.vendor} · ${l.years}\n${l.caliber}',
                   style: TextStyle(color: grey)),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => LegendDetailScreen(legend: l)),
-              ),
+              onTap: () {
+                tapHaptic();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => LegendDetailScreen(legend: l)),
+                );
+              },
             ),
           );
         },

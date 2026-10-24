@@ -48,6 +48,8 @@ class DiscontinuedLegend {
   final String caliber;
   final String years;
   final String story;
+  /// 静态图片（网上找的真实照片，存 assets/images/），无图时为 null。
+  final String? image;
 
   const DiscontinuedLegend({
     required this.name,
@@ -56,6 +58,7 @@ class DiscontinuedLegend {
     required this.caliber,
     required this.years,
     required this.story,
+    this.image,
   });
 }
 
@@ -65,6 +68,9 @@ class AccessoryItem {
   final String type;
   final String description;
   final List<String> fitGuns;
+  /// 零售参考价：目前均未核实到可靠零售价，留空；
+  /// 详情页显示“暂未收录”，有可靠报价时再补，绝不现编。
+  final String? price;
 
   const AccessoryItem({
     required this.name,
@@ -72,6 +78,7 @@ class AccessoryItem {
     required this.type,
     required this.description,
     required this.fitGuns,
+    this.price,
   });
 }
 
@@ -85,6 +92,10 @@ class CaliberInfo {
   final String maxOal;
   final String use;
   final List<String> fitGuns;
+  /// 常见弹头：重量 + 类型/型号/军用代号，如穿甲、曳光、燃烧等功能弹。
+  final List<String> bullets;
+  /// 工厂弹售价参考（如“约 $18–30 / 20发”），未核实则为空。
+  final String? factoryPrice;
 
   const CaliberInfo({
     required this.caliber,
@@ -94,6 +105,8 @@ class CaliberInfo {
     required this.maxOal,
     required this.use,
     required this.fitGuns,
+    required this.bullets,
+    this.factoryPrice,
   });
 }
 

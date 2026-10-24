@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../haptics.dart';
 import '../models.dart';
 import '../widgets/category_silhouette.dart';
 import '../widgets/app_top_bar.dart';
@@ -77,11 +78,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     child: ListTile(
                       title: Text(g.name),
                       subtitle: Text('${g.vendor} · ${g.caliber}'),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => GunDetailScreen(gun: g)),
-                      ),
+                      onTap: () {
+                        tapHaptic();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => GunDetailScreen(gun: g)),
+                        );
+                      },
                     ),
                   )),
               if (results.isEmpty)
@@ -114,11 +118,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   final c = categories[i];
                   final count = guns.where((g) => g.category == c).length;
                   return GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => GunListScreen(category: c)),
-                    ),
+                    onTap: () {
+                      tapHaptic();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => GunListScreen(category: c)),
+                      );
+                    },
                     child: Container(
                       decoration: BoxDecoration(
                         color: cardBg,
@@ -174,11 +181,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   style: TextStyle(color: grey, fontSize: 13)),
               const SizedBox(height: 12),
               GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const LegendListScreen()),
-                ),
+                onTap: () {
+                  tapHaptic();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const LegendListScreen()),
+                  );
+                },
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),

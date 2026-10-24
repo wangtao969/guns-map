@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../haptics.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
 import 'gun_detail_screen.dart';
@@ -69,11 +70,14 @@ class GunListScreen extends StatelessWidget {
                                   size: 36, color: Color(0xFF9A917F)),
                           title: Text(g.name),
                           subtitle: Text(g.caliber),
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => GunDetailScreen(gun: g)),
-                          ),
+                          onTap: () {
+                            tapHaptic();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => GunDetailScreen(gun: g)),
+                            );
+                          },
                         ))
                     .toList(),
               ),
