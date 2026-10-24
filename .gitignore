@@ -1,0 +1,20 @@
+# 构建产物
+app-debug.apk
+*.apk
+firearms-app-build/
+build/
+.dart_tool/
+.gradle/
+
+# IDE
+*.iml
+.idea/
+
+# 本地 Gradle 依赖镜像（构建缓存，不是源码）
+gradle-offline-mirror/
+
+# 图片生成中间产物（App 引用的是 8 张短名 webp）
+assets/images/media-generation-*
+
+# 日志
+*.log
