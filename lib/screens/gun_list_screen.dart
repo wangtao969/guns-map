@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
 import '../models.dart';
+import '../widgets/app_top_bar.dart';
 import 'gun_detail_screen.dart';
 
 /// 品类内页：按厂商分组，每个厂商一个可折叠分区，分区内是该厂商的型号。
@@ -17,10 +18,28 @@ class GunListScreen extends StatelessWidget {
     }
     final vendors = byVendor.keys.toList()..sort();
     return Scaffold(
-      appBar: AppBar(title: Text(category)),
-      body: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-        itemCount: vendors.length,
+      appBar: const GunsMapAppBar(),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(category,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(
+                    '${categoryEn[category] ?? ''} · ${list.length} 支',
+                    style: const TextStyle(color: Colors.grey)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+              itemCount: vendors.length,
         itemBuilder: (context, i) {
           final vendor = vendors[i];
           final models = byVendor[vendor]!;
@@ -61,7 +80,10 @@ class GunListScreen extends StatelessWidget {
             ),
           );
         },
-      ),
-    );
+              ),
+            ),
+          ],
+        ),
+      );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../widgets/app_top_bar.dart';
 
 class AccessoriesScreen extends StatefulWidget {
   const AccessoriesScreen({super.key});
@@ -11,17 +12,24 @@ class AccessoriesScreen extends StatefulWidget {
 class _AccessoriesScreenState extends State<AccessoriesScreen> {
   String? _vendor;
   String? _type;
+  String? _gun;
 
   @override
   Widget build(BuildContext context) {
     final types = accessories.map((a) => a.type).toSet().toList();
+    final gunNames = accessories
+        .expand((a) => a.fitGuns)
+        .toSet()
+        .toList()
+      ..sort();
     final list = accessories.where((a) {
       if (_vendor != null && a.vendor != _vendor) return false;
       if (_type != null && a.type != _type) return false;
+      if (_gun != null && !a.fitGuns.contains(_gun)) return false;
       return true;
     }).toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('配件目录')),
+      appBar: const GunsMapAppBar(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -70,6 +78,34 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                         selected: _type == t,
                         onSelected: (_) =>
                             setState(() => _type = _type == t ? null : t),
+                      ),
+                    )),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(12, 4, 12, 4),
+            child: Text('按枪械',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                ChoiceChip(
+                  label: const Text('全部枪械'),
+                  selected: _gun == null,
+                  onSelected: (_) => setState(() => _gun = null),
+                ),
+                ...gunNames.map((g) => Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: ChoiceChip(
+                        label: Text(g),
+                        selected: _gun == g,
+                        onSelected: (_) =>
+                            setState(() => _gun = _gun == g ? null : g),
                       ),
                     )),
               ],

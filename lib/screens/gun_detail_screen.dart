@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
+import '../widgets/category_silhouette.dart';
+import '../widgets/app_top_bar.dart';
 
 class GunDetailScreen extends StatefulWidget {
   final Gun gun;
@@ -43,7 +45,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
   Widget build(BuildContext context) {
     final gun = widget.gun;
     return Scaffold(
-      appBar: AppBar(title: Text(gun.name)),
+      appBar: const GunsMapAppBar(),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
@@ -72,7 +74,12 @@ class _GunDetailScreenState extends State<GunDetailScreen>
                     },
                     child: gun.image != null
                         ? Image.asset(gun.image!, fit: BoxFit.contain)
-                        : const Icon(Icons.image_not_supported, size: 80),
+                        : CategorySilhouette(
+                            category: gun.category,
+                            width: 220,
+                            height: 96,
+                            color: const Color(0xFFE8E0D0),
+                          ),
                   ),
                 ),
                 Positioned.fill(
@@ -128,7 +135,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
             ],
           ),
           if (gun.image == null)
-            const Text('注：本枪侧视图为示意占位，后续替换为真实渲染图。',
+            const Text('注：本枪暂无实拍侧视图，当前以品类剪影占位。',
                 style: TextStyle(color: Colors.grey, fontSize: 12)),
           if (_assembled.isNotEmpty)
             Padding(
@@ -148,6 +155,15 @@ class _GunDetailScreenState extends State<GunDetailScreen>
                   const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           Text('${gun.vendor} · ${gun.caliber}',
               style: const TextStyle(color: Colors.grey, fontSize: 16)),
+          if (gun.nameEn != null)
+            Text(gun.nameEn!,
+                style: const TextStyle(color: Colors.grey, fontSize: 14)),
+          if (gun.price != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('大约价格：${gun.price}（美国零售参考价）',
+                  style: const TextStyle(color: Colors.grey, fontSize: 14)),
+            ),
           const SizedBox(height: 12),
           const Text('参数',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),

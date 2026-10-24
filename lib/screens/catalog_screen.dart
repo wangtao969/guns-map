@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../data.dart';
 import '../models.dart';
 import '../widgets/category_silhouette.dart';
+import '../widgets/app_top_bar.dart';
 import 'gun_list_screen.dart';
 import 'gun_detail_screen.dart';
+import 'legend_list_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
@@ -17,6 +19,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
+    final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
+    final ink = dark ? const Color(0xFFEDE8DF) : const Color(0xFF2E2A24);
+    final cardBg = dark ? const Color(0xFF1E1C19) : Colors.white;
+    final silhouette = dark ? const Color(0xFFE8E0D0) : const Color(0xFF4A4238);
     final q = _query.trim().toLowerCase();
     final results = q.isEmpty
         ? <Gun>[]
@@ -28,6 +36,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
             .toList();
     return Scaffold(
       backgroundColor: Colors.transparent,
+      appBar: const GunsMapAppBar(),
       body: SafeArea(
         top: true,
         bottom: false,
@@ -37,7 +46,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
             // 药丸形搜索框
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cardBg,
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
@@ -48,12 +57,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 ],
               ),
               child: TextField(
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: '搜索枪械、厂商、口径…',
-                  hintStyle: TextStyle(color: Color(0xFF9A917F)),
-                  prefixIcon: Icon(Icons.search, color: Color(0xFF6B5B3E)),
+                  hintStyle: TextStyle(color: grey),
+                  prefixIcon: Icon(Icons.search, color: bronze),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 onChanged: (v) => setState(() => _query = v),
               ),
@@ -76,20 +85,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     ),
                   )),
               if (results.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 24),
+                Padding(
+                  padding: const EdgeInsets.only(top: 24),
                   child: Center(
                     child: Text('没有找到相关枪械',
-                        style: TextStyle(color: Color(0xFF9A917F))),
+                        style: TextStyle(color: grey)),
                   ),
                 ),
             ],
             if (_query.isEmpty) ...[
-              const Text('枪械品类',
+              Text('枪械品类',
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2E2A24))),
+                      color: ink)),
               const SizedBox(height: 12),
               GridView.builder(
                 shrinkWrap: true,
@@ -104,8 +113,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 itemBuilder: (context, i) {
                   final c = categories[i];
                   final count = guns.where((g) => g.category == c).length;
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(20),
+                  return GestureDetector(
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -113,7 +121,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     ),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cardBg,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
@@ -128,32 +136,84 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFE7D8),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(
-                              child: CategorySilhouette(category: c),
+                          // 剪影直接落在卡片上，不再套米色底块。
+                          Center(
+                            child: CategorySilhouette(
+                              category: c,
+                              color: silhouette,
                             ),
                           ),
                           const SizedBox(height: 10),
                           Text(c,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2E2A24))),
+                                  color: ink)),
+                          Text(categoryEn[c] ?? '',
+                              style: TextStyle(color: grey, fontSize: 11)),
                           const SizedBox(height: 2),
                           Text('$count 支在售',
-                              style: const TextStyle(
-                                  color: Color(0xFF9A917F), fontSize: 12)),
+                              style: TextStyle(color: grey, fontSize: 12)),
                         ],
                       ),
                     ),
                   );
                 },
+              ),
+              // 停售名枪鉴赏：首页下方的大类入口。
+              const SizedBox(height: 24),
+              Text('停售名枪鉴赏',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: ink)),
+              const SizedBox(height: 4),
+              Text('已停产的经典名枪，与它们背后的历史和事件',
+                  style: TextStyle(color: grey, fontSize: 13)),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const LegendListScreen()),
+                ),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('走进停售名枪的陈列室',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: ink)),
+                            const SizedBox(height: 4),
+                            Text(
+                                'M1 加兰德、Kar98k、STG44、汤普森……共 ${legends.length} 支',
+                                style:
+                                    TextStyle(color: grey, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: grey),
+                    ],
+                  ),
+                ),
               ),
             ],
           ],

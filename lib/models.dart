@@ -14,6 +14,10 @@ class Gun {
   final String? image;
   final List<String> ammo;
   final List<String> accessories;
+  /// 英文型号名（如 Glock 19），价格调研完成后填入。
+  final String? nameEn;
+  /// 大约价格（美元参考价字符串），未确认或无民用市价时为相应文字。
+  final String? price;
 
   const Gun({
     required this.name,
@@ -31,6 +35,27 @@ class Gun {
     this.image,
     required this.ammo,
     required this.accessories,
+    this.nameEn,
+    this.price,
+  });
+}
+
+/// 一支已停售名枪：用于“停售名枪鉴赏”栏目，讲历史与关联事件。
+class DiscontinuedLegend {
+  final String name;
+  final String nameEn;
+  final String vendor;
+  final String caliber;
+  final String years;
+  final String story;
+
+  const DiscontinuedLegend({
+    required this.name,
+    required this.nameEn,
+    required this.vendor,
+    required this.caliber,
+    required this.years,
+    required this.story,
   });
 }
 
@@ -79,6 +104,27 @@ class ReloadCaliber {
     required this.cases,
     required this.powders,
     required this.primers,
+  });
+}
+
+/// 一条复装组件商品：弹头 / 弹壳 / 火药 / 底火。
+/// price 为 2026 年 10 月查到的美国零售参考价字符串，未查到的写“未确认”，
+/// 绝非固定售价；feature 为特性一句话；spec 为口径/重量/类型等规格。
+class ReloadComponent {
+  final String kind;
+  final String vendor;
+  final String name;
+  final String spec;
+  final String feature;
+  final String price;
+
+  const ReloadComponent({
+    required this.kind,
+    required this.vendor,
+    required this.name,
+    required this.spec,
+    required this.feature,
+    required this.price,
   });
 }
 
