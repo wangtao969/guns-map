@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../community_store.dart';
 import '../i18n.dart';
-import '../widgets/app_top_bar.dart';
 import '../widgets/community_theme.dart';
 import '../widgets/level_badge.dart';
 import 'community_account_dialogs.dart';
@@ -186,31 +185,29 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
         }
         myComments.sort((a, b) => b.comment.time.compareTo(a.comment.time));
         final canSeeFavorites = isMine || account.favoritesPublic;
+        // 个人资料页不显示应用栏（应用名）和返回箭头：返回走系统返回，
+        // 标题只留“我的主页 / 昵称”，不再跟主页面重复。
         return Scaffold(
-          appBar: const GunsMapAppBar(),
-          body: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back),
-                    ),
-                    Expanded(
-                      child: Text(isMine ? '我的主页' : account.nickname,
-                          style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold)),
-                    ),
-                    if (isMine)
-                      TextButton(
-                        onPressed: () => showEditProfileDialog(context),
-                        child: Text(tr('edit_profile')),
+          body: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(isMine ? '我的主页' : account.nickname,
+                            style: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold)),
                       ),
-                  ],
+                      if (isMine)
+                        TextButton(
+                          onPressed: () => showEditProfileDialog(context),
+                          child: Text(tr('edit_profile')),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -388,6 +385,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                 ),
               ),
             ],
+          ),
           ),
         );
       },
