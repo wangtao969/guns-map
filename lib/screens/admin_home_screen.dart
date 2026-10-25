@@ -34,7 +34,7 @@ class AdminHomeScreen extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(
-                    '本地版后台：数据只保存在本机，正式版接服务器后由服务器验权与同步。初始管理员为 ID 为 wangtao969 的账号；管理员可任命其他管理员与版主。',
+                    '本地版后台：数据只保存在本机，正式版接服务器后由服务器验权与同步。初始管理员为 ID 为 10000 的账号（旧版 wangtao969 账号仍可进后台）；管理员可任命其他管理员与版主。',
                     style: TextStyle(color: grey, fontSize: 12),
                   ),
                 ),

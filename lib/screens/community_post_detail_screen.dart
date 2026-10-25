@@ -81,10 +81,7 @@ class _CommunityPostDetailScreenState
     final err = communityStore.addComment(widget.post, content);
     if (err != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(err == '账号已被禁言' || err == '账号已被封禁'
-                ? err
-                : '内容含敏感词“$err”，请修改后重试')),
+        SnackBar(content: Text(err)),
       );
       return;
     }
@@ -208,6 +205,7 @@ class _CommunityPostDetailScreenState
                             color: p.authorColor,
                             nickname: p.authorNickname,
                             radius: 20,
+                            frame: p.authorFrame,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -217,7 +215,7 @@ class _CommunityPostDetailScreenState
                             children: [
                               Row(
                                 children: [
-                                  Expanded(
+                                  Flexible(
                                     child: Text(p.authorNickname,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -338,10 +336,13 @@ class _CommunityPostDetailScreenState
                                     color: c.authorColor,
                                     nickname: c.authorNickname,
                                     radius: 14,
+                                    frame: c.authorFrame,
                                   ),
                                   const SizedBox(width: 8),
-                                  Expanded(
+                                  Flexible(
                                     child: Text(c.authorNickname,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 13)),
@@ -358,6 +359,7 @@ class _CommunityPostDetailScreenState
                                       child: LevelBadge(account: account),
                                     );
                                   }),
+                                  const Spacer(),
                                   Text(CommunityStore.formatTime(c.time),
                                       style: TextStyle(
                                           color: grey, fontSize: 11)),

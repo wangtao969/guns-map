@@ -70,6 +70,7 @@ class CommunityLeaderboardScreen extends StatelessWidget {
                                       color: accounts[i].avatarColor,
                                       nickname: accounts[i].nickname,
                                       radius: 18,
+                                      frame: accounts[i].avatarFrame,
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(

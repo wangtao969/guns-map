@@ -25,23 +25,36 @@ const communityBoards = [
   '靶场日记',
 ];
 
-/// 本机敏感词：发帖时命中直接拦截并提示，不做静默放行。
+/// 本机敏感词库：命中不拦截，自动替换为等长星号。
+/// 覆盖：枪弹非法交易与制造、毒品、赌博、色情、诈骗金融、
+/// 假证伪造、暴力极端、走私偷税、违禁政治类。
 const sensitiveWords = [
-  '赌博',
-  '博彩',
-  '赌场',
-  '贷款',
-  '放贷',
-  '套现',
-  '洗钱',
-  '色情',
-  '卖淫',
-  '嫖娼',
-  '毒品',
-  '办证',
-  '发票',
-  '刷单',
-  '代购',
+  // 枪弹非法交易与制造（社区红线）
+  '卖枪', '买枪', '出枪', '收枪', '枪支买卖', '枪支交易', '枪支走私',
+  '出售枪支', '转让枪支', '出售弹药', '转让弹药', '弹药买卖', '弹药交易',
+  '弹药走私', '子弹买卖', '买卖子弹', '制枪', '造枪', '自制枪', '改枪',
+  '制造枪支', '制造弹药', '枪械改装', '改装枪', '散件交易', '散件买卖',
+  '出散件', '收散件', '散件出售', '买卖散件',
+  // 毒品
+  '毒品', '吸毒', '贩毒', '制毒', '大麻', '冰毒', '海洛因', '可卡因',
+  '摇头丸', '吗啡', '鸦片', 'k粉', '麻古', '毒资',
+  // 赌博
+  '赌博', '博彩', '赌场', '赌球', '赌资', '百家乐', '网络赌博',
+  // 色情
+  '色情', '卖淫', '嫖娼', '淫秽', '色情片', '援交', '包养', '色情服务',
+  // 诈骗金融
+  '诈骗', '洗钱', '套现', '贷款', '放贷', '高利贷', '套路贷', '裸贷',
+  '信用卡套现', '刷单', '代购', '假币', '伪造货币', '盗刷',
+  // 假证伪造
+  '办证', '假证', '办假证', '伪造证件', '假身份证', '虚开发票',
+  '买卖发票', '假发票',
+  // 暴力极端
+  '恐怖袭击', '制造炸弹', '炸弹制作', '爆炸物', '恐怖组织', '极端组织',
+  '买凶', '雇凶',
+  // 走私偷税行贿
+  '走私', '偷渡', '偷税漏税', '行贿', '受贿',
+  // 违禁政治类
+  '台独', '港独', '藏独', '疆独', '邪教', '法轮功',
 ];
 
 /// 从正文里解析话题标签：#xxx# 形式。
@@ -64,11 +77,17 @@ List<String> parseMentions(String content) {
   return ids;
 }
 
-String? findSensitiveWord(String text) {
-  for (final w in sensitiveWords) {
-    if (text.contains(w)) return w;
+/// 把文本里的敏感词替换为等长星号（长词优先，避免短词先切坏长词）。
+String maskSensitiveWords(String text) {
+  var out = text;
+  final words = sensitiveWords.toList()
+    ..sort((a, b) => b.length.compareTo(a.length));
+  for (final w in words) {
+    if (out.contains(w)) {
+      out = out.replaceAll(w, '*' * w.length);
+    }
   }
-  return null;
+  return out;
 }
 
 class CommunityAccount {
@@ -83,6 +102,8 @@ class CommunityAccount {
   String role;
   /// 账号状态：active 正常 / muted 禁言（不能发帖评论）/ banned 封禁（不能发帖评论）。
   String status;
+  /// 头像边框：'' 无 / copper 铜圈 / gold 金圈 / rainbow 彩虹圈。
+  String avatarFrame;
   /// 隐私开关：帖子旁是否显示 ID、收藏是否对外可见。
   bool showIdPublic;
   bool favoritesPublic;
@@ -104,11 +125,12 @@ class CommunityAccount {
     required this.nickname,
     required this.id,
     required this.password,
-    required this.avatarColor,
+    this.avatarColor = const Color(0xFF6B5B3E),
     this.avatarBytes,
     this.bio = '',
     this.role = 'user',
     this.status = 'active',
+    this.avatarFrame = '',
     this.showIdPublic = true,
     this.favoritesPublic = true,
     Set<String>? followingIds,
@@ -225,6 +247,7 @@ class CommunityAccount {
         'bio': bio,
         'role': role,
         'status': status,
+        'avatarFrame': avatarFrame,
         'showIdPublic': showIdPublic,
         'favoritesPublic': favoritesPublic,
         'followingIds': followingIds.toList(),
@@ -251,6 +274,7 @@ class CommunityAccount {
       bio: j['bio'] as String? ?? '',
       role: j['role'] as String? ?? 'user',
       status: j['status'] as String? ?? 'active',
+      avatarFrame: j['avatarFrame'] as String? ?? '',
       showIdPublic: j['showIdPublic'] as bool? ?? true,
       favoritesPublic: j['favoritesPublic'] as bool? ?? true,
       followingIds: (j['followingIds'] as List? ?? []).cast<String>().toSet(),
@@ -353,6 +377,7 @@ class CommunityComment {
   final String authorNickname;
   final Color authorColor;
   final Uint8List? authorAvatar;
+  final String authorFrame;
   final String content;
   final DateTime time;
   final Set<String> likedBy;
@@ -363,6 +388,7 @@ class CommunityComment {
     required this.authorNickname,
     required this.authorColor,
     this.authorAvatar,
+    this.authorFrame = '',
     required this.content,
     required this.time,
     Set<String>? likedBy,
@@ -375,6 +401,7 @@ class CommunityComment {
         'authorColor': authorColor.toARGB32(),
         'authorAvatar':
             authorAvatar == null ? null : base64Encode(authorAvatar!),
+        'authorFrame': authorFrame,
         'content': content,
         'time': time.toIso8601String(),
         'likedBy': likedBy.toList(),
@@ -389,6 +416,7 @@ class CommunityComment {
         authorAvatar: j['authorAvatar'] == null
             ? null
             : base64Decode(j['authorAvatar'] as String),
+        authorFrame: j['authorFrame'] as String? ?? '',
         content: j['content'] as String? ?? '',
         time: DateTime.tryParse(j['time'] as String? ?? '') ?? DateTime.now(),
         likedBy: (j['likedBy'] as List? ?? []).cast<String>().toSet(),
@@ -404,6 +432,7 @@ class CommunityPost {
   final String authorNickname;
   final Color authorColor;
   final Uint8List? authorAvatar;
+  final String authorFrame;
   final DateTime time;
   final List<Uint8List> images;
   final Set<String> likedBy;
@@ -422,6 +451,7 @@ class CommunityPost {
     required this.authorNickname,
     required this.authorColor,
     this.authorAvatar,
+    this.authorFrame = '',
     required this.time,
     List<Uint8List>? images,
     Set<String>? likedBy,
@@ -450,6 +480,7 @@ class CommunityPost {
         'authorColor': authorColor.toARGB32(),
         'authorAvatar':
             authorAvatar == null ? null : base64Encode(authorAvatar!),
+        'authorFrame': authorFrame,
         'time': time.toIso8601String(),
         'images': images.map((b) => base64Encode(b)).toList(),
         'likedBy': likedBy.toList(),
@@ -471,6 +502,7 @@ class CommunityPost {
         authorAvatar: j['authorAvatar'] == null
             ? null
             : base64Decode(j['authorAvatar'] as String),
+        authorFrame: j['authorFrame'] as String? ?? '',
         time: DateTime.tryParse(j['time'] as String? ?? '') ?? DateTime.now(),
         images: (j['images'] as List? ?? [])
             .map((e) => base64Decode(e as String))
@@ -1066,36 +1098,47 @@ class CommunityStore extends ChangeNotifier {
     return null;
   }
 
-  /// 初始管理员账号 ID：用这个 ID 登录即为管理员（本地版规则；正式版由服务器认角色）。
-  static const adminBootstrapId = 'wangtao969';
+  /// 初始管理员账号 ID：10000（第一位注册用户即为管理员账号）。
+  /// 旧版已注册的 wangtao969 账号仍可进后台，做兼容保留。
+  static const adminBootstrapId = '10000';
+  static const legacyAdminId = 'wangtao969';
 
   /// 是否管理员：初始管理员账号，或 role 为 admin 的账号。
   bool get isAdmin =>
       current != null &&
-      (current!.id == adminBootstrapId || current!.role == 'admin');
+      (current!.id == adminBootstrapId ||
+          current!.id == legacyAdminId ||
+          current!.role == 'admin');
+
+  /// 下一个系统分配 ID：从 10000 起，按已有数字 ID 顺序递增。
+  String get nextUserId {
+    var maxId = 9999;
+    for (final a in accounts) {
+      final n = int.tryParse(a.id);
+      if (n != null && n > maxId) maxId = n;
+    }
+    return '${maxId + 1}';
+  }
 
   /// 是否版主（含管理员）：可审核帖子，不能管人员与配置。
   bool get isModerator =>
       current != null && (current!.role == 'moderator' || isAdmin);
 
-  /// 注册：昵称、ID、密码；ID 不可重复。注册成功自动登录。
-  /// 返回 null 表示成功，否则返回错误文案。
+  /// 注册：昵称、密码；ID 由系统从 10000 起顺序分配，不可自选。
+  /// 注册成功自动登录。返回 null 表示成功，否则返回错误文案。
   String? register({
     required String nickname,
-    required String id,
     required String password,
-    required Color avatarColor,
     Uint8List? avatarBytes,
   }) {
-    if (nickname.isEmpty || id.isEmpty || password.isEmpty) {
-      return '昵称、ID、密码都不能为空';
+    if (nickname.isEmpty || password.isEmpty) {
+      return '昵称和密码都不能为空';
     }
-    if (findAccount(id) != null) return '这个 ID 已经被注册了';
+    final id = nextUserId;
     final account = CommunityAccount(
-      nickname: nickname,
+      nickname: maskSensitiveWords(nickname),
       id: id,
       password: password,
-      avatarColor: avatarColor,
       avatarBytes: avatarBytes,
     );
     accounts.add(account);
@@ -1132,29 +1175,30 @@ class CommunityStore extends ChangeNotifier {
     if (author.status == 'banned') return '账号已被封禁';
     if (author.status == 'muted') return '账号已被禁言';
     if (disabledBoards.contains(board)) return '该板块已关闭';
-    final bad = findSensitiveWord(title + content);
-    if (bad != null) return bad;
+    final maskedTitle = maskSensitiveWords(title);
+    final maskedContent = maskSensitiveWords(content);
     final post = CommunityPost(
       id: _nextId(),
-      title: title.trim().isEmpty ? '无标题' : title.trim(),
-      content: content.trim(),
+      title: maskedTitle.trim().isEmpty ? '无标题' : maskedTitle.trim(),
+      content: maskedContent.trim(),
       board: board,
       authorId: author.id,
       authorNickname: author.nickname,
       authorColor: author.avatarColor,
       authorAvatar: author.avatarBytes,
+      authorFrame: author.avatarFrame,
       time: DateTime.now(),
       images: images,
     );
     posts.insert(0, post);
     draft = null;
     // 经验：内容满 20 字才算（水贴不计）；当日首条 +5，之后 +2。
-    if (content.trim().length >= 20) {
+    if (maskedContent.trim().length >= 20) {
       final firstToday = _postsToday(this, author) <= 1;
       author.addXp(firstToday ? 5 : 2);
     }
     // @ 到的本机账号收到互动通知。
-    for (final mentionedId in parseMentions(content)) {
+    for (final mentionedId in parseMentions(maskedContent)) {
       if (mentionedId != author.id && findAccount(mentionedId) != null) {
         _notify(
           targetAccountId: mentionedId,
@@ -1210,15 +1254,15 @@ class CommunityStore extends ChangeNotifier {
     if (me == null) return '请先登录';
     if (me.status == 'banned') return '账号已被封禁';
     if (me.status == 'muted') return '账号已被禁言';
-    final bad = findSensitiveWord(content);
-    if (bad != null) return bad;
+    final masked = maskSensitiveWords(content);
     post.comments.add(CommunityComment(
       id: _nextId(),
       authorId: me.id,
       authorNickname: me.nickname,
       authorColor: me.avatarColor,
       authorAvatar: me.avatarBytes,
-      content: content.trim(),
+      authorFrame: me.avatarFrame,
+      content: masked.trim(),
       time: DateTime.now(),
     ));
     // 经验：当日头 3 条评论 +2，之后 +1。
@@ -1232,7 +1276,7 @@ class CommunityStore extends ChangeNotifier {
         postId: post.id,
       );
     }
-    for (final mentionedId in parseMentions(content)) {
+    for (final mentionedId in parseMentions(masked)) {
       if (mentionedId != me.id &&
           mentionedId != post.authorId &&
           findAccount(mentionedId) != null) {
@@ -1285,7 +1329,9 @@ class CommunityStore extends ChangeNotifier {
   String? setUserRole(CommunityAccount target, String role) {
     if (!isAdmin) return '只有管理员可以管理权限';
     if (target.id == current?.id) return '不能修改自己的权限';
-    if (target.id == adminBootstrapId) return '不能修改初始管理员';
+    if (target.id == adminBootstrapId || target.id == legacyAdminId) {
+      return '不能修改初始管理员';
+    }
     target.role = role;
     notifyListeners();
     return null;
@@ -1294,7 +1340,9 @@ class CommunityStore extends ChangeNotifier {
   String? setUserStatus(CommunityAccount target, String status) {
     if (!isAdmin) return '只有管理员可以管理权限';
     if (target.id == current?.id) return '不能修改自己的权限';
-    if (target.id == adminBootstrapId) return '不能修改初始管理员';
+    if (target.id == adminBootstrapId || target.id == legacyAdminId) {
+      return '不能修改初始管理员';
+    }
     target.status = status;
     notifyListeners();
     return null;
@@ -1358,18 +1406,19 @@ class CommunityStore extends ChangeNotifier {
   void sendDm(String toId, String content) {
     final me = current;
     if (me == null) return;
+    final masked = maskSensitiveWords(content);
     dms.add(DirectMessage(
       id: _nextId(),
       fromId: me.id,
       toId: toId,
-      content: content.trim(),
+      content: masked.trim(),
       time: DateTime.now(),
     ));
     _notify(
       targetAccountId: toId,
       kind: 'dm',
       title: '新私信',
-      body: '${me.nickname}：${content.trim()}',
+      body: '${me.nickname}：${masked.trim()}',
     );
     notifyListeners();
   }
@@ -1456,26 +1505,51 @@ class CommunityStore extends ChangeNotifier {
 }
 
 /// 头像显示：有上传头像用图片，没有则用颜色圆 + 昵称首字。
+/// 社区头像：有照片用照片；无照片统一用灰底人形描边默认头像（微信式），
+/// 不再用颜色 + 首字头像。frame 为头像边框（'' / copper / gold / rainbow）。
 Widget communityAvatar({
   required Uint8List? bytes,
   required Color color,
   required String nickname,
   required double radius,
+  String frame = '',
 }) {
+  final Widget core;
   if (bytes != null) {
-    return CircleAvatar(
+    core = CircleAvatar(
       backgroundImage: MemoryImage(bytes),
       radius: radius,
     );
+  } else {
+    core = CircleAvatar(
+      backgroundColor: const Color(0xFFB8B8B8),
+      radius: radius,
+      child: Icon(Icons.person_outline,
+          size: radius * 1.15, color: Colors.white),
+    );
   }
-  return CircleAvatar(
-    backgroundColor: color,
-    foregroundColor: Colors.white,
-    radius: radius,
-    child: Text(
-      nickname.isEmpty ? '枪' : nickname.characters.first,
-      style: TextStyle(fontSize: radius * 0.75),
+  if (frame.isEmpty) return core;
+  final colors = switch (frame) {
+    'copper' => [const Color(0xFFD9B57A), const Color(0xFF8C6A2F)],
+    'gold' => [const Color(0xFFF0C75E), const Color(0xFFB8860B)],
+    'rainbow' => [
+        Colors.red,
+        Colors.orange,
+        Colors.yellow,
+        Colors.green,
+        Colors.blue,
+        Colors.purple,
+      ],
+    _ => null,
+  };
+  if (colors == null) return core;
+  return Container(
+    padding: const EdgeInsets.all(2.5),
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: LinearGradient(colors: colors),
     ),
+    child: core,
   );
 }
 

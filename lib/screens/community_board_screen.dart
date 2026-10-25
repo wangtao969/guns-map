@@ -408,6 +408,7 @@ class _ThreadRow extends StatelessWidget {
                   color: p.authorColor,
                   nickname: p.authorNickname,
                   radius: 18,
+                  frame: p.authorFrame,
                 ),
               ),
               const SizedBox(width: 12),
@@ -462,9 +463,9 @@ class _ThreadRow extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Expanded(
+                          Flexible(
                             child: Text(
-                              '${p.authorNickname} · ${CommunityStore.formatTime(p.time)}${showBoard ? ' · ${p.board}' : ''}',
+                              p.authorNickname,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style:
@@ -478,11 +479,20 @@ class _ThreadRow extends StatelessWidget {
                               return const SizedBox.shrink();
                             }
                             return Padding(
-                              padding:
-                                  const EdgeInsets.only(left: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6),
                               child: LevelBadge(account: account),
                             );
                           }),
+                          Expanded(
+                            child: Text(
+                              '${CommunityStore.formatTime(p.time)}${showBoard ? ' · ${p.board}' : ''}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  TextStyle(color: grey, fontSize: 12),
+                            ),
+                          ),
                           Text(
                             '回复 ${p.comments.length} · 点赞 ${p.likedBy.length}',
                             style: TextStyle(color: grey, fontSize: 12),

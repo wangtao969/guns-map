@@ -8,15 +8,6 @@ import '../i18n.dart';
 /// 设置页、新手引导共用，逻辑只写一份。
 /// 样式：统一毛玻璃弹窗（模糊背景 + 半透明填充 + 圆角 + 细边），
 /// 不再用默认 AlertDialog 的毛坯样式。
-const _avatarColors = [
-  Color(0xFF6B5B3E),
-  Color(0xFF8C4A2F),
-  Color(0xFF2F5D50),
-  Color(0xFF3E5C8C),
-  Color(0xFF7A4A8C),
-  Color(0xFF8C8C3E),
-];
-
 const _pickImageChannel = MethodChannel('gunsmap/pick_image');
 const _copper = Color(0xFF8C6A2F);
 
@@ -197,7 +188,6 @@ Widget _errorBar(String error) {
 Widget _avatarPickerRow({
   required BuildContext context,
   required Uint8List? picked,
-  required Color color,
   required String nickname,
   required StateSetter setDialogState,
   required ValueChanged<Uint8List?> onPicked,
@@ -205,7 +195,10 @@ Widget _avatarPickerRow({
   return Row(
     children: [
       communityAvatar(
-          bytes: picked, color: color, nickname: nickname, radius: 26),
+          bytes: picked,
+          color: const Color(0xFFB8B8B8),
+          nickname: nickname,
+          radius: 26),
       const SizedBox(width: 12),
       Expanded(
         child: Column(
@@ -236,7 +229,7 @@ Widget _avatarPickerRow({
             if (picked != null)
               TextButton(
                 onPressed: () => setDialogState(() => onPicked(null)),
-                child: Text(tr('use_color_avatar')),
+                child: Text(tr('remove_photo')),
               ),
           ],
         ),
@@ -245,40 +238,64 @@ Widget _avatarPickerRow({
   );
 }
 
-Widget _colorPickerRow({
-  required Color color,
+const _avatarFrames = ['', 'copper', 'gold', 'rainbow'];
+
+String _frameLabel(String frame) {
+  switch (frame) {
+    case 'copper':
+      return tr('frame_copper');
+    case 'gold':
+      return tr('frame_gold');
+    case 'rainbow':
+      return tr('frame_rainbow');
+    default:
+      return tr('frame_none');
+  }
+}
+
+Widget _framePickerRow({
+  required Uint8List? picked,
+  required String nickname,
+  required String frame,
   required StateSetter setDialogState,
-  required ValueChanged<Color> onPick,
+  required ValueChanged<String> onPick,
 }) {
   return Row(
-    children: _avatarColors.map((c) {
-      final selected = c == color;
+    children: _avatarFrames.map((f) {
+      final selected = f == frame;
       return Padding(
-        padding: const EdgeInsets.only(right: 10),
+        padding: const EdgeInsets.only(right: 16),
         child: GestureDetector(
-          onTap: () => setDialogState(() => onPick(c)),
-          child: Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: c,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: selected ? Colors.white : Colors.transparent,
-                width: 2.5,
-              ),
-              boxShadow: [
-                if (selected)
-                  BoxShadow(
-                    color: c.withOpacity(0.5),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
+          onTap: () => setDialogState(() => onPick(f)),
+          child: Column(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected ? Colors.white : Colors.transparent,
+                    width: 2.5,
                   ),
-              ],
-            ),
-            child: selected
-                ? const Icon(Icons.check, size: 18, color: Colors.white)
-                : null,
+                  boxShadow: [
+                    if (selected)
+                      const BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                  ],
+                ),
+                child: communityAvatar(
+                  bytes: picked,
+                  color: const Color(0xFFB8B8B8),
+                  nickname: nickname,
+                  radius: 22,
+                  frame: f,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(_frameLabel(f), style: const TextStyle(fontSize: 11)),
+            ],
           ),
         ),
       );
@@ -305,10 +322,8 @@ Widget _glassSwitchRow({
 
 Future<bool> showRegisterDialog(BuildContext context) async {
   final nickCtrl = TextEditingController();
-  final idCtrl = TextEditingController();
   final passCtrl = TextEditingController();
   final confirmCtrl = TextEditingController();
-  var color = _avatarColors.first;
   Uint8List? pickedAvatar;
   String? error;
   var obscure = true;
@@ -324,7 +339,6 @@ Future<bool> showRegisterDialog(BuildContext context) async {
           onCancel: () => Navigator.of(dialogContext).pop(false),
           onPrimary: () {
             final nick = nickCtrl.text.trim();
-            final id = idCtrl.text.trim();
             final pass = passCtrl.text;
             String? e;
             if (pass != confirmCtrl.text) {
@@ -332,9 +346,7 @@ Future<bool> showRegisterDialog(BuildContext context) async {
             } else {
               e = communityStore.register(
                 nickname: nick,
-                id: id,
                 password: pass,
-                avatarColor: color,
                 avatarBytes: pickedAvatar,
               );
             }
@@ -349,33 +361,26 @@ Future<bool> showRegisterDialog(BuildContext context) async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(tr('avatar_color'),
-                style:
-                    const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            _colorPickerRow(
-              color: color,
-              setDialogState: setDialogState,
-              onPick: (c) => color = c,
-            ),
-            const SizedBox(height: 14),
             _avatarPickerRow(
               context: context,
               picked: pickedAvatar,
-              color: color,
               nickname: nickCtrl.text,
               setDialogState: setDialogState,
               onPicked: (b) => pickedAvatar = b,
             ),
+            const SizedBox(height: 14),
+            Text(
+              '${tr('assigned_id')}：${communityStore.nextUserId}',
+              style:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 2),
+            Text(tr('id_auto_note'),
+                style: const TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 18),
             TextField(
               controller: nickCtrl,
               decoration: _glassField(context, tr('nickname_label')),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: idCtrl,
-              decoration: _glassField(context, tr('id_login_hint')),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -404,7 +409,6 @@ Future<bool> showRegisterDialog(BuildContext context) async {
     ),
   );
   nickCtrl.dispose();
-  idCtrl.dispose();
   passCtrl.dispose();
   confirmCtrl.dispose();
   return ok == true;
@@ -474,8 +478,8 @@ Future<void> showEditProfileDialog(BuildContext context) async {
   if (account == null) return;
   final nickCtrl = TextEditingController(text: account.nickname);
   final bioCtrl = TextEditingController(text: account.bio);
-  var color = account.avatarColor;
   Uint8List? pickedAvatar = account.avatarBytes;
+  var frame = account.avatarFrame;
   var showId = account.showIdPublic;
   var favPublic = account.favoritesPublic;
   final saved = await showDialog<bool>(
@@ -493,23 +497,24 @@ Future<void> showEditProfileDialog(BuildContext context) async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(tr('avatar_color'),
-                style:
-                    const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            _colorPickerRow(
-              color: color,
-              setDialogState: setDialogState,
-              onPick: (c) => color = c,
-            ),
-            const SizedBox(height: 14),
             _avatarPickerRow(
               context: context,
               picked: pickedAvatar,
-              color: color,
               nickname: nickCtrl.text,
               setDialogState: setDialogState,
               onPicked: (b) => pickedAvatar = b,
+            ),
+            const SizedBox(height: 16),
+            Text(tr('avatar_frame'),
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            _framePickerRow(
+              picked: pickedAvatar,
+              nickname: nickCtrl.text,
+              frame: frame,
+              setDialogState: setDialogState,
+              onPick: (f) => frame = f,
             ),
             const SizedBox(height: 18),
             TextField(
@@ -544,11 +549,11 @@ Future<void> showEditProfileDialog(BuildContext context) async {
   );
   if (saved == true) {
     if (nickCtrl.text.trim().isNotEmpty) {
-      account.nickname = nickCtrl.text.trim();
+      account.nickname = maskSensitiveWords(nickCtrl.text.trim());
     }
-    account.bio = bioCtrl.text.trim();
-    account.avatarColor = color;
+    account.bio = maskSensitiveWords(bioCtrl.text.trim());
     account.avatarBytes = pickedAvatar;
+    account.avatarFrame = frame;
     account.showIdPublic = showId;
     account.favoritesPublic = favPublic;
     communityStore.refresh();

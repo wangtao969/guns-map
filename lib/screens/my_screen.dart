@@ -40,26 +40,40 @@ class MyScreen extends StatelessWidget {
               if (me == null)
                 Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 28, horizontal: 14),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(tr('not_logged'),
+                            textAlign: TextAlign.center,
                             style: const TextStyle(
-                                fontWeight: FontWeight.bold)),
+                                fontWeight: FontWeight.bold, fontSize: 16)),
                         const SizedBox(height: 4),
                         Text(tr('not_logged_sub'),
+                            textAlign: TextAlign.center,
                             style: const TextStyle(
                                 color: Colors.grey, fontSize: 12)),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 18),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                shape: const StadiumBorder(),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 30, vertical: 12),
+                              ),
                               onPressed: () => showLoginDialog(context),
                               child: Text(tr('login')),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 12),
                             OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                shape: const StadiumBorder(),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 30, vertical: 12),
+                              ),
                               onPressed: () => showRegisterDialog(context),
                               child: Text(tr('register')),
                             ),
@@ -77,6 +91,7 @@ class MyScreen extends StatelessWidget {
                       color: me.avatarColor,
                       nickname: me.nickname,
                       radius: 32,
+                      frame: me.avatarFrame,
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -85,7 +100,7 @@ class MyScreen extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              Expanded(
+                              Flexible(
                                 child: Text(me.nickname,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -217,6 +232,22 @@ class MyScreen extends StatelessWidget {
                     ),
                   ),
                 _MenuTile(
+                  icon: Icons.edit_outlined,
+                  title: '编辑资料',
+                  onTap: () => showEditProfileDialog(context),
+                ),
+                _MenuTile(
+                  icon: Icons.logout_outlined,
+                  title: '退出登录',
+                  titleColor: Colors.red,
+                  onTap: () {
+                    communityStore.logout();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('已退出登录')),
+                    );
+                  },
+                ),
+                _MenuTile(
                   icon: Icons.settings_outlined,
                   title: '设置',
                   onTap: () => Navigator.push(
@@ -256,11 +287,13 @@ class _MenuTile extends StatelessWidget {
   final String title;
   final VoidCallback onTap;
   final int badge;
+  final Color? titleColor;
   const _MenuTile({
     required this.icon,
     required this.title,
     required this.onTap,
     this.badge = 0,
+    this.titleColor,
   });
 
   @override
@@ -270,7 +303,8 @@ class _MenuTile extends StatelessWidget {
       child: ListTile(
         leading: Icon(icon, color: const Color(0xFF8C6A2F)),
         title: Text(title,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
+            style: TextStyle(
+                fontWeight: FontWeight.bold, color: titleColor)),
         trailing: badge > 0
             ? Badge(
                 label: Text('$badge'),

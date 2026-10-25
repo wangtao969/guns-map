@@ -3,18 +3,16 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../community_store.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../main.dart';
 import '../system_actions.dart';
 import '../widgets/app_top_bar.dart';
 import 'about_screen.dart';
-import 'community_account_dialogs.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '1.10.0';
+const String appVersion = '1.11.0';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -192,46 +190,6 @@ class SettingsScreen extends StatelessWidget {
               style: TextStyle(color: grey, fontSize: 13),
             ),
           ),
-          const SizedBox(height: 24),
-          Text('社区账号',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          AnimatedBuilder(
-            animation: communityStore,
-            builder: (_, __) {
-              final me = communityStore.current;
-              if (me == null) {
-                return const ListTile(
-                  title: Text('未登录'),
-                  subtitle: Text('请到社区 Tab 登录或注册'),
-                );
-              }
-              return Column(
-                children: [
-                  ListTile(
-                    title: Text(me.nickname),
-                    subtitle: Text(
-                        '${tr('id_field')}：${me.id} · LV${me.level} ${me.tierName}'),
-                  ),
-                  ListTile(
-                    title: Text(tr('edit_profile')),
-                    trailing: const Icon(Icons.edit_outlined),
-                    onTap: () => showEditProfileDialog(context),
-                  ),
-                  ListTile(
-                    title: Text(tr('logout')),
-                    trailing: const Icon(Icons.logout_outlined),
-                    onTap: () {
-                      communityStore.logout();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('已退出登录')),
-                      );
-                    },
-                  ),
-                ],
-              );
-            },
-          ),
           const SizedBox(height: 32),
           const Divider(),
           const SizedBox(height: 8),
@@ -382,10 +340,13 @@ class SettingsScreen extends StatelessWidget {
       }
       return;
     }
+    final cacheDir =
+        await getCacheDirPath() ?? Directory.systemTemp.path;
     final path = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _DownloadDialog(url: apkUrl, version: latest),
+      builder: (_) =>
+          _DownloadDialog(url: apkUrl, version: latest, dir: cacheDir),
     );
     if (path == null) {
       if (context.mounted) {
@@ -401,7 +362,14 @@ class SettingsScreen extends StatelessWidget {
       SnackBar(
         content: Text(ok
             ? '安装器已拉起，请按提示完成安装'
-            : '未能拉起安装：请在系统设置中允许本应用安装未知应用后重试'),
+            : '未能拉起安装：请确认已允许本应用安装未知应用，或复制链接到浏览器下载安装'),
+        action: ok
+            ? null
+            : SnackBarAction(
+                label: '复制链接',
+                onPressed: () =>
+                    Clipboard.setData(ClipboardData(text: apkUrl)),
+              ),
       ),
     );
   }
@@ -423,7 +391,9 @@ class SettingsScreen extends StatelessWidget {
 class _DownloadDialog extends StatefulWidget {
   final String url;
   final String version;
-  const _DownloadDialog({required this.url, required this.version});
+  final String dir;
+  const _DownloadDialog(
+      {required this.url, required this.version, required this.dir});
 
   @override
   State<_DownloadDialog> createState() => _DownloadDialogState();
@@ -450,8 +420,8 @@ class _DownloadDialogState extends State<_DownloadDialog> {
         throw HttpException('HTTP ${response.statusCode}');
       }
       final total = response.contentLength;
-      final file = File(
-          '${Directory.systemTemp.path}/GunsMap-v${widget.version}-arm64.apk');
+      final file =
+          File('${widget.dir}/GunsMap-v${widget.version}-arm64.apk');
       final sink = file.openWrite();
       var received = 0;
       await for (final chunk in response) {

@@ -221,6 +221,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   color: p.authorColor,
                   nickname: p.authorNickname,
                   radius: 18,
+                  frame: p.authorFrame,
                 ),
               ),
               const SizedBox(width: 12),
@@ -230,7 +231,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   children: [
                     Row(
                       children: [
-                        Expanded(
+                        Flexible(
                           child: Text(p.authorNickname,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -554,6 +555,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     color: current.avatarColor,
                     nickname: current.nickname,
                     radius: 16,
+                    frame: current.avatarFrame,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -584,6 +586,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         color: accounts[i].avatarColor,
                         nickname: accounts[i].nickname,
                         radius: 14,
+                        frame: accounts[i].avatarFrame,
                       ),
                       const SizedBox(width: 8),
                       Expanded(

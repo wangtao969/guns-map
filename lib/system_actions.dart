@@ -13,6 +13,15 @@ Future<bool> openSystemUrl(String url) async {
   }
 }
 
+/// 原生 cacheDir：下载目录以此为准，保证落在 FileProvider 的 cache-path 内。
+Future<String?> getCacheDirPath() async {
+  try {
+    return await _systemChannel.invokeMethod<String>('getCacheDir');
+  } catch (_) {
+    return null;
+  }
+}
+
 Future<bool> installDownloadedApk(String path) async {
   try {
     return await _systemChannel.invokeMethod<bool>('installApk', {'path': path}) ??

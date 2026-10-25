@@ -137,7 +137,9 @@ import android.provider.MediaStore
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import androidx.core.content.FileProvider
 import java.io.ByteArrayOutputStream
+import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val mailChannel = "gunsmap/mailto"
@@ -246,6 +248,48 @@ class MainActivity : FlutterActivity() {
                     result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "gunsmap/system")
+            .setMethodCallHandler { call, result ->
+                if (call.method == "openUrl") {
+                    val url = call.argument<String>("url") ?: ""
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                } else if (call.method == "getCacheDir") {
+                    result.success(cacheDir.absolutePath)
+                } else if (call.method == "installApk") {
+                    val path = call.argument<String>("path") ?: ""
+                    try {
+                        val file = File(path)
+                        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+                        // 优先用专用安装动作（部分国产 ROM 上 ACTION_VIEW 解析不到安装器），
+                        // 失败再回退 ACTION_VIEW。
+                        try {
+                            val installIntent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                                setDataAndType(uri, "application/vnd.android.package-archive")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(installIntent)
+                        } catch (e2: Exception) {
+                            val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(uri, "application/vnd.android.package-archive")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(viewIntent)
+                        }
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                } else {
+                    result.notImplemented()
+                }
+            }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -307,12 +351,46 @@ s = re.sub(r'android:icon="[^"]*"', 'android:icon="@mipmap/ic_launcher"', s, cou
 # 权限，main 清单没有，release 包联网会直接失败，这里补上。
 if 'android.permission.INTERNET' not in s:
     s = s.replace('<application', '    <uses-permission android:name="android.permission.INTERNET"/>\n    <application', 1)
+# 自下载安装：Android 8+ 安装未知应用需声明，安装包经 FileProvider 读缓存。
+if 'android.permission.REQUEST_INSTALL_PACKAGES' not in s:
+    s = s.replace('<application', '    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>\n    <application', 1)
+if '<queries>' not in s:
+    s = s.replace('<application', '''    <queries>
+        <intent>
+            <action android:name="android.intent.action.INSTALL_PACKAGE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="content" android:mimeType="application/vnd.android.package-archive" />
+        </intent>
+    </queries>
+    <application''', 1)
+if 'fileprovider' not in s:
+    s = s.replace('</application>', '''        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>''', 1)
 if 'android:roundIcon=' not in s:
     s = s.replace('android:icon="@mipmap/ic_launcher"',
                   'android:icon="@mipmap/ic_launcher"\n        android:roundIcon="@mipmap/ic_launcher_round"', 1)
 open(p, "w").write(s)
 print("AndroidManifest label/icon/roundIcon patched")
 PYEOF
+
+# ---- FileProvider 路径：安装器读取本机缓存里的 APK ----
+mkdir -p "$BUILD_DIR/android/app/src/main/res/xml"
+cat > "$BUILD_DIR/android/app/src/main/res/xml/file_paths.xml" <<'XMLEOF'
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="apk" path="." />
+</paths>
+XMLEOF
 
 # ---- 启动图标：把 app-icon/res/ 合并进生成工程的 res/ ----
 # 同名目录合并：只替换 ic_launcher 相关文件（模板自带的默认图标），其他已有

@@ -61,6 +61,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                         color: a.avatarColor,
                         nickname: a.nickname,
                         radius: 16,
+                        frame: a.avatarFrame,
                       ),
                       title: Text(a.nickname),
                       subtitle:
@@ -217,6 +218,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                       color: account.avatarColor,
                       nickname: account.nickname,
                       radius: 32,
+                      frame: account.avatarFrame,
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -225,7 +227,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                         children: [
                           Row(
                             children: [
-                              Expanded(
+                              Flexible(
                                 child: Text(account.nickname,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,

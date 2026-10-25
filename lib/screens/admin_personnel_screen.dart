@@ -68,6 +68,7 @@ class AdminPersonnelScreen extends StatelessWidget {
                       color: a.avatarColor,
                       nickname: a.nickname,
                       radius: 20,
+                      frame: a.avatarFrame,
                     ),
                     title: Text(a.nickname,
                         style: const TextStyle(fontWeight: FontWeight.bold)),

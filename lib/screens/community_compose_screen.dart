@@ -94,9 +94,8 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
           SnackBar(content: Text(err)),
         );
       } else {
-        // err 就是命中的敏感词。
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('内容含敏感词“$err”，请修改后重试')),
+          SnackBar(content: Text(err)),
         );
       }
       return;
