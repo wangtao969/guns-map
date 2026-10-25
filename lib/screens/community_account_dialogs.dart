@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import '../widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../community_store.dart';
@@ -215,9 +216,7 @@ Widget _avatarPickerRow({
                 final bytes = await _pickAvatar(context);
                 if (bytes == null) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(tr('pick_failed'))),
-                    );
+                    showAppToast(context, tr('pick_failed'));
                   }
                   return;
                 }

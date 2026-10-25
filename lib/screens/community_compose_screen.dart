@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_toast.dart';
 import 'package:flutter/services.dart';
 import '../community_store.dart';
 import '../i18n.dart';
@@ -52,18 +53,14 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
       final bytes = await _pickImageChannel.invokeMethod<Uint8List>('pickImage');
       if (bytes == null || bytes.isEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(tr('pick_failed'))),
-          );
+          showAppToast(context, tr('pick_failed'));
         }
         return;
       }
       setState(() => _images.add(bytes));
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr('pick_failed'))),
-        );
+        showAppToast(context, tr('pick_failed'));
       }
     }
   }
@@ -71,9 +68,7 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
   void _publish() {
     final content = _contentCtrl.text.trim();
     if (content.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('正文不能为空')),
-      );
+      showAppToast(context, '正文不能为空');
       return;
     }
     final err = communityStore.createPost(
@@ -84,19 +79,13 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
     );
     if (err != null) {
       if (err == '请先登录') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr('login_required_body'))),
-        );
+        showAppToast(context, tr('login_required_body'));
       } else if (err == '账号已被禁言' ||
           err == '账号已被封禁' ||
           err == '该板块已关闭') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err)),
-        );
+        showAppToast(context, err);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err)),
-        );
+        showAppToast(context, err);
       }
       return;
     }

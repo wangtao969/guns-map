@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_toast.dart';
 import '../community_store.dart';
 import '../widgets/app_top_bar.dart';
 
@@ -129,9 +130,7 @@ class AdminPersonnelScreen extends StatelessWidget {
         break;
     }
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(err ?? '已更新')),
-    );
+    showAppToast(context, err ?? '已更新');
   }
 
   Widget _item(String label, String value) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_toast.dart';
 import 'package:flutter/services.dart';
 import '../community_store.dart';
 import '../widgets/app_top_bar.dart';
@@ -93,17 +94,12 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
                     onPressed: () {
                       final v = int.tryParse(_seasonCtrl.text.trim());
                       if (v == null || v < 7 || v > 365) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('请输入 7–365 之间的天数')),
-                        );
+                        showAppToast(context, '请输入 7–365 之间的天数');
                         return;
                       }
                       communityStore.seasonLengthDays = v;
                       communityStore.notifyListeners();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('赛季长度已改为 $v 天')),
-                      );
+                      showAppToast(context, '赛季长度已改为 $v 天');
                     },
                     child: const Text('保存'),
                   ),
@@ -135,17 +131,13 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
                   final title = _titleCtrl.text.trim();
                   final body = _bodyCtrl.text.trim();
                   if (title.isEmpty || body.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('标题和内容都不能为空')),
-                    );
+                    showAppToast(context, '标题和内容都不能为空');
                     return;
                   }
                   communityStore.publishAnnouncement(title, body);
                   _titleCtrl.clear();
                   _bodyCtrl.clear();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('公告已发布')),
-                  );
+                  showAppToast(context, '公告已发布');
                 },
                 child: const Text('发布'),
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_toast.dart';
 import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
@@ -81,9 +82,7 @@ class CommunityRangeScreen extends StatelessWidget {
         groupSize: double.tryParse(groupCtrl.text) ?? 0,
         note: noteCtrl.text.trim(),
       ));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('成绩已记录 +5 经验')),
-      );
+      showAppToast(context, '成绩已记录 +5 经验');
     }
     distanceCtrl.dispose();
     shotsCtrl.dispose();

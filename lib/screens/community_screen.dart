@@ -1,4 +1,5 @@
 import 'dart:ui';
+import '../widgets/app_toast.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../community_store.dart';
@@ -70,9 +71,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       MaterialPageRoute(builder: (_) => const CommunityComposeScreen()),
     );
     if (autoChecked == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('发布成功，已自动签到')),
-      );
+      showAppToast(context, '发布成功，已自动签到');
     }
   }
 
@@ -94,17 +93,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
     }
     final granted = communityStore.checkIn();
     if (granted < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('今天已经签到过了，连签 ${me.checkInStreak} 天')),
-      );
+      showAppToast(context, '今天已经签到过了，连签 ${me.checkInStreak} 天');
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(granted > 0
+    showAppToast(context, granted > 0
               ? '签到成功 +$granted 经验，连签 ${me.checkInStreak} 天'
-              : '签到成功，连签 ${me.checkInStreak} 天')),
-    );
+              : '签到成功，连签 ${me.checkInStreak} 天');
   }
 
   List<CommunityPost> _feedPosts(CommunityAccount? me) {

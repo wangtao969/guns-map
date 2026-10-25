@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_toast.dart';
 import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
@@ -72,7 +73,7 @@ class CommunityTasksScreen extends StatelessWidget {
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16)),
                             ),
-                            LevelBadge(account: me),
+                            LevelBadge(account: me, nicknameFontSize: 16),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -108,12 +109,9 @@ class CommunityTasksScreen extends StatelessWidget {
                       ? null
                       : () {
                           final granted = communityStore.checkIn();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text(granted > 0
+                          showAppToast(context, granted > 0
                                     ? '签到成功 +$granted 经验'
-                                    : '签到成功')),
-                          );
+                                    : '签到成功');
                         },
                 ),
                 _TaskTile(

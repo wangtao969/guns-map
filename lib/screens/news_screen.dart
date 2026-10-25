@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_toast.dart';
 import '../news_data.dart';
 import '../system_actions.dart';
 import '../widgets/app_top_bar.dart';
@@ -51,9 +52,7 @@ class NewsScreen extends StatelessWidget {
                 onTap: () async {
                   final ok = await openSystemUrl(n.url);
                   if (!ok && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('未能打开浏览器')),
-                    );
+                    showAppToast(context, '未能打开浏览器');
                   }
                 },
                 child: Padding(

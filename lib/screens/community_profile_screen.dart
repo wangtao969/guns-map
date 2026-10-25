@@ -11,7 +11,11 @@ import 'community_post_detail_screen.dart';
 /// 自己的主页全可见；别人的主页：收藏按对方的“收藏对外可见”开关决定是否展示。
 class CommunityProfileScreen extends StatefulWidget {
   final CommunityAccount account;
-  const CommunityProfileScreen({super.key, required this.account});
+
+  /// 打开时默认选中的栏：0 帖子 / 1 收藏 / 2 勋章墙 / 3 历史。
+  final int initialTab;
+  const CommunityProfileScreen(
+      {super.key, required this.account, this.initialTab = 0});
 
   @override
   State<CommunityProfileScreen> createState() =>
@@ -25,7 +29,8 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, vsync: this);
+    _tabs = TabController(
+        length: 4, vsync: this, initialIndex: widget.initialTab);
   }
 
   @override
@@ -236,20 +241,25 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                                         fontWeight: FontWeight.bold)),
                               ),
                               const SizedBox(width: 8),
-                              LevelBadge(account: account),
+                              LevelBadge(account: account, nicknameFontSize: 18),
+                              if (account.isFounder) ...[
+                                const SizedBox(width: 6),
+                                const FounderBadge(nicknameFontSize: 18),
+                              ],
                             ],
                           ),
                           Text('${tr('id_field')}：${account.id}',
                               style:
                                   TextStyle(color: grey, fontSize: 12)),
-                          Text(
-                              account.role == 'admin'
-                                  ? '管理员'
-                                  : account.role == 'moderator'
-                                      ? '版主'
-                                      : '普通用户',
-                              style:
-                                  TextStyle(color: grey, fontSize: 12)),
+                          Text(account.displayRole,
+                              style: TextStyle(
+                                  color: account.isFounder
+                                      ? const Color(0xFFD4A017)
+                                      : grey,
+                                  fontSize: 12,
+                                  fontWeight: account.isFounder
+                                      ? FontWeight.bold
+                                      : FontWeight.normal)),
                           Text(
                               '赛季声望 ${communityStore.seasonPrestige(account)} · 还剩 ${communityStore.seasonRemainingDays} 天',
                               style: TextStyle(
@@ -277,6 +287,11 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                   _Stat('收藏',
                       canSeeFavorites ? '${myFavorites.length}' : '—', null),
                 ],
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _UserSystemCard(account: account),
               ),
               if (!isMine && me != null) ...[
                 const SizedBox(height: 12),
@@ -334,9 +349,21 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                             itemBuilder: (_, i) {
                               final p = myPosts[i];
                               return ListTile(
+                                leading: p.images.isEmpty
+                                    ? null
+                                    : ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(8),
+                                        child: Image.memory(
+                                          p.images.first,
+                                          width: 56,
+                                          height: 56,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
                                 title: Text(p.title),
                                 subtitle: Text(
-                                    '${p.board} · ${CommunityStore.formatTime(p.time)} · ${p.likedBy.length}赞 ${p.comments.length}评'),
+                                    '${CommunityStore.formatTime(p.time)} · ${p.board} · ${p.likedBy.length}赞 ${p.comments.length}评'),
                                 onTap: () => _openPost(p),
                               );
                             },
@@ -356,9 +383,21 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                                 itemBuilder: (_, i) {
                                   final p = myFavorites[i];
                                   return ListTile(
+                                    leading: p.images.isEmpty
+                                        ? null
+                                        : ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            child: Image.memory(
+                                              p.images.first,
+                                              width: 56,
+                                              height: 56,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
                                     title: Text(p.title),
                                     subtitle: Text(
-                                        '${p.authorNickname} · ${p.board} · ${CommunityStore.formatTime(p.time)}'),
+                                        '${CommunityStore.formatTime(p.time)} · ${p.authorNickname} · ${p.board}'),
                                     onTap: () => _openPost(p),
                                   );
                                 },
@@ -391,6 +430,119 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
           ),
         );
       },
+    );
+  }
+}
+
+/// 用户制度卡：身份、等级与下一级进度、赛季声望、勋章，以及六档段位阶梯。
+class _UserSystemCard extends StatelessWidget {
+  final CommunityAccount account;
+  const _UserSystemCard({required this.account});
+
+  @override
+  Widget build(BuildContext context) {
+    final earned = communityStore.earnedMedals(account).length;
+    final lv = account.level;
+    final toNext = lv >= 60
+        ? '已满级'
+        : '距 LV${lv + 1} 还差 ${CommunityAccount.xpForLevel(lv + 1) - account.totalXp} 经验';
+    const tiers = [
+      ('铁灰', 'LV 1–10', Color(0xFF8A8D91)),
+      ('铜', 'LV 11–20', Color(0xFFB08D57)),
+      ('银', 'LV 21–35', Color(0xFFB9C0C7)),
+      ('金', 'LV 36–48', Color(0xFFD4A017)),
+      ('钛', 'LV 49–55', Color(0xFF7FA8BC)),
+      ('曜石', 'LV 56–60', Color(0xFF4A4A5A)),
+    ];
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.badge_outlined, color: communityAccent),
+                SizedBox(width: 8),
+                Text('用户制度',
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _UserSystemRow('身份', account.displayRole,
+                highlight: account.isFounder),
+            _UserSystemRow('等级', 'LV$lv · ${account.tierName}'),
+            _UserSystemRow('经验', '${account.totalXp}（$toNext）'),
+            _UserSystemRow(
+                '赛季声望', '${communityStore.seasonPrestige(account)}'),
+            _UserSystemRow('勋章', '$earned / ${medalCatalog.length}'),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            for (final t in tiers)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                          color: t.$3, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(t.$1,
+                        style: TextStyle(
+                            fontWeight: account.tierName == t.$1
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: account.tierName == t.$1 ? t.$3 : null)),
+                    const SizedBox(width: 8),
+                    Text(t.$2,
+                        style: const TextStyle(
+                            color: Colors.grey, fontSize: 12)),
+                    if (account.tierName == t.$1) ...[
+                      const Spacer(),
+                      const Text('当前段位',
+                          style: TextStyle(
+                              color: communityAccent,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UserSystemRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool highlight;
+  const _UserSystemRow(this.label, this.value, {this.highlight = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(value,
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: highlight ? const Color(0xFFD4A017) : null)),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../widgets/app_toast.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -12,7 +13,7 @@ import 'about_screen.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '1.11.1';
+const String appVersion = '1.12.0';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -168,9 +169,7 @@ class SettingsScreen extends StatelessWidget {
               final ok = await openSystemUrl(
                   'https://github.com/wangtao969/guns-map');
               if (!ok && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('未能打开浏览器')),
-                );
+                showAppToast(context, '未能打开浏览器');
               }
             },
           ),
@@ -292,9 +291,7 @@ class SettingsScreen extends StatelessWidget {
                 if (!dialogContext.mounted) return;
                 Navigator.of(dialogContext).pop();
                 if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(tr('copied'))),
-                );
+                showAppToast(context, tr('copied'));
               },
               child: Text(tr('copy_link')),
             ),
@@ -334,9 +331,7 @@ class SettingsScreen extends StatelessWidget {
       BuildContext context, String apkUrl, String latest) async {
     if (!apkUrl.endsWith('.apk')) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('未找到安装包，请复制链接到浏览器下载')),
-        );
+        showAppToast(context, '未找到安装包，请复制链接到浏览器下载');
       }
       return;
     }
@@ -350,28 +345,15 @@ class SettingsScreen extends StatelessWidget {
     );
     if (path == null) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('下载失败，请检查网络后重试')),
-        );
+        showAppToast(context, '下载失败，请检查网络后重试');
       }
       return;
     }
     final ok = await installDownloadedApk(path);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ok
+    showAppToast(context, ok
             ? '安装器已拉起，请按提示完成安装'
-            : '未能拉起安装：请确认已允许本应用安装未知应用，或复制链接到浏览器下载安装'),
-        action: ok
-            ? null
-            : SnackBarAction(
-                label: '复制链接',
-                onPressed: () =>
-                    Clipboard.setData(ClipboardData(text: apkUrl)),
-              ),
-      ),
-    );
+            : '未能拉起安装：请确认已允许本应用安装未知应用，或复制链接到浏览器下载安装', onTap: ok ? null : () => Clipboard.setData(ClipboardData(text: apkUrl)), actionLabel: ok ? null : '复制链接');
   }
 
   /// 版本号比较：1.4.0 这种三段数字，返回负数表示 a 更旧。

@@ -253,24 +253,6 @@ class _FloatingNavBar extends StatelessWidget {
                     ],
                   ),
                 ),
-                // 顶部高光线：液态玻璃的反光边缘。
-                Positioned(
-                  top: 0,
-                  left: 28,
-                  right: 28,
-                  child: Container(
-                    height: 1.5,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withValues(alpha: 0.0),
-                          Colors.white.withValues(alpha: 0.55),
-                          Colors.white.withValues(alpha: 0.0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),

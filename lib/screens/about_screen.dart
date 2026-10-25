@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_toast.dart';
 import '../system_actions.dart';
 import '../widgets/app_top_bar.dart';
 
@@ -78,9 +79,7 @@ class AboutScreen extends StatelessWidget {
                 final ok = await openSystemUrl(
                     'https://github.com/wangtao969/guns-map');
                 if (!ok && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('未能打开浏览器')),
-                  );
+                  showAppToast(context, '未能打开浏览器');
                 }
               },
             ),

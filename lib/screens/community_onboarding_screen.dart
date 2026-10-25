@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_toast.dart';
 import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
@@ -46,9 +47,7 @@ class _CommunityOnboardingScreenState
           _interests.toList(), _boards.toList());
     }
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('欢迎！第一枚勋章已点亮')),
-    );
+    showAppToast(context, '欢迎！第一枚勋章已点亮');
   }
 
   Widget _chip(String label, bool selected, VoidCallback onTap) {

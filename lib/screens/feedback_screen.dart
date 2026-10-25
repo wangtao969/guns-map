@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_toast.dart';
 import 'package:flutter/services.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
@@ -71,18 +72,14 @@ if (!mounted) return;
 if (!opened) {
 await Clipboard.setData(
 const ClipboardData(text: 'Toryphoto77@gmail.com'));
-ScaffoldMessenger.of(context).showSnackBar(
-SnackBar(content: Text(tr('no_mail_app'))),
-);
+showAppToast(context, tr('no_mail_app'));
 }
 }
 
 void _submit() {
 final content = _contentCtrl.text.trim();
 if (content.isEmpty) {
-ScaffoldMessenger.of(context).showSnackBar(
-SnackBar(content: Text(tr('feedback_empty'))),
-);
+showAppToast(context, tr('feedback_empty'));
 return;
 }
 setState(() {
@@ -96,9 +93,7 @@ time: _now(),
 ));
 _contentCtrl.clear();
 });
-ScaffoldMessenger.of(context).showSnackBar(
-SnackBar(content: Text(tr('feedback_saved'))),
-);
+showAppToast(context, tr('feedback_saved'));
 }
 
 
@@ -202,10 +197,7 @@ onPressed: () async {
 await Clipboard.setData(
 ClipboardData(text: f.shareText));
 if (!context.mounted) return;
-ScaffoldMessenger.of(context).showSnackBar(
-SnackBar(
-content: Text(tr('feedback_copied'))),
-);
+showAppToast(context, tr('feedback_copied'));
 },
 icon: const Icon(Icons.copy, size: 16),
 label: Text(tr('copy')),

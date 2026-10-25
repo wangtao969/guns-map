@@ -100,6 +100,17 @@ class CommunityAccount {
   /// 角色：user 普通用户 / moderator 版主 / admin 管理员。
   /// 本机版只有本机账号，角色字段为后端预留，权限判断先按本地管理走。
   String role;
+
+  /// 是否创始用户：ID 固定为 10000 的账号，开放软件全部权限。
+  bool get isFounder => id == CommunityStore.founderId;
+
+  /// 资料页展示的身份：创始用户 / 管理员 / 版主 / 普通用户。
+  String get displayRole {
+    if (isFounder) return '创始用户';
+    if (role == 'admin') return '管理员';
+    if (role == 'moderator') return '版主';
+    return '普通用户';
+  }
   /// 账号状态：active 正常 / muted 禁言（不能发帖评论）/ banned 封禁（不能发帖评论）。
   String status;
   /// 头像边框：'' 无 / copper 铜圈 / gold 金圈 / rainbow 彩虹圈。
@@ -1101,6 +1112,12 @@ class CommunityStore extends ChangeNotifier {
   /// 初始管理员账号 ID：10000（第一位注册用户即为管理员账号）。
   /// 旧版已注册的 wangtao969 账号仍可进后台，做兼容保留。
   static const adminBootstrapId = '10000';
+
+  /// 创始用户账号 ID：固定为 10000，开放软件全部权限。
+  static const founderId = '10000';
+
+  /// 当前登录账号是否为创始用户。
+  bool get isFounder => current != null && current!.id == founderId;
   static const legacyAdminId = 'wangtao969';
 
   /// 是否管理员：初始管理员账号，或 role 为 admin 的账号。
@@ -1172,8 +1189,12 @@ class CommunityStore extends ChangeNotifier {
   }) {
     final author = current;
     if (author == null) return '请先登录';
-    if (author.status == 'banned') return '账号已被封禁';
-    if (author.status == 'muted') return '账号已被禁言';
+    if (!author.isFounder && author.status == 'banned') {
+      return '账号已被封禁';
+    }
+    if (!author.isFounder && author.status == 'muted') {
+      return '账号已被禁言';
+    }
     if (disabledBoards.contains(board)) return '该板块已关闭';
     final maskedTitle = maskSensitiveWords(title);
     final maskedContent = maskSensitiveWords(content);
@@ -1252,8 +1273,8 @@ class CommunityStore extends ChangeNotifier {
   String? addComment(CommunityPost post, String content) {
     final me = current;
     if (me == null) return '请先登录';
-    if (me.status == 'banned') return '账号已被封禁';
-    if (me.status == 'muted') return '账号已被禁言';
+    if (!me.isFounder && me.status == 'banned') return '账号已被封禁';
+    if (!me.isFounder && me.status == 'muted') return '账号已被禁言';
     final masked = maskSensitiveWords(content);
     post.comments.add(CommunityComment(
       id: _nextId(),
@@ -1329,7 +1350,8 @@ class CommunityStore extends ChangeNotifier {
   String? setUserRole(CommunityAccount target, String role) {
     if (!isAdmin) return '只有管理员可以管理权限';
     if (target.id == current?.id) return '不能修改自己的权限';
-    if (target.id == adminBootstrapId || target.id == legacyAdminId) {
+    if (!isFounder &&
+        (target.id == adminBootstrapId || target.id == legacyAdminId)) {
       return '不能修改初始管理员';
     }
     target.role = role;
@@ -1340,7 +1362,8 @@ class CommunityStore extends ChangeNotifier {
   String? setUserStatus(CommunityAccount target, String status) {
     if (!isAdmin) return '只有管理员可以管理权限';
     if (target.id == current?.id) return '不能修改自己的权限';
-    if (target.id == adminBootstrapId || target.id == legacyAdminId) {
+    if (!isFounder &&
+        (target.id == adminBootstrapId || target.id == legacyAdminId)) {
       return '不能修改初始管理员';
     }
     target.status = status;

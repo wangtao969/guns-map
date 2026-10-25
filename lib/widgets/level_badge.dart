@@ -2,26 +2,65 @@ import 'package:flutter/material.dart';
 import '../community_store.dart';
 import 'community_theme.dart';
 
-/// 等级铭牌：段位配色底 + LV.x + 段位名，挂在头像右侧与每条帖子作者名旁。
+/// 等级铭牌：段位配色底 + LV.x + 段位名，挂在每条帖子作者名旁。
+/// 外框高度严格等于昵称字号（nicknameFontSize），不比昵称字大，
+/// 保证各页视觉协调；铭牌内文字按比例缩小。
 class LevelBadge extends StatelessWidget {
   final CommunityAccount account;
-  final double fontSize;
-  const LevelBadge({super.key, required this.account, this.fontSize = 11});
+  final double nicknameFontSize;
+  const LevelBadge(
+      {super.key, required this.account, this.nicknameFontSize = 14});
 
   @override
   Widget build(BuildContext context) {
     final c = account.tierColor;
+    final h = nicknameFontSize;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      height: h,
+      padding: EdgeInsets.symmetric(horizontal: h * 0.32),
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: c.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(h / 2),
         border: Border.all(color: c),
       ),
       child: Text(
         'LV${account.level} · ${account.tierName}',
         style: TextStyle(
-            color: c, fontSize: fontSize, fontWeight: FontWeight.bold),
+            color: c,
+            fontSize: h * 0.68,
+            fontWeight: FontWeight.bold,
+            height: 1),
+      ),
+    );
+  }
+}
+
+/// 创始用户铭牌：金底小药丸，与等级铭牌同高（等于昵称字号）。
+class FounderBadge extends StatelessWidget {
+  final double nicknameFontSize;
+  const FounderBadge({super.key, this.nicknameFontSize = 14});
+
+  @override
+  Widget build(BuildContext context) {
+    const c = Color(0xFFD4A017);
+    final h = nicknameFontSize;
+    return Container(
+      height: h,
+      padding: EdgeInsets.symmetric(horizontal: h * 0.32),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(h / 2),
+        border: Border.all(color: c),
+      ),
+      child: Text(
+        '创始用户',
+        style: TextStyle(
+            color: c,
+            fontSize: h * 0.68,
+            fontWeight: FontWeight.bold,
+            height: 1),
       ),
     );
   }

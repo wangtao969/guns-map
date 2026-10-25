@@ -3,7 +3,9 @@ import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/app_toast.dart';
 import 'community_account_dialogs.dart';
+import 'community_compose_screen.dart';
 import 'community_collection_screen.dart';
 import 'community_dm_screen.dart';
 import 'community_notifications_screen.dart';
@@ -85,33 +87,36 @@ class MyScreen extends StatelessWidget {
                 )
               else ...[
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    communityAvatar(
-                      bytes: me.avatarBytes,
-                      color: me.avatarColor,
-                      nickname: me.nickname,
-                      radius: 32,
-                      frame: me.avatarFrame,
+                    Column(
+                      children: [
+                        communityAvatar(
+                          bytes: me.avatarBytes,
+                          color: me.avatarColor,
+                          nickname: me.nickname,
+                          radius: 32,
+                          frame: me.avatarFrame,
+                        ),
+                        const SizedBox(height: 8),
+                        LevelBadge(account: me, nicknameFontSize: 14),
+                        if (me.isFounder) ...[
+                          const SizedBox(height: 4),
+                          const FounderBadge(nicknameFontSize: 14),
+                        ],
+                      ],
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(me.nickname,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold)),
-                              ),
-                              const SizedBox(width: 8),
-                              LevelBadge(account: me),
-                            ],
-                          ),
+                          Text(me.nickname,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold)),
                           Text('${tr('id_field')}：${me.id}',
                               style: const TextStyle(
                                   color: Colors.grey, fontSize: 12)),
@@ -151,6 +156,35 @@ class MyScreen extends StatelessWidget {
                   );
                 }),
                 const SizedBox(height: 16),
+                _MenuTile(
+                  icon: Icons.dynamic_feed_outlined,
+                  title: '我的动态',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => CommunityProfileScreen(
+                            account: me, initialTab: 0)),
+                  ),
+                ),
+                _MenuTile(
+                  icon: Icons.edit_note_outlined,
+                  title: '发帖',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const CommunityComposeScreen()),
+                  ),
+                ),
+                _MenuTile(
+                  icon: Icons.emoji_events_outlined,
+                  title: '勋章墙',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => CommunityProfileScreen(
+                            account: me, initialTab: 2)),
+                  ),
+                ),
                 _MenuTile(
                   icon: Icons.person_outlined,
                   title: '我的主页',
@@ -242,9 +276,7 @@ class MyScreen extends StatelessWidget {
                   titleColor: Colors.red,
                   onTap: () {
                     communityStore.logout();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已退出登录')),
-                    );
+                    showAppToast(context, '已退出登录');
                   },
                 ),
                 _MenuTile(
@@ -298,21 +330,45 @@ class _MenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 54,
       margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        leading: Icon(icon, color: const Color(0xFF8C6A2F)),
-        title: Text(title,
-            style: TextStyle(
-                fontWeight: FontWeight.bold, color: titleColor)),
-        trailing: badge > 0
-            ? Badge(
-                label: Text('$badge'),
-                backgroundColor: const Color(0xFFE86A1C),
-                child: const Icon(Icons.chevron_right),
-              )
-            : const Icon(Icons.chevron_right),
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF24211D) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: dark
+                ? Colors.white.withValues(alpha: 0.10)
+                : Colors.black.withValues(alpha: 0.08)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Icon(icon, color: const Color(0xFF8C6A2F)),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(title,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: titleColor)),
+              ),
+              if (badge > 0) ...[
+                Badge(
+                  label: Text('$badge'),
+                  backgroundColor: const Color(0xFFE86A1C),
+                ),
+                const SizedBox(width: 8),
+              ],
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
       ),
     );
   }

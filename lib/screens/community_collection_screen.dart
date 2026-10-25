@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import '../widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../community_store.dart';
@@ -48,9 +49,7 @@ class CommunityCollectionScreen extends StatelessWidget {
       category: gun.category,
       status: status,
     ));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已登记到收藏柜 +3 经验')),
-    );
+    showAppToast(context, '已登记到收藏柜 +3 经验');
   }
 
   Future<Uint8List> _drawCard(CommunityAccount me) async {
@@ -132,9 +131,7 @@ class CommunityCollectionScreen extends StatelessWidget {
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('分享失败，请重试')),
-        );
+        showAppToast(context, '分享失败，请重试');
       }
     }
   }

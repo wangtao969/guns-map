@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_toast.dart';
 import 'package:flutter/services.dart';
 import '../community_store.dart';
 import '../i18n.dart';
@@ -61,9 +62,7 @@ class _CommunityPostDetailScreenState
       await _shareChannel.invokeMethod('shareText', {'text': text});
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('分享失败，系统分享通道不可用')),
-        );
+        showAppToast(context, '分享失败，系统分享通道不可用');
       }
     }
   }
@@ -71,18 +70,14 @@ class _CommunityPostDetailScreenState
   void _sendReply() {
     final me = communityStore.current;
     if (me == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('login_required_body'))),
-      );
+      showAppToast(context, tr('login_required_body'));
       return;
     }
     final content = _replyCtrl.text.trim();
     if (content.isEmpty) return;
     final err = communityStore.addComment(widget.post, content);
     if (err != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(err)),
-      );
+      showAppToast(context, err);
       return;
     }
     _replyCtrl.clear();
@@ -159,9 +154,7 @@ class _CommunityPostDetailScreenState
       case 'report':
         communityStore.reportPost(p);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('已举报，帖子已标记为待审核')),
-          );
+          showAppToast(context, '已举报，帖子已标记为待审核');
         }
         break;
     }
@@ -356,7 +349,7 @@ class _CommunityPostDetailScreenState
                                     return Padding(
                                       padding: const EdgeInsets.only(
                                           right: 6),
-                                      child: LevelBadge(account: account),
+                                      child: LevelBadge(account: account, nicknameFontSize: 13),
                                     );
                                   }),
                                   const Spacer(),

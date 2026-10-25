@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_toast.dart';
 import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
@@ -74,9 +75,7 @@ class _CommunityBoardScreenState extends State<CommunityBoardScreen> {
 
   void _openComposer() {
     if (communityStore.current == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('login_required_body'))),
-      );
+      showAppToast(context, tr('login_required_body'));
       return;
     }
     Navigator.push(
@@ -481,7 +480,7 @@ class _ThreadRow extends StatelessWidget {
                             return Padding(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6),
-                              child: LevelBadge(account: account),
+                              child: LevelBadge(account: account, nicknameFontSize: 12),
                             );
                           }),
                           Expanded(
