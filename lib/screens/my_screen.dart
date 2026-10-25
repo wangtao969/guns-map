@@ -5,6 +5,8 @@ import '../widgets/app_top_bar.dart';
 import '../widgets/level_badge.dart';
 import 'community_account_dialogs.dart';
 import 'community_collection_screen.dart';
+import 'community_dm_screen.dart';
+import 'community_notifications_screen.dart';
 import 'community_profile_screen.dart';
 import 'community_range_screen.dart';
 import 'community_tasks_screen.dart';
@@ -138,6 +140,38 @@ class MyScreen extends StatelessWidget {
                             CommunityProfileScreen(account: me)),
                   ),
                 ),
+                Builder(builder: (_) {
+                  final unread = communityStore.unreadCount(me.id);
+                  final unreadDm = communityStore
+                      .notificationsFor(me.id)
+                      .where((n) => n.kind == 'dm' && !n.read)
+                      .length;
+                  return Column(
+                    children: [
+                      _MenuTile(
+                        icon: Icons.notifications_outlined,
+                        title: '通知',
+                        badge: unread,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const CommunityNotificationsScreen()),
+                        ),
+                      ),
+                      _MenuTile(
+                        icon: Icons.mail_outlined,
+                        title: '私信',
+                        badge: unreadDm,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const CommunityDmScreen()),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
                 _MenuTile(
                   icon: Icons.inventory_2_outlined,
                   title: '我的收藏柜',
@@ -205,10 +239,12 @@ class _MenuTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final VoidCallback onTap;
+  final int badge;
   const _MenuTile({
     required this.icon,
     required this.title,
     required this.onTap,
+    this.badge = 0,
   });
 
   @override
@@ -219,7 +255,13 @@ class _MenuTile extends StatelessWidget {
         leading: Icon(icon, color: const Color(0xFF8C6A2F)),
         title: Text(title,
             style: const TextStyle(fontWeight: FontWeight.bold)),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: badge > 0
+            ? Badge(
+                label: Text('$badge'),
+                backgroundColor: const Color(0xFFE86A1C),
+                child: const Icon(Icons.chevron_right),
+              )
+            : const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
     );

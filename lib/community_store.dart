@@ -1329,6 +1329,16 @@ class CommunityStore extends ChangeNotifier {
     return notificationsFor(accountId).where((n) => !n.read).length;
   }
 
+  /// 板块热度（纯计算，不改状态）：帖数 × 10 + 各帖热度分之和。
+  /// 社区页热聊/排行榜与排行榜页共用。
+  int boardHeat(String board) {
+    var heat = 0;
+    for (final p in posts.where((p) => p.board == board)) {
+      heat += 10 + p.hotScore;
+    }
+    return heat;
+  }
+
   void saveDraft({required String title, required String content, required String board}) {
     if (title.trim().isEmpty && content.trim().isEmpty) {
       draft = null;

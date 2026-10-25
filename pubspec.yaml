@@ -1,7 +1,7 @@
 name: firearms_catalog
 description: 枪械图鉴 App 原型
 publish_to: 'none'
-version: 1.8.0+11
+version: 1.9.0+12
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

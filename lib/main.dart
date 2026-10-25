@@ -8,6 +8,7 @@ import 'screens/catalog_screen.dart';
 import 'screens/community_screen.dart';
 import 'screens/my_screen.dart';
 import 'screens/tools_screen.dart';
+import 'widgets/page_transitions.dart';
 
 /// 主题选择状态：设置页写入，MaterialApp 监听切换。
 /// 仅本次打开期间生效，不做持久化。
@@ -43,6 +44,17 @@ class FirearmsApp extends StatelessWidget {
         title: "Gun's Map",
         themeMode: mode,
       theme: ThemeData.light().copyWith(
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: <TargetPlatform, PageTransitionsBuilder>{
+            TargetPlatform.android:
+                SlideFadePageTransitionsBuilder(),
+            TargetPlatform.iOS: SlideFadePageTransitionsBuilder(),
+            TargetPlatform.macOS: SlideFadePageTransitionsBuilder(),
+            TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.fuchsia: FadeUpwardsPageTransitionsBuilder(),
+          },
+        ),
         colorScheme: const ColorScheme.light(
           primary: _bronze,
           secondary: Color(0xFF8C7A5A),
@@ -62,6 +74,17 @@ class FirearmsApp extends StatelessWidget {
             ),
       ),
       darkTheme: ThemeData.dark().copyWith(
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: <TargetPlatform, PageTransitionsBuilder>{
+            TargetPlatform.android:
+                SlideFadePageTransitionsBuilder(),
+            TargetPlatform.iOS: SlideFadePageTransitionsBuilder(),
+            TargetPlatform.macOS: SlideFadePageTransitionsBuilder(),
+            TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.fuchsia: FadeUpwardsPageTransitionsBuilder(),
+          },
+        ),
         colorScheme: const ColorScheme.dark(
           primary: _bronzeLight,
           secondary: Color(0xFF8C7A5A),
@@ -133,7 +156,26 @@ class _HomePageState extends State<HomePage> {
         body: Padding(
           // 给悬浮导航留出空间，避免遮住各页底部内容。
           padding: const EdgeInsets.only(bottom: 96),
-          child: pages[_index],
+          // 底部 Tab 切换带淡入 + 轻微上移动画，衔接不生硬。
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeIn,
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.02),
+                  end: Offset.zero,
+                ).animate(anim),
+                child: child,
+              ),
+            ),
+            child: KeyedSubtree(
+              key: ValueKey(_index),
+              child: pages[_index],
+            ),
+          ),
         ),
         bottomNavigationBar: _FloatingNavBar(
           index: _index,
