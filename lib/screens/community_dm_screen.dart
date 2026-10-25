@@ -1,7 +1,10 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
+import '../widgets/glass_dialog.dart';
 import 'community_profile_screen.dart';
 
 /// 私信：会话列表 + 对话页，只在本机账号之间流转（本机版）。
@@ -23,6 +26,62 @@ class _CommunityDmScreenState extends State<CommunityDmScreen> {
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _showNewChatDialog(
+      BuildContext context, List<CommunityAccount> others) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => GlassDialog(
+        title: '新对话',
+        content: others.isEmpty
+            ? const Text('还没有其他账号')
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: others
+                    .map((a) => InkWell(
+                          onTap: () {
+                            Navigator.of(dialogContext).pop();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      CommunityDmThreadScreen(
+                                          peerId: a.id)),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 8),
+                            child: Row(
+                              children: [
+                                communityAvatar(
+                                  bytes: a.avatarBytes,
+                                  color: a.avatarColor,
+                                  nickname: a.nickname,
+                                  radius: 20,
+                                  frame: a.avatarFrame,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(a.nickname,
+                                      style: const TextStyle(
+                                          fontWeight:
+                                              FontWeight.bold)),
+                                ),
+                                Text('ID：${a.id}',
+                                    style: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+        actions: [glassPrimaryButton(dialogContext, '关闭')],
+      ),
+    );
   }
 
   @override
@@ -60,11 +119,57 @@ class _CommunityDmScreenState extends State<CommunityDmScreen> {
             .toList();
         return Scaffold(
           appBar: SubPageAppBar(title: '私信'),
+          floatingActionButton: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  child: IconButton(
+                    icon: const Icon(Icons.add_comment_outlined,
+                        color: Colors.white),
+                    onPressed: () => _showNewChatDialog(context, others),
+                  ),
+                ),
+              ),
+            ),
+          ),
           body: Column(
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: TextField(
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                CommunityProfileScreen(account: me)),
+                      ),
+                      child: communityAvatar(
+                        bytes: me.avatarBytes,
+                        color: me.avatarColor,
+                        nickname: me.nickname,
+                        radius: 20,
+                        frame: me.avatarFrame,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
                   controller: _searchCtrl,
                   onChanged: (v) => setState(() => _query = v),
                   decoration: InputDecoration(
@@ -86,7 +191,10 @@ class _CommunityDmScreenState extends State<CommunityDmScreen> {
                     ),
                     contentPadding:
                         const EdgeInsets.symmetric(vertical: 10),
-                  ),
+                      ),
+                    ),
+                    ),
+                  ],
                 ),
               ),
               Expanded(

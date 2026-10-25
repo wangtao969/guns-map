@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../community_store.dart';
 import 'community_theme.dart';
@@ -6,89 +8,194 @@ import 'glass_dialog.dart';
 /// 等级铭牌：段位配色底 + LV.x + 段位名，挂在每条帖子作者名旁。
 /// 外框高度严格等于昵称字号（nicknameFontSize），不比昵称字大，
 /// 保证各页视觉协调；铭牌内文字按比例缩小。
-class LevelBadge extends StatelessWidget {
+/// 发光：初始段位铁灰不发光；其余段位按各自颜色做呼吸灯（1.8 秒一呼一吸）；
+/// 最高段位曜石另加闪电绕着铭牌转并闪烁。
+class LevelBadge extends StatefulWidget {
   final CommunityAccount account;
   final double nicknameFontSize;
   const LevelBadge(
       {super.key, required this.account, this.nicknameFontSize = 14});
 
-  /// 段位发光：铁灰极淡 → 铜淡光 → 银中光 → 金强光 → 钛强光扩散 → 曜石双层光晕。
-  List<BoxShadow> _glow(Color c) {
-    final lv = account.level;
-    final tier = lv <= 10
-        ? 0
-        : lv <= 20
-            ? 1
-            : lv <= 35
-                ? 2
-                : lv <= 48
-                    ? 3
-                    : lv <= 55
-                        ? 4
-                        : 5;
-    switch (tier) {
+  @override
+  State<LevelBadge> createState() => _LevelBadgeState();
+}
+
+class _LevelBadgeState extends State<LevelBadge>
+    with SingleTickerProviderStateMixin {
+  late final _ctrl = AnimationController(
+      duration: const Duration(milliseconds: 1800), vsync: this)
+    ..repeat();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  int get _tier {
+    final lv = widget.account.level;
+    if (lv <= 10) return 0;
+    if (lv <= 20) return 1;
+    if (lv <= 35) return 2;
+    if (lv <= 48) return 3;
+    if (lv <= 55) return 4;
+    return 5;
+  }
+
+  /// 呼吸灯：t 在 0–1 之间正弦起伏，阴影的透明度与模糊半径跟着一呼一吸。
+  List<BoxShadow> _glow(Color c, double t) {
+    switch (_tier) {
       case 0:
-        return [
-          BoxShadow(
-              color: c.withValues(alpha: 0.10), blurRadius: 2, spreadRadius: 0)
-        ];
+        return const [];
       case 1:
         return [
           BoxShadow(
-              color: c.withValues(alpha: 0.25), blurRadius: 6, spreadRadius: 0)
+              color: c.withValues(alpha: 0.30 + 0.25 * t),
+              blurRadius: 8 + 6 * t,
+              spreadRadius: 0)
         ];
       case 2:
         return [
           BoxShadow(
-              color: c.withValues(alpha: 0.35), blurRadius: 8, spreadRadius: 0)
+              color: c.withValues(alpha: 0.35 + 0.30 * t),
+              blurRadius: 10 + 8 * t,
+              spreadRadius: 0)
         ];
       case 3:
         return [
           BoxShadow(
-              color: c.withValues(alpha: 0.45), blurRadius: 12, spreadRadius: 0)
+              color: c.withValues(alpha: 0.45 + 0.30 * t),
+              blurRadius: 14 + 10 * t,
+              spreadRadius: 0)
         ];
       case 4:
         return [
           BoxShadow(
-              color: c.withValues(alpha: 0.55), blurRadius: 16, spreadRadius: 1)
+              color: c.withValues(alpha: 0.55 + 0.30 * t),
+              blurRadius: 18 + 12 * t,
+              spreadRadius: 1)
         ];
       default:
         return [
           BoxShadow(
-              color: c.withValues(alpha: 0.65), blurRadius: 20, spreadRadius: 1),
+              color: c.withValues(alpha: 0.60 + 0.30 * t),
+              blurRadius: 20 + 10 * t,
+              spreadRadius: 1),
           BoxShadow(
-              color: c.withValues(alpha: 0.35), blurRadius: 30, spreadRadius: 2),
+              color: c.withValues(alpha: 0.30 + 0.25 * t),
+              blurRadius: 30 + 12 * t,
+              spreadRadius: 2),
         ];
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final c = account.tierColor;
-    final h = nicknameFontSize;
+    final c = widget.account.tierColor;
+    final h = widget.nicknameFontSize;
     return GestureDetector(
-      onTap: () => showLevelSystemDialog(context, account),
-      child: Container(
-        height: h,
-        padding: EdgeInsets.symmetric(horizontal: h * 0.32),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: c.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(h / 2),
-          border: Border.all(color: c),
-          boxShadow: _glow(c),
-        ),
-        child: Text(
-          'LV${account.level} · ${account.tierName}',
-          style: TextStyle(
-              color: c,
-              fontSize: h * 0.68,
-              fontWeight: FontWeight.bold,
-              height: 1),
-        ),
+      onTap: () => showLevelSystemDialog(context, widget.account),
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, __) {
+          final t =
+              (math.sin(_ctrl.value * 2 * math.pi) + 1) / 2;
+          final badge = Container(
+            height: h,
+            padding: EdgeInsets.symmetric(horizontal: h * 0.32),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: c.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(h / 2),
+              border: Border.all(color: c),
+              boxShadow: _glow(c, t),
+            ),
+            child: Text(
+              'LV${widget.account.level} · ${widget.account.tierName}',
+              style: TextStyle(
+                  color: c,
+                  fontSize: h * 0.68,
+                  fontWeight: FontWeight.bold,
+                  height: 1),
+            ),
+          );
+          if (_tier != 5) return badge;
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(5),
+                child: badge,
+              ),
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _LightningPainter(_ctrl.value),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+}
+
+/// 曜石闪电：三道小闪电沿铭牌外圈旋转，每道以固定节奏明暗闪烁。
+class _LightningPainter extends CustomPainter {
+  final double progress;
+  const _LightningPainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final rx = size.width / 2 - 3;
+    final ry = size.height / 2 - 3;
+    final glowPaint = Paint()
+      ..color = const Color(0xFFBFEFFF).withValues(alpha: 0.25)
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final corePaint = Paint()
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    for (var k = 0; k < 3; k++) {
+      final angle = progress * 2 * math.pi + k * 2 * math.pi / 3;
+      final bx = cx + math.cos(angle) * rx;
+      final by = cy + math.sin(angle) * ry;
+      // 切线方向的锯齿：5 个点左右交错，形成闪电折线。
+      final tx = -math.sin(angle);
+      final ty = math.cos(angle);
+      final nx = math.cos(angle);
+      final ny = math.sin(angle);
+      final points = <Offset>[];
+      for (var i = 0; i < 5; i++) {
+        final along = (i - 2) * 3.0;
+        final off = (i % 2 == 0 ? 1 : -1) * (i == 2 ? 0 : 2.5);
+        points.add(Offset(
+          bx + tx * along + nx * off,
+          by + ty * along + ny * off,
+        ));
+      }
+      final path = Path()..moveTo(points.first.dx, points.first.dy);
+      for (final p in points.skip(1)) {
+        path.lineTo(p.dx, p.dy);
+      }
+      final flicker =
+          ((progress * 12).floor() + k) % 2 == 0 ? 0.95 : 0.35;
+      canvas.drawPath(path, glowPaint);
+      canvas.drawPath(
+          path,
+          corePaint
+            ..color =
+                const Color(0xFFFFFFFF).withValues(alpha: flicker));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LightningPainter old) =>
+      old.progress != progress;
 }
 
 /// 等级制度弹窗：点铭牌弹出，列出六档段位、等级区间与所需累计经验。

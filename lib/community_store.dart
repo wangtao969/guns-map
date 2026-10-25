@@ -169,8 +169,10 @@ class CommunityAccount {
         followedBoards = followedBoards ?? <String>{},
         interests = interests ?? [];
 
-  /// 升到下一级需要的经验：100 + (级数-1)*15。
-  static int xpForNextLevel(int level) => 100 + (level - 1) * 15;
+  /// 升到下一级需要的经验：15 + (级数-1)*4，按奖励比例定——
+  /// 签到一次 +10 ≈ 大半级（前期），活跃一天 25–40 经验前期可升 1–2 级，
+  /// 后期一级要 200+ 经验（约一周），满级累计 7729。
+  static int xpForNextLevel(int level) => 15 + (level - 1) * 4;
 
   /// 升到 level 级所需的累计经验。
   static int xpForLevel(int level) {
