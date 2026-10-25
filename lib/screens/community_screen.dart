@@ -775,8 +775,19 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   top: MediaQuery.of(context).padding.top + kToolbarHeight),
               child: Column(
                 children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: Row(
+                      children: [
+                        Text('社区',
+                            style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                     child: _topSwitch(),
                   ),
                 Expanded(
@@ -801,7 +812,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       if (_view == 'feed')
                         Positioned(
                           right: 16,
-                          bottom: 16,
+                          bottom: 100,
                           child: GestureDetector(
                             onTap: _openComposer,
                             child: ClipOval(

@@ -23,7 +23,7 @@ class _GlassBackground extends StatelessWidget {
   }
 }
 
-/// 主 Tab 顶栏（毛玻璃）：应用名居中，右上角齿轮圆形设置按钮。
+/// 主 Tab 顶栏（毛玻璃）：应用名靠左，右上角齿轮圆形设置按钮。
 /// 只在首页四个主页面显示；子页面一律用 SubPageAppBar，不再出现应用名与齿轮。
 class GunsMapAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// 设置页本身不再放齿轮按钮，避免重复进设置页。
@@ -39,7 +39,7 @@ class GunsMapAppBar extends StatelessWidget implements PreferredSizeWidget {
     final ink = dark ? const Color(0xFFEDE8DF) : const Color(0xFF2E2A24);
     final circleBg = dark ? const Color(0xFF1E1C19) : Colors.white;
     return AppBar(
-      centerTitle: true,
+      centerTitle: false,
       backgroundColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -47,11 +47,11 @@ class GunsMapAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Text(
         "Gun's Map",
         style: TextStyle(
-          // 无衬线现代简洁体：Android 系统默认无衬线 Roboto，加粗字重。
-          fontFamily: 'Roboto',
+          // 线衬体（系统 serif）：比无衬线多一点设计感。
+          fontFamily: 'serif',
           fontSize: 22,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.3,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
           color: ink,
         ),
       ),
@@ -106,7 +106,7 @@ class SubPageAppBar extends StatelessWidget implements PreferredSizeWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final ink = dark ? const Color(0xFFEDE8DF) : const Color(0xFF2E2A24);
     return AppBar(
-      centerTitle: true,
+      centerTitle: false,
       backgroundColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,

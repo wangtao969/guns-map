@@ -153,28 +153,41 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Scaffold(
         extendBody: true,
-        body: Padding(
-          // 给悬浮导航留出空间，避免遮住各页底部内容。
-          padding: const EdgeInsets.only(bottom: 96),
-          // 底部 Tab 切换只淡入：上下滑动会让页面一震一震像 bug，已去掉。
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeIn,
-            transitionBuilder: (child, anim) =>
-                FadeTransition(opacity: anim, child: child),
-            child: KeyedSubtree(
-              key: ValueKey(_index),
-              child: pages[_index],
+        // 导航栏不再占底部槽位：以悬浮层盖在页面之上，
+        // 各页内容从玻璃栏下面滑过，不再被顶出整整一个底部。
+        body: Stack(
+          children: [
+            // 底部 Tab 切换只淡入：上下滑动会让页面一震一震像 bug，已去掉。
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, anim) =>
+                  FadeTransition(opacity: anim, child: child),
+              child: KeyedSubtree(
+                key: ValueKey(_index),
+                child: pages[_index],
+              ),
             ),
-          ),
-        ),
-        bottomNavigationBar: _FloatingNavBar(
-          index: _index,
-          onTap: (i) {
-            tapHaptic();
-            setState(() => _index = i);
-          },
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: _FloatingNavBar(
+                    index: _index,
+                    onTap: (i) {
+                      tapHaptic();
+                      setState(() => _index = i);
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       ),
@@ -192,11 +205,7 @@ class _FloatingNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
-        child: ClipRRect(
+    return ClipRRect(
           borderRadius: BorderRadius.circular(34),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
@@ -265,9 +274,7 @@ class _FloatingNavBar extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
+        );
   }
 }
 

@@ -33,6 +33,9 @@ class MyScreen extends StatelessWidget {
                 16,
                 16),
             children: [
+              const Text('我的',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
               if (me == null)
                 Card(
                   child: Padding(

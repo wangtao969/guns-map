@@ -49,13 +49,78 @@ class _CatalogScreenState extends State<CatalogScreen> {
         top: true,
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12 + kToolbarHeight, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 8 + kToolbarHeight, 16, 16),
           children: [
+            // 枪械资讯入口：页头太空，补一条厂商与弹药商资讯快讯；搜索时隐藏。
+            if (_query.isEmpty)
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    tapHaptic();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const NewsScreen()),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: bronze,
+                          ),
+                          child: Icon(Icons.newspaper_outlined,
+                              size: 20,
+                              color: dark
+                                  ? const Color(0xFF121110)
+                                  : Colors.white),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('枪械资讯',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14)),
+                              const SizedBox(height: 2),
+                              Text(
+                                newsItems.first.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: grey, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right, color: grey),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 12),
             // 搜索：平时只显示一个放大镜圆钮，点开才展开成输入框；
             // 收起时清空搜索，避免看不见的筛选条件留在后台。
             if (!_searchExpanded)
               Row(
                 children: [
+                  Text(tr('tab_catalog'),
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: ink)),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => setState(() => _searchExpanded = true),
@@ -134,65 +199,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 ],
               ),
             const SizedBox(height: 12),
-            // 枪械资讯入口：页头太空，补一条厂商与弹药商资讯快讯；搜索时隐藏。
-            if (_query.isEmpty)
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () {
-                    tapHaptic();
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const NewsScreen()),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: bronze,
-                          ),
-                          child: Icon(Icons.newspaper_outlined,
-                              size: 20,
-                              color: dark
-                                  ? const Color(0xFF121110)
-                                  : Colors.white),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('枪械资讯',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14)),
-                              const SizedBox(height: 2),
-                              Text(
-                                newsItems.first.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    color: grey, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(Icons.chevron_right, color: grey),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+            const SizedBox(height: 12),
             // 收藏完成度 + 赛季倒计时（登录后显示，点进收藏柜 / 任务页）。
             AnimatedBuilder(
               animation: communityStore,

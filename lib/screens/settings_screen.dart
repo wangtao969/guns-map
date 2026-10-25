@@ -14,7 +14,7 @@ import 'community_account_dialogs.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '1.9.3';
+const String appVersion = '1.9.4';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -46,7 +46,9 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 const Text("Gun's Map",
                     style: TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
+                        fontFamily: 'serif',
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
