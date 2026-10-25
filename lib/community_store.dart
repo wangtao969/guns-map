@@ -123,6 +123,12 @@ class CommunityAccount {
   /// 成长体系（本机版，随账号一起落盘）：
   /// 经验、每日经验、签到日期、收藏柜、靶场成绩、关注板块、兴趣品类、引导。
   int totalXp;
+
+  /// 段位测试前备份：-1 表示未在测试态；恢复时把经验写回该值。
+  int xpBeforeTest;
+
+  /// 邀请码：注册时填的邀请人 ID；联网版按此字段给邀请人结算 +100 经验/人。
+  String invitedBy;
   int dailyXp;
   String dailyXpDate;
   final List<String> checkInDates;
@@ -146,6 +152,8 @@ class CommunityAccount {
     this.favoritesPublic = true,
     Set<String>? followingIds,
     this.totalXp = 0,
+    this.xpBeforeTest = -1,
+    this.invitedBy = '',
     this.dailyXp = 0,
     this.dailyXpDate = '',
     List<String>? checkInDates,
@@ -263,6 +271,8 @@ class CommunityAccount {
         'favoritesPublic': favoritesPublic,
         'followingIds': followingIds.toList(),
         'totalXp': totalXp,
+        'xpBeforeTest': xpBeforeTest,
+        'invitedBy': invitedBy,
         'dailyXp': dailyXp,
         'dailyXpDate': dailyXpDate,
         'checkInDates': checkInDates,
@@ -290,6 +300,8 @@ class CommunityAccount {
       favoritesPublic: j['favoritesPublic'] as bool? ?? true,
       followingIds: (j['followingIds'] as List? ?? []).cast<String>().toSet(),
       totalXp: j['totalXp'] as int? ?? 0,
+      xpBeforeTest: j['xpBeforeTest'] as int? ?? -1,
+      invitedBy: j['invitedBy'] as String? ?? '',
       dailyXp: j['dailyXp'] as int? ?? 0,
       dailyXpDate: j['dailyXpDate'] as String? ?? '',
       checkInDates: (j['checkInDates'] as List? ?? []).cast<String>(),
@@ -1177,6 +1189,7 @@ class CommunityStore extends ChangeNotifier {
     required String nickname,
     required String password,
     Uint8List? avatarBytes,
+    String invitedBy = '',
   }) {
     if (nickname.isEmpty || password.isEmpty) {
       return '昵称和密码都不能为空';
@@ -1187,8 +1200,16 @@ class CommunityStore extends ChangeNotifier {
       id: id,
       password: password,
       avatarBytes: avatarBytes,
+      invitedBy: invitedBy,
     );
     accounts.add(account);
+    // 本机可核验的邀请奖励：邀请人账号就在本机时，直接 +100 经验（不占每日封顶）。
+    if (invitedBy.isNotEmpty) {
+      final inviter = findAccount(invitedBy);
+      if (inviter != null && inviter.id != id) {
+        inviter.totalXp += 100;
+      }
+    }
     current = account;
     notifyListeners();
     return null;
@@ -1548,6 +1569,24 @@ class CommunityStore extends ChangeNotifier {
   }
 
   /// 供界面在直接改了账号字段后触发刷新（如编辑资料、通知开关）。
+  /// 段位测试（仅创始用户入口调用）：先备份当前经验，再把段位拉到曜石 LV56。
+  void setTestObsidian() {
+    final me = current;
+    if (me == null) return;
+    if (me.xpBeforeTest < 0) me.xpBeforeTest = me.totalXp;
+    me.totalXp = CommunityAccount.xpForLevel(56);
+    refresh();
+  }
+
+  /// 恢复测试前段位：把经验写回备份值并清除备份。
+  void restoreTestTier() {
+    final me = current;
+    if (me == null || me.xpBeforeTest < 0) return;
+    me.totalXp = me.xpBeforeTest;
+    me.xpBeforeTest = -1;
+    refresh();
+  }
+
   void refresh() {
     notifyListeners();
   }

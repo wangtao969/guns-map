@@ -9,13 +9,14 @@ import '../i18n.dart';
 import '../main.dart';
 import '../system_actions.dart';
 import '../widgets/app_top_bar.dart';
+import '../widgets/glass_dialog.dart';
 import '../community_store.dart';
 import 'about_screen.dart';
 import 'admin_home_screen.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '2.0.1';
+const String appVersion = '2.0.2';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -199,6 +200,12 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.person_add_outlined, size: 22),
+            title: const Text('邀请好友'),
+            subtitle: const Text('每邀请一位新用户，+100 经验'),
+            onTap: () => _showInviteDialog(context),
+          ),
+          ListTile(
             leading: const Icon(Icons.code, size: 22),
             title: const Text('GitHub 开源代码'),
             subtitle: const Text('wangtao969/ordnance'),
@@ -231,7 +238,6 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.info_outlined, size: 22),
             title: Text(tr('data_note')),
             subtitle: Text(
               tr('data_note_body'),
@@ -240,6 +246,62 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
+      ),
+    );
+  }
+
+  /// 邀请好友：邀请码就是自己的 ID；新用户注册时填码，
+  /// 邀请人在本机可直接 +100 经验，跨设备部分联网版按 invitedBy 结算。
+  void _showInviteDialog(BuildContext context) {
+    final me = communityStore.current;
+    if (me == null) {
+      showAppToast(context, '请先登录，再邀请好友');
+      return;
+    }
+    final invitedCount =
+        communityStore.accounts.where((a) => a.invitedBy == me.id).length;
+    const shareChannel = MethodChannel('gunsmap/share');
+    showDialog(
+      context: context,
+      builder: (dialogContext) => GlassDialog(
+        title: '邀请好友',
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('你的邀请码', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 4),
+            Text(me.id,
+                style: const TextStyle(
+                    fontSize: 28, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('新用户注册时填写你的邀请码，每成功邀请一位，+100 经验。',
+                style: TextStyle(fontSize: 13)),
+            const SizedBox(height: 4),
+            Text('本机已有 $invitedCount 位用户填了你的邀请码',
+                style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: me.id));
+              if (dialogContext.mounted) {
+                showAppToast(dialogContext, '邀请码已复制');
+              }
+            },
+            child: const Text('复制邀请码'),
+          ),
+          glassPrimaryButton(
+            dialogContext,
+            '分享邀请',
+            onPressed: () async {
+              await shareChannel.invokeMethod('shareText', {
+                'text':
+                    '来玩 Ordnance，一起聊枪、晒收藏！下载：https://github.com/wangtao969/ordnance/releases/latest 邀请码：${me.id}（注册时填写）'
+              });
+            },
+          ),
+        ],
       ),
     );
   }

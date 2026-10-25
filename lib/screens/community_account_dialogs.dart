@@ -323,6 +323,7 @@ Future<bool> showRegisterDialog(BuildContext context) async {
   final nickCtrl = TextEditingController();
   final passCtrl = TextEditingController();
   final confirmCtrl = TextEditingController();
+  final inviteCtrl = TextEditingController();
   Uint8List? pickedAvatar;
   String? error;
   var obscure = true;
@@ -347,6 +348,7 @@ Future<bool> showRegisterDialog(BuildContext context) async {
                 nickname: nick,
                 password: pass,
                 avatarBytes: pickedAvatar,
+                invitedBy: inviteCtrl.text.trim(),
               );
             }
             if (e != null) {
@@ -401,6 +403,11 @@ Future<bool> showRegisterDialog(BuildContext context) async {
               obscureText: obscure,
               decoration: _glassField(context, tr('confirm_password')),
             ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: inviteCtrl,
+              decoration: _glassField(context, '邀请码（可选，填邀请人的 ID）'),
+            ),
             if (error != null) _errorBar(error!),
           ],
         ),
@@ -410,6 +417,7 @@ Future<bool> showRegisterDialog(BuildContext context) async {
   nickCtrl.dispose();
   passCtrl.dispose();
   confirmCtrl.dispose();
+  inviteCtrl.dispose();
   return ok == true;
 }
 

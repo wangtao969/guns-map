@@ -17,11 +17,12 @@ class _CommunityNotificationsScreenState
     extends State<CommunityNotificationsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabCtrl;
+  bool _showSettings = false;
 
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 3, vsync: this);
+    _tabCtrl = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -50,9 +51,15 @@ class _CommunityNotificationsScreenState
           body: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Row(
                   children: [
+                    TextButton.icon(
+                      onPressed: () =>
+                          setState(() => _showSettings = !_showSettings),
+                      icon: const Icon(Icons.tune, size: 18),
+                      label: const Text('提醒设置'),
+                    ),
                     const Spacer(),
                     TextButton(
                       onPressed: me == null
@@ -63,43 +70,48 @@ class _CommunityNotificationsScreenState
                   ],
                 ),
               ),
+              if (_showSettings) ...[
+                SwitchListTile(
+                  title: const Text('系统公告提醒'),
+                  value: communityStore.notifySystem,
+                  onChanged: (v) => setState(() {
+                    communityStore.notifySystem = v;
+                    communityStore.refresh();
+                  }),
+                ),
+                SwitchListTile(
+                  title: const Text('互动提醒（回复、点赞、@、关注）'),
+                  value: communityStore.notifyInteraction,
+                  onChanged: (v) => setState(() {
+                    communityStore.notifyInteraction = v;
+                    communityStore.refresh();
+                  }),
+                ),
+                SwitchListTile(
+                  title: const Text('私信提醒'),
+                  value: communityStore.notifyDm,
+                  onChanged: (v) => setState(() {
+                    communityStore.notifyDm = v;
+                    communityStore.refresh();
+                  }),
+                ),
+                const Divider(height: 1),
+              ],
               TabBar(
                 controller: _tabCtrl,
                 tabs: const [
+                  Tab(text: '全部'),
                   Tab(text: '系统公告'),
                   Tab(text: '互动'),
                   Tab(text: '私信'),
                 ],
-              ),
-              SwitchListTile(
-                title: const Text('系统公告提醒'),
-                value: communityStore.notifySystem,
-                onChanged: (v) => setState(() {
-                  communityStore.notifySystem = v;
-                  communityStore.refresh();
-                }),
-              ),
-              SwitchListTile(
-                title: const Text('互动提醒（回复、点赞、@、关注）'),
-                value: communityStore.notifyInteraction,
-                onChanged: (v) => setState(() {
-                  communityStore.notifyInteraction = v;
-                  communityStore.refresh();
-                }),
-              ),
-              SwitchListTile(
-                title: const Text('私信提醒'),
-                value: communityStore.notifyDm,
-                onChanged: (v) => setState(() {
-                  communityStore.notifyDm = v;
-                  communityStore.refresh();
-                }),
               ),
               const Divider(height: 1),
               Expanded(
                 child: TabBarView(
                   controller: _tabCtrl,
                   children: [
+                    _NotificationList(items: mine, grey: grey),
                     _NotificationList(
                         items: byKind['system']!, grey: grey),
                     _NotificationList(
@@ -121,48 +133,98 @@ class _NotificationList extends StatelessWidget {
   final Color grey;
   const _NotificationList({required this.items, required this.grey});
 
+  /// X 风格行：种类小圆标 + 粗标题 + 正文 + 时间，未读右上角蓝点，行间细线。
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return Center(
-          child: Text('暂无通知', style: TextStyle(color: grey)));
+      return Center(child: Text('暂无通知', style: TextStyle(color: grey)));
     }
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: items.map((n) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            title: Text(n.title,
-                style: TextStyle(
-                    fontWeight:
-                        n.read ? FontWeight.normal : FontWeight.bold)),
-            subtitle: Column(
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (_, i) {
+        final n = items[i];
+        final IconData icon;
+        final Color iconColor;
+        switch (n.kind) {
+          case 'system':
+            icon = Icons.campaign_outlined;
+            iconColor = const Color(0xFFE86A1C);
+            break;
+          case 'dm':
+            icon = Icons.mail_outlined;
+            iconColor = const Color(0xFF4A90D9);
+            break;
+          default:
+            icon = Icons.favorite_border;
+            iconColor = const Color(0xFFE0245E);
+        }
+        return InkWell(
+          onTap: () {
+            communityStore.markNotificationRead(n);
+            if (n.postId != null) {
+              final post = communityStore.findPost(n.postId!);
+              if (post != null && context.mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          CommunityPostDetailScreen(post: post)),
+                );
+              }
+            }
+          },
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(n.body),
-                const SizedBox(height: 4),
-                Text(CommunityStore.formatTime(n.time),
-                    style: TextStyle(color: grey, fontSize: 11)),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 20, color: iconColor),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(n.title,
+                          style: TextStyle(
+                              fontWeight: n.read
+                                  ? FontWeight.normal
+                                  : FontWeight.bold)),
+                      const SizedBox(height: 2),
+                      Text(n.body, style: const TextStyle(fontSize: 14)),
+                      const SizedBox(height: 4),
+                      Text(CommunityStore.formatTime(n.time),
+                          style: TextStyle(color: grey, fontSize: 11)),
+                    ],
+                  ),
+                ),
+                if (!n.read) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(top: 4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1D9BF0),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
               ],
             ),
-            onTap: () {
-              communityStore.markNotificationRead(n);
-              if (n.postId != null) {
-                final post = communityStore.findPost(n.postId!);
-                if (post != null && context.mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) =>
-                            CommunityPostDetailScreen(post: post)),
-                  );
-                }
-              }
-            },
           ),
         );
-      }).toList(),
+      },
     );
   }
 }

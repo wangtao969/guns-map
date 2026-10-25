@@ -10,7 +10,6 @@ import 'community_dm_screen.dart';
 import 'community_notifications_screen.dart';
 import 'community_profile_screen.dart';
 import 'community_range_screen.dart';
-import 'community_tasks_screen.dart';
 
 /// 我的 Tab：个人中心入口。登录后显示头像、等级铭牌、赛季声望与统计，
 /// 下分我的主页、收藏柜、靶场成绩、任务、设置；未登录时显示登录/注册。
@@ -31,7 +30,7 @@ class MyScreen extends StatelessWidget {
                 16,
                 MediaQuery.of(context).padding.top + kToolbarHeight + 16,
                 16,
-                16),
+                110),
             children: [
               const Text('我的',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),

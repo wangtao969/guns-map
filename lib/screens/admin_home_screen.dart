@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../community_store.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/app_top_bar.dart';
 import 'admin_config_screen.dart';
 import 'admin_personnel_screen.dart';
 import 'admin_review_screen.dart';
 
-/// 后台首页：仅管理员 / 版主可见（入口在“我的”页，登录态决定）。
+/// 后台首页：仅管理员 / 版主可见（入口在设置页，登录态决定）。
 /// 本地版：数据只保存在本机；正式版接服务器后由服务器验权与同步。
 class AdminHomeScreen extends StatelessWidget {
   const AdminHomeScreen({super.key});
@@ -74,6 +75,51 @@ class AdminHomeScreen extends StatelessWidget {
                       builder: (_) => const AdminReviewScreen()),
                 );
               }),
+              if (communityStore.current?.isFounder == true)
+                Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('段位测试（仅创始用户）',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Text(
+                          communityStore.current == null
+                              ? ''
+                              : '当前：LV${communityStore.current!.level} · ${communityStore.current!.tierName}',
+                          style:
+                              TextStyle(color: grey, fontSize: 12),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            ElevatedButton(
+                              onPressed: () {
+                                communityStore.setTestObsidian();
+                                showAppToast(context, '已设为曜石 LV56，看看铭牌发光效果');
+                              },
+                              child: const Text('设为曜石'),
+                            ),
+                            const SizedBox(width: 8),
+                            OutlinedButton(
+                              onPressed: communityStore.current == null ||
+                                      communityStore.current!.xpBeforeTest < 0
+                                  ? null
+                                  : () {
+                                      communityStore.restoreTestTier();
+                                      showAppToast(context, '已恢复测试前段位');
+                                    },
+                              child: const Text('恢复测试前段位'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               if (isAdmin)
                 _entry(context, Icons.tune_outlined, '板块 / 赛季 / 公告',
                     '板块开关、赛季长度、发布系统公告', () {
