@@ -9,11 +9,13 @@ import '../i18n.dart';
 import '../main.dart';
 import '../system_actions.dart';
 import '../widgets/app_top_bar.dart';
+import '../community_store.dart';
 import 'about_screen.dart';
+import 'admin_home_screen.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '2.0.0';
+const String appVersion = '2.0.1';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -48,6 +50,9 @@ class SettingsScreen extends StatelessWidget {
                         fontFamily: 'serif',
                         fontSize: 20,
                         fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text('Firearms Atlas · Accessories · Reloading · Community',
+                    style: TextStyle(color: grey, fontSize: 12)),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -66,12 +71,22 @@ class SettingsScreen extends StatelessWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.bold)),
                 ),
+                const SizedBox(height: 6),
+                Text('内核版本：Flutter 3.47.8',
+                    style: TextStyle(color: grey, fontSize: 12)),
               ],
             ),
           ),
           const SizedBox(height: 24),
-          Text(tr('theme'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              const Icon(Icons.palette_outlined, size: 22),
+              const SizedBox(width: 8),
+              Text(tr('theme'),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
           const SizedBox(height: 8),
           ValueListenableBuilder<ThemeMode>(
             valueListenable: themeModeNotifier,
@@ -102,8 +117,15 @@ class SettingsScreen extends StatelessWidget {
           Text(tr('theme_note'),
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 24),
-          Text(tr('haptics'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              const Icon(Icons.vibration_outlined, size: 22),
+              const SizedBox(width: 8),
+              Text(tr('haptics'),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
           const SizedBox(height: 8),
           ValueListenableBuilder<bool>(
             valueListenable: hapticsEnabledNotifier,
@@ -117,8 +139,15 @@ class SettingsScreen extends StatelessWidget {
           Text(tr('haptics_note'),
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 24),
-          Text(tr('language'),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              const Icon(Icons.language_outlined, size: 22),
+              const SizedBox(width: 8),
+              Text(tr('language'),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
           const SizedBox(height: 8),
           ValueListenableBuilder<String>(
             valueListenable: localeNotifier,
@@ -139,32 +168,40 @@ class SettingsScreen extends StatelessWidget {
           Text(tr('language_note'),
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 24),
-          Text(tr('about'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              const Icon(Icons.info_outlined, size: 22),
+              const SizedBox(width: 8),
+              Text(tr('about'),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
           const SizedBox(height: 8),
           ListTile(
+            leading: const Icon(Icons.apps_outlined, size: 22),
             title: const Text("Ordnance"),
             subtitle: Text('${tr('version_prefix')}v$appVersion${tr('version_suffix')}'),
           ),
           ListTile(
+            leading: const Icon(Icons.system_update_alt, size: 22),
             title: Text(tr('check_update')),
             subtitle: Text(tr('check_update_sub')),
-            trailing: const Icon(Icons.system_update_alt),
             onTap: () => _checkUpdate(context),
           ),
           ListTile(
+            leading: const Icon(Icons.feedback_outlined, size: 22),
             title: Text(tr('feedback')),
             subtitle: Text(tr('feedback_sub')),
-            trailing: const Icon(Icons.feedback_outlined),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const FeedbackScreen()),
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.code, size: 22),
             title: const Text('GitHub 开源代码'),
             subtitle: const Text('wangtao969/ordnance'),
-            trailing: const Icon(Icons.open_in_new, size: 20),
             onTap: () async {
               final ok = await openSystemUrl(
                   'https://github.com/wangtao969/ordnance');
@@ -173,33 +210,33 @@ class SettingsScreen extends StatelessWidget {
               }
             },
           ),
+          if (communityStore.isAdmin || communityStore.isModerator)
+            ListTile(
+              leading:
+                  const Icon(Icons.admin_panel_settings_outlined, size: 22),
+              title: const Text('后台管理'),
+              subtitle: const Text('人员、帖子、板块、赛季与公告'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AdminHomeScreen()),
+              ),
+            ),
           ListTile(
-            title: const Text('项目介绍与操作手册'),
-            subtitle: const Text('Gun\'s Map 是什么、每块怎么用'),
-            trailing: const Icon(Icons.chevron_right),
+            leading: const Icon(Icons.book_outlined, size: 22),
+            title: const Text('项目手册'),
+            subtitle: const Text('Ordnance 是什么、每块怎么用'),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AboutScreen()),
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.info_outlined, size: 22),
             title: Text(tr('data_note')),
             subtitle: Text(
               tr('data_note_body'),
               style: TextStyle(color: grey, fontSize: 13),
             ),
-          ),
-          const SizedBox(height: 32),
-          const Divider(),
-          const SizedBox(height: 8),
-          Center(
-            child: Text('ID：wangtao969',
-                style: TextStyle(color: grey, fontSize: 13)),
-          ),
-          const SizedBox(height: 4),
-          Center(
-            child: Text(tr('id_account'),
-                style: TextStyle(color: grey, fontSize: 11)),
           ),
         ],
       ),

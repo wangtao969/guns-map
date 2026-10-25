@@ -218,37 +218,39 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    communityAvatar(
-                      bytes: account.avatarBytes,
-                      color: account.avatarColor,
-                      nickname: account.nickname,
-                      radius: 32,
-                      frame: account.avatarFrame,
+                    Column(
+                      children: [
+                        communityAvatar(
+                          bytes: account.avatarBytes,
+                          color: account.avatarColor,
+                          nickname: account.nickname,
+                          radius: 32,
+                          frame: account.avatarFrame,
+                        ),
+                        const SizedBox(height: 8),
+                        LevelBadge(account: account, nicknameFontSize: 14),
+                        if (account.isFounder ||
+                            account.role == 'admin' ||
+                            account.role == 'moderator') ...[
+                          const SizedBox(height: 4),
+                          IdentityBadge(
+                              account: account, nicknameFontSize: 14),
+                        ],
+                      ],
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(account.nickname,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold)),
-                              ),
-                              const SizedBox(width: 8),
-                              LevelBadge(account: account, nicknameFontSize: 18),
-                              if (account.isFounder) ...[
-                                const SizedBox(width: 6),
-                                const FounderBadge(nicknameFontSize: 18),
-                              ],
-                            ],
-                          ),
+                          Text(account.nickname,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold)),
                           Text('${tr('id_field')}：${account.id}',
                               style:
                                   TextStyle(color: grey, fontSize: 12)),

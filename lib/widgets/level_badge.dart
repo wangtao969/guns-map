@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../community_store.dart';
 import 'community_theme.dart';
+import 'glass_dialog.dart';
 
 /// 等级铭牌：段位配色底 + LV.x + 段位名，挂在每条帖子作者名旁。
 /// 外框高度严格等于昵称字号（nicknameFontSize），不比昵称字大，
@@ -10,6 +11,56 @@ class LevelBadge extends StatelessWidget {
   final double nicknameFontSize;
   const LevelBadge(
       {super.key, required this.account, this.nicknameFontSize = 14});
+
+  /// 段位发光：铁灰极淡 → 铜淡光 → 银中光 → 金强光 → 钛强光扩散 → 曜石双层光晕。
+  List<BoxShadow> _glow(Color c) {
+    final lv = account.level;
+    final tier = lv <= 10
+        ? 0
+        : lv <= 20
+            ? 1
+            : lv <= 35
+                ? 2
+                : lv <= 48
+                    ? 3
+                    : lv <= 55
+                        ? 4
+                        : 5;
+    switch (tier) {
+      case 0:
+        return [
+          BoxShadow(
+              color: c.withValues(alpha: 0.10), blurRadius: 2, spreadRadius: 0)
+        ];
+      case 1:
+        return [
+          BoxShadow(
+              color: c.withValues(alpha: 0.25), blurRadius: 6, spreadRadius: 0)
+        ];
+      case 2:
+        return [
+          BoxShadow(
+              color: c.withValues(alpha: 0.35), blurRadius: 8, spreadRadius: 0)
+        ];
+      case 3:
+        return [
+          BoxShadow(
+              color: c.withValues(alpha: 0.45), blurRadius: 12, spreadRadius: 0)
+        ];
+      case 4:
+        return [
+          BoxShadow(
+              color: c.withValues(alpha: 0.55), blurRadius: 16, spreadRadius: 1)
+        ];
+      default:
+        return [
+          BoxShadow(
+              color: c.withValues(alpha: 0.65), blurRadius: 20, spreadRadius: 1),
+          BoxShadow(
+              color: c.withValues(alpha: 0.35), blurRadius: 30, spreadRadius: 2),
+        ];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +76,7 @@ class LevelBadge extends StatelessWidget {
           color: c.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(h / 2),
           border: Border.all(color: c),
+          boxShadow: _glow(c),
         ),
         child: Text(
           'LV${account.level} · ${account.tierName}',
@@ -55,10 +107,9 @@ void showLevelSystemDialog(BuildContext context, CommunityAccount account) {
       : '距 LV${lv + 1} 还差 ${CommunityAccount.xpForLevel(lv + 1) - account.totalXp} 经验';
   showDialog(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('用户等级'),
-      content: SingleChildScrollView(
-        child: Column(
+    builder: (ctx) => GlassDialog(
+      title: '用户等级',
+      content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -101,13 +152,7 @@ void showLevelSystemDialog(BuildContext context, CommunityAccount account) {
                 style: TextStyle(color: Colors.grey, fontSize: 12)),
           ],
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(),
-          child: const Text('知道了'),
-        ),
-      ],
+      actions: [glassPrimaryButton(ctx, '知道了')],
     ),
   );
 }
@@ -122,10 +167,9 @@ void showRoleSystemDialog(BuildContext context) {
   ];
   showDialog(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('用户身份'),
-      content: SingleChildScrollView(
-        child: Column(
+    builder: (ctx) => GlassDialog(
+      title: '用户身份',
+      content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -137,42 +181,54 @@ void showRoleSystemDialog(BuildContext context) {
             ],
           ],
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(),
-          child: const Text('知道了'),
-        ),
-      ],
+      actions: [glassPrimaryButton(ctx, '知道了')],
     ),
   );
 }
 
-/// 创始用户铭牌：金底小药丸，与等级铭牌同高（等于昵称字号）。
-class FounderBadge extends StatelessWidget {
+/// 特殊身份铭牌：与等级铭牌同高（等于昵称字号）。
+/// 创始用户金、管理员橙、版主钛蓝；普通用户不挂。
+class IdentityBadge extends StatelessWidget {
+  final CommunityAccount account;
   final double nicknameFontSize;
-  const FounderBadge({super.key, this.nicknameFontSize = 14});
+  const IdentityBadge(
+      {super.key, required this.account, this.nicknameFontSize = 14});
+
+  Color get _color {
+    if (account.isFounder) return const Color(0xFFD4A017);
+    if (account.role == 'admin') return const Color(0xFFE86A1C);
+    return const Color(0xFF7FA8BC);
+  }
+
+  String get _label {
+    if (account.isFounder) return '创始用户';
+    if (account.role == 'admin') return '管理员';
+    return '版主';
+  }
 
   @override
   Widget build(BuildContext context) {
-    const c = Color(0xFFD4A017);
+    final c = _color;
     final h = nicknameFontSize;
-    return Container(
-      height: h,
-      padding: EdgeInsets.symmetric(horizontal: h * 0.32),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(h / 2),
-        border: Border.all(color: c),
-      ),
-      child: Text(
-        '创始用户',
-        style: TextStyle(
-            color: c,
-            fontSize: h * 0.68,
-            fontWeight: FontWeight.bold,
-            height: 1),
+    return GestureDetector(
+      onTap: () => showRoleSystemDialog(context),
+      child: Container(
+        height: h,
+        padding: EdgeInsets.symmetric(horizontal: h * 0.32),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: c.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(h / 2),
+          border: Border.all(color: c),
+        ),
+        child: Text(
+          _label,
+          style: TextStyle(
+              color: c,
+              fontSize: h * 0.68,
+              fontWeight: FontWeight.bold,
+              height: 1),
+        ),
       ),
     );
   }

@@ -353,6 +353,15 @@ class RangeScore {
   final DateTime date;
   final String note;
 
+  /// 现实靶场记录项：口径、弹药、姿势、靶纸、环数、天气、风速风向。
+  final String caliber;
+  final String ammo;
+  final String position;
+  final String target;
+  final String score;
+  final String weather;
+  final String wind;
+
   RangeScore({
     required this.gunName,
     required this.distance,
@@ -360,6 +369,13 @@ class RangeScore {
     required this.groupSize,
     DateTime? date,
     this.note = '',
+    this.caliber = '',
+    this.ammo = '',
+    this.position = '',
+    this.target = '',
+    this.score = '',
+    this.weather = '',
+    this.wind = '',
   }) : date = date ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
@@ -369,6 +385,13 @@ class RangeScore {
         'groupSize': groupSize,
         'date': date.toIso8601String(),
         'note': note,
+        'caliber': caliber,
+        'ammo': ammo,
+        'position': position,
+        'target': target,
+        'score': score,
+        'weather': weather,
+        'wind': wind,
       };
 
   static RangeScore fromJson(Map<String, dynamic> j) => RangeScore(
@@ -379,6 +402,13 @@ class RangeScore {
         date:
             DateTime.tryParse(j['date'] as String? ?? '') ?? DateTime.now(),
         note: j['note'] as String? ?? '',
+        caliber: j['caliber'] as String? ?? '',
+        ammo: j['ammo'] as String? ?? '',
+        position: j['position'] as String? ?? '',
+        target: j['target'] as String? ?? '',
+        score: j['score'] as String? ?? '',
+        weather: j['weather'] as String? ?? '',
+        wind: j['wind'] as String? ?? '',
       );
 }
 
