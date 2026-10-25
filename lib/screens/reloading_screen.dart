@@ -6,6 +6,7 @@ import '../models.dart';
 import '../widgets/app_top_bar.dart';
 import 'suppliers_screen.dart';
 import 'reload_log_screen.dart';
+import 'reload_tools_screen.dart';
 
 /// 复装页三个板块：
 /// 一、子弹口径图鉴（可搜索、可按弹种分组，卡片标题直接显示关键尺寸）；
@@ -263,12 +264,26 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
               ),
             ),
           ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.build_outlined),
+              title: const Text('复装工具'),
+              subtitle: Text('压机、模具、量具等 ${reloadTools.length} 种',
+                  style: TextStyle(color: grey, fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const ReloadToolsScreen()),
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Text(
-                '数据来源说明：本页装药数据均引自 Hornady、Speer、Nosler、Hodgdon、Vihtavuori、Lyman 等公开出版手册与官方数据页，各条标注出处；未引述的字段以“手册未载”标示；未经核实的组合一律未收录。组件价格为 2026 年 10 月美国零售参考价，随时变动，以下单时商家标价为准。',
+                '数据来源说明：本页装药数据均引自 Hornady、Speer、Nosler、Hodgdon、Vihtavuori、Lyman 等公开出版手册与官方数据页，各条标注出处；未引述的字段以“手册未载”标示；未经核实的组合一律未收录。组件与工具价格均为 2026 年 10 月美国零售参考价，随时变动，以下单时商家标价为准；未确认的以“未确认”标示。',
                 style: TextStyle(color: grey, fontSize: 12),
               ),
             ),

@@ -147,6 +147,27 @@ class ReloadComponent {
   });
 }
 
+/// 一条复装工具：压机 / 模具 / 量粉 / 量具 / 修整 / 底火 / 清洁等。
+/// price 为 2026 年 10 月查到的美国零售参考价字符串，未查到的写“未确认”，
+/// 绝非固定售价；function 为具体功能一句话；essential 为新手必备。
+class ReloadTool {
+  final String category;
+  final String vendor;
+  final String name;
+  final String function;
+  final String price;
+  final bool essential;
+
+  const ReloadTool({
+    required this.category,
+    required this.vendor,
+    required this.name,
+    required this.function,
+    required this.price,
+    required this.essential,
+  });
+}
+
 /// 一条装药数据。所有数值字段均须有 Hornady 手册原文出处；
 /// 未经核实的字段以“详见手册原文”标示，初速/膛压未引述时为空。
 class ReloadLoad {

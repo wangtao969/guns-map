@@ -14,7 +14,7 @@ import 'community_account_dialogs.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '1.9.4';
+const String appVersion = '1.9.5';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {

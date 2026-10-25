@@ -17576,6 +17576,57 @@ const List<ReloadComponent> reloadComponents = [
   ),
 ];
 
+/// 复装常用工具（2026-10-25 核实）。
+/// 价格为 2026 年 10 月美国零售参考价（以所列具体型号/口径为例，不同口径与卖家有浮动），
+/// 未查到的写“未确认”，绝非固定售价；下单以商家标价为准。
+const List<ReloadTool> reloadTools = [
+  // 压床
+  ReloadTool(category: '压床', vendor: 'RCBS、Lee、Redding', name: '单级压床', function: '一次只做一道工序，精度最高的新手标准压床', price: '\$239.99（仅压床）', essential: true),
+  ReloadTool(category: '压床', vendor: 'Lee、RCBS、Lyman', name: '转塔压床', function: '多个模具装在可旋转转塔上，换工序不用反复拆装模具', price: '\$186.99（仅压床）', essential: false),
+  ReloadTool(category: '压床', vendor: 'Dillon、Hornady、Lee', name: '连续压床', function: '一次行程同时对多个弹壳做不同工序，批量生产用', price: '\$1,099.00', essential: false),
+  ReloadTool(category: '压床', vendor: 'Lee', name: '手持压床', function: '不用固定在台面上、手持操作的小型压床，适合小空间或外出', price: '\$53.79（仅压床）', essential: false),
+  // 模具与壳座
+  ReloadTool(category: '模具与壳座', vendor: 'RCBS、Lee、Redding、Hornady', name: '全长整形模组', function: '把击发过的弹壳整体恢复到标准尺寸并退出旧底火', price: '\$85.89（3 模组）', essential: true),
+  ReloadTool(category: '模具与壳座', vendor: 'Lee、Redding', name: '颈部整形模', function: '只整形弹壳颈部、不动壳体，延长弹壳寿命、提升同枪复装一致性', price: '\$29.98', essential: false),
+  ReloadTool(category: '模具与壳座', vendor: 'RCBS、Lee、Redding、Hornady', name: '坐弹模', function: '把弹头按设定深度压入弹壳口并定好全弹长', price: '未确认', essential: true),
+  ReloadTool(category: '模具与壳座', vendor: 'Lee、RCBS', name: '收口模', function: '在弹壳口收紧固定弹头，防止弹头在供弹/后坐中移位', price: '\$10.99', essential: false),
+  ReloadTool(category: '模具与壳座', vendor: 'RCBS、Lee、Hornady', name: '壳座', function: '按口径卡住弹壳底缘、固定在压床上，模具操作的前提配件', price: '\$9.99', essential: true),
+  // 称量与量粉
+  ReloadTool(category: '称量与量粉', vendor: 'RCBS、Lyman', name: '横梁秤', function: '用横梁平衡原理称量火药，不受电池与电磁干扰', price: '\$97.73', essential: true),
+  ReloadTool(category: '称量与量粉', vendor: 'RCBS、Hornady、Frankford Arsenal', name: '电子秤', function: '数字显示火药重量，读数快、可去皮', price: '\$154.39', essential: true),
+  ReloadTool(category: '称量与量粉', vendor: 'RCBS、Lee、Hornady、Redding', name: '量粉器', function: '按设定体积重复倒出定量火药', price: '\$101.96', essential: true),
+  ReloadTool(category: '称量与量粉', vendor: 'RCBS、Lyman、Hornady', name: '微调粉勺', function: '一粒一粒缓慢补粉，把秤上的药量精确补到目标值', price: '\$29.99', essential: false),
+  ReloadTool(category: '称量与量粉', vendor: 'RCBS、Lee、Hornady', name: '漏斗', function: '把火药从秤盘/量粉器干净地导进弹壳口', price: '\$7.99', essential: true),
+  // 测量与规具
+  ReloadTool(category: '测量与规具', vendor: 'Frankford Arsenal、RCBS、Hornady、Lyman', name: '卡尺', function: '测量弹壳长度、全弹长、弹头直径等关键尺寸', price: '\$27.99', essential: true),
+  ReloadTool(category: '测量与规具', vendor: 'Hornady、Lyman、RCBS', name: '壳长/膛压规', function: '对比击发前后弹壳的膛压基准尺寸，判断整形量是否合适', price: '\$40.99', essential: false),
+  ReloadTool(category: '测量与规具', vendor: 'Hornady、Frankford Arsenal', name: '弹头总长规', function: '测出本枪膛线起始位置，确定弹头坐深与膛线间隙', price: '\$35.69', essential: false),
+  // 弹壳修整
+  ReloadTool(category: '弹壳修整', vendor: 'Lyman、Lee、RCBS、Hornady', name: '修壳器', function: '把拉长超标的弹壳口切回标准长度', price: '\$105.99', essential: true),
+  ReloadTool(category: '弹壳修整', vendor: 'Lee、Lyman、RCBS、Hornady', name: '倒角/去毛刺工具', function: '修整切口内外的毛刺并给壳口倒角，方便弹头顺利入座', price: '\$2.99', essential: true),
+  ReloadTool(category: '弹壳修整', vendor: 'RCBS、Lyman', name: '颈部刷', function: '清理弹壳颈部内壁残渣并可配合涂颈部润滑', price: '\$4.29', essential: false),
+  // 底火窝与传火孔
+  ReloadTool(category: '底火窝与传火孔', vendor: 'RCBS、Lee、Lyman', name: '底火窝清洁器', function: '刷掉底火窝内的积碳残渣，保证新底火坐平坐稳', price: '\$18.99', essential: true),
+  ReloadTool(category: '底火窝与传火孔', vendor: 'Sinclair、Lyman、RCBS', name: '底火窝均一工具', function: '把底火窝底部切平到统一深度，使底火坐深一致', price: '\$19.99', essential: false),
+  ReloadTool(category: '底火窝与传火孔', vendor: 'Lyman、Hornady、Redding、Sinclair', name: '传火孔去毛刺工具', function: '去除传火孔内侧冲压毛刺，使点火传导更均匀', price: '\$15.99', essential: false),
+  ReloadTool(category: '底火窝与传火孔', vendor: 'RCBS、Dillon', name: '底火窝扩孔器', function: '去除军用弹壳底火窝的压紧翻边，使新底火能装入', price: '\$44.99', essential: false),
+  // 底火安装
+  ReloadTool(category: '底火安装', vendor: 'RCBS、Lee', name: '手持底火安装器', function: '手持将新底火逐个压入底火窝，凭手感控制坐深', price: '\$86.99', essential: true),
+  ReloadTool(category: '底火安装', vendor: 'RCBS、Forster', name: '台式底火安装器', function: '固定在台面上的杠杆式底火安装器，省力且坐深稳定', price: '\$134.99', essential: false),
+  // 弹壳清洁
+  ReloadTool(category: '弹壳清洁', vendor: 'Frankford Arsenal、Lyman、Hornady', name: '滚筒抛光机', function: '用介质滚动摩擦抛光弹壳，去除污垢氧化层', price: '\$189.99', essential: false),
+  ReloadTool(category: '弹壳清洁', vendor: 'Hornady、Lyman、Frankford Arsenal', name: '超声波清洗机', function: '用超声波空化清洗弹壳内外与底火窝，不抛光', price: '\$169.99', essential: false),
+  // 润滑与辅助
+  ReloadTool(category: '润滑与辅助', vendor: 'RCBS、Hornady、Redding、Lyman', name: '壳体润滑剂+润滑垫', function: '给弹壳外壁涂润滑，防止整形时弹壳卡在模具里', price: '\$25.99（套装）', essential: true),
+  ReloadTool(category: '润滑与辅助', vendor: 'RCBS、Frankford Arsenal、Hornady', name: '装弹托盘', function: '直立固定一批弹壳，方便批量装药、检查与转移', price: '\$14.59', essential: true),
+  // 拔弹与故障处理
+  ReloadTool(category: '拔弹与故障处理', vendor: 'Frankford Arsenal、Lyman、Hornady', name: '惯性拔弹器', function: '靠敲击惯性把已装好的弹头从弹壳中震出', price: '\$17.99', essential: false),
+  ReloadTool(category: '拔弹与故障处理', vendor: 'RCBS、Hornady、Forster', name: '夹头式拔弹器', function: '装在压床上用夹头夹住弹头拔出，不损伤弹头、适合批量纠错', price: '\$29.99（本体不含夹头）', essential: false),
+  ReloadTool(category: '拔弹与故障处理', vendor: 'RCBS', name: '卡壳取出器', function: '取出卡在整形模里的弹壳，避免模具报废', price: '\$18.29', essential: false),
+];
+
+
+
 /// 复装流程 SOP（金属弹壳，单动式压机顺序），依据 NRA 七步法、NIJ 复装流程模块、
 /// Hornady / Speer / Lyman 各手册通用流程、Alliant 与 RemArms 安全规程整理。
 const List<String> reloadSopSteps = [
