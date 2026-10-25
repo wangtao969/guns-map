@@ -81,7 +81,10 @@ class _CommunityPostDetailScreenState
     final err = communityStore.addComment(widget.post, content);
     if (err != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('内容含敏感词“$err”，请修改后重试')),
+        SnackBar(
+            content: Text(err == '账号已被禁言' || err == '账号已被封禁'
+                ? err
+                : '内容含敏感词“$err”，请修改后重试')),
       );
       return;
     }

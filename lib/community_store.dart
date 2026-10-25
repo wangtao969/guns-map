@@ -81,6 +81,8 @@ class CommunityAccount {
   /// 角色：user 普通用户 / moderator 版主 / admin 管理员。
   /// 本机版只有本机账号，角色字段为后端预留，权限判断先按本地管理走。
   String role;
+  /// 账号状态：active 正常 / muted 禁言（不能发帖评论）/ banned 封禁（不能发帖评论）。
+  String status;
   /// 隐私开关：帖子旁是否显示 ID、收藏是否对外可见。
   bool showIdPublic;
   bool favoritesPublic;
@@ -106,6 +108,7 @@ class CommunityAccount {
     this.avatarBytes,
     this.bio = '',
     this.role = 'user',
+    this.status = 'active',
     this.showIdPublic = true,
     this.favoritesPublic = true,
     Set<String>? followingIds,
@@ -221,6 +224,7 @@ class CommunityAccount {
             avatarBytes == null ? null : base64Encode(avatarBytes!),
         'bio': bio,
         'role': role,
+        'status': status,
         'showIdPublic': showIdPublic,
         'favoritesPublic': favoritesPublic,
         'followingIds': followingIds.toList(),
@@ -246,6 +250,7 @@ class CommunityAccount {
           : base64Decode(j['avatarBytes'] as String),
       bio: j['bio'] as String? ?? '',
       role: j['role'] as String? ?? 'user',
+      status: j['status'] as String? ?? 'active',
       showIdPublic: j['showIdPublic'] as bool? ?? true,
       favoritesPublic: j['favoritesPublic'] as bool? ?? true,
       followingIds: (j['followingIds'] as List? ?? []).cast<String>().toSet(),
@@ -813,8 +818,14 @@ class CommunityStore extends ChangeNotifier {
   bool notifyInteraction = true;
   bool notifyDm = true;
 
-  /// 赛季起点（全社区共用一季，70 天一季）；赛季声望按窗口内数据现算。
+  /// 赛季起点（全社区共用一季）；赛季声望按窗口内数据现算。
   DateTime firstSeasonStart = DateTime.now();
+
+  /// 被管理员关闭的板块：关闭后不再出现在板块入口与发帖板块选择里。
+  final Set<String> disabledBoards = {};
+
+  /// 赛季长度（天），管理员可调；每日经验封顶 120 固定不变。
+  int seasonLengthDays = 70;
 
   bool _loaded = false;
   int _seq = 0;
@@ -861,6 +872,10 @@ class CommunityStore extends ChangeNotifier {
         firstSeasonStart =
             DateTime.tryParse(j['firstSeasonStart'] as String? ?? '') ??
                 DateTime.now();
+        disabledBoards.clear();
+        disabledBoards.addAll(
+            (j['disabledBoards'] as List? ?? []).map((e) => e.toString()));
+        seasonLengthDays = j['seasonLengthDays'] as int? ?? 70;
         final currentId = j['currentId'] as String?;
         current = currentId == null ? null : findAccount(currentId);
       }
@@ -882,6 +897,8 @@ class CommunityStore extends ChangeNotifier {
         'notifyInteraction': notifyInteraction,
         'notifyDm': notifyDm,
         'firstSeasonStart': firstSeasonStart.toIso8601String(),
+        'disabledBoards': disabledBoards.toList(),
+        'seasonLengthDays': seasonLengthDays,
       };
 
   void _save() {
@@ -905,14 +922,15 @@ class CommunityStore extends ChangeNotifier {
   DateTime get seasonStartCurrent {
     final elapsed = DateTime.now().difference(firstSeasonStart).inDays;
     if (elapsed < 0) return firstSeasonStart;
-    return firstSeasonStart.add(Duration(days: (elapsed ~/ 70) * 70));
+    return firstSeasonStart.add(
+        Duration(days: (elapsed ~/ seasonLengthDays) * seasonLengthDays));
   }
 
   int get seasonRemainingDays {
     final elapsed = DateTime.now().difference(firstSeasonStart).inDays;
-    if (elapsed < 0) return 70;
-    final left = 70 - (elapsed % 70);
-    return left == 0 ? 70 : left;
+    if (elapsed < 0) return seasonLengthDays;
+    final left = seasonLengthDays - (elapsed % seasonLengthDays);
+    return left == 0 ? seasonLengthDays : left;
   }
 
   /// 赛季声望（本机版）：本赛季签到 10 分/天 + 发帖 5 分/条，现算。
@@ -1048,6 +1066,18 @@ class CommunityStore extends ChangeNotifier {
     return null;
   }
 
+  /// 初始管理员账号 ID：用这个 ID 登录即为管理员（本地版规则；正式版由服务器认角色）。
+  static const adminBootstrapId = 'wangtao969';
+
+  /// 是否管理员：初始管理员账号，或 role 为 admin 的账号。
+  bool get isAdmin =>
+      current != null &&
+      (current!.id == adminBootstrapId || current!.role == 'admin');
+
+  /// 是否版主（含管理员）：可审核帖子，不能管人员与配置。
+  bool get isModerator =>
+      current != null && (current!.role == 'moderator' || isAdmin);
+
   /// 注册：昵称、ID、密码；ID 不可重复。注册成功自动登录。
   /// 返回 null 表示成功，否则返回错误文案。
   String? register({
@@ -1099,6 +1129,9 @@ class CommunityStore extends ChangeNotifier {
   }) {
     final author = current;
     if (author == null) return '请先登录';
+    if (author.status == 'banned') return '账号已被封禁';
+    if (author.status == 'muted') return '账号已被禁言';
+    if (disabledBoards.contains(board)) return '该板块已关闭';
     final bad = findSensitiveWord(title + content);
     if (bad != null) return bad;
     final post = CommunityPost(
@@ -1175,6 +1208,8 @@ class CommunityStore extends ChangeNotifier {
   String? addComment(CommunityPost post, String content) {
     final me = current;
     if (me == null) return '请先登录';
+    if (me.status == 'banned') return '账号已被封禁';
+    if (me.status == 'muted') return '账号已被禁言';
     final bad = findSensitiveWord(content);
     if (bad != null) return bad;
     post.comments.add(CommunityComment(
@@ -1242,6 +1277,64 @@ class CommunityStore extends ChangeNotifier {
 
   void deletePost(CommunityPost post) {
     posts.remove(post);
+    notifyListeners();
+  }
+
+  /// 人员管理（仅管理员）：改角色 / 改状态；不能改自己，不能改初始管理员。
+  /// 返回 null 表示成功，否则返回原因。
+  String? setUserRole(CommunityAccount target, String role) {
+    if (!isAdmin) return '只有管理员可以管理权限';
+    if (target.id == current?.id) return '不能修改自己的权限';
+    if (target.id == adminBootstrapId) return '不能修改初始管理员';
+    target.role = role;
+    notifyListeners();
+    return null;
+  }
+
+  String? setUserStatus(CommunityAccount target, String status) {
+    if (!isAdmin) return '只有管理员可以管理权限';
+    if (target.id == current?.id) return '不能修改自己的权限';
+    if (target.id == adminBootstrapId) return '不能修改初始管理员';
+    target.status = status;
+    notifyListeners();
+    return null;
+  }
+
+  /// 取消举报（管理员/版主）。
+  void clearReport(CommunityPost post) {
+    post.reported = false;
+    notifyListeners();
+  }
+
+  /// 板块开关（仅管理员）。
+  void setBoardDisabled(String board, bool disabled) {
+    if (disabled) {
+      disabledBoards.add(board);
+    } else {
+      disabledBoards.remove(board);
+    }
+    notifyListeners();
+  }
+
+  /// 发布公告（仅管理员）：全站系统通知。
+  void publishAnnouncement(String title, String body) {
+    notifications.insert(
+      0,
+      CommunityNotification(
+        id: _nextId(),
+        targetAccountId: '',
+        kind: 'system',
+        title: title,
+        body: body,
+        time: DateTime.now(),
+      ),
+    );
+    notifyListeners();
+  }
+
+  /// 删除公告（仅管理员）。
+  void deleteAnnouncement(CommunityNotification n) {
+    notifications.remove(n);
     notifyListeners();
   }
 

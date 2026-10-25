@@ -530,7 +530,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Widget _rankingSection(CommunityAccount? current, Color grey) {
     final accounts = communityStore.accounts.toList();
     accounts.sort((a, b) => b.totalXp.compareTo(a.totalXp));
-    final boards = communityBoards.toList();
+    final boards = communityBoards
+        .where((b) => !communityStore.disabledBoards.contains(b))
+        .toList();
     boards.sort((a, b) =>
         communityStore.boardHeat(b).compareTo(communityStore.boardHeat(a)));
     int? myRank;
@@ -738,7 +740,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
           crossAxisSpacing: 10,
           childAspectRatio: 0.95,
           children: [
-            for (final b in communityBoards) _boardGridItem(b, grey),
+            for (final b in communityBoards.where(
+        (b) => !communityStore.disabledBoards.contains(b)))
+              _boardGridItem(b, grey),
           ],
         ),
         const SizedBox(height: 20),

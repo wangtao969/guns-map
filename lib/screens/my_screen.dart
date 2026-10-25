@@ -11,6 +11,7 @@ import 'community_profile_screen.dart';
 import 'community_range_screen.dart';
 import 'community_tasks_screen.dart';
 import 'settings_screen.dart';
+import 'admin_home_screen.dart';
 
 /// 我的 Tab：个人中心入口。登录后显示头像、等级铭牌、赛季声望与统计，
 /// 下分我的主页、收藏柜、靶场成绩、任务、设置；未登录时显示登录/注册。
@@ -205,6 +206,16 @@ class MyScreen extends StatelessWidget {
                         builder: (_) => const CommunityTasksScreen()),
                   ),
                 ),
+                if (communityStore.isAdmin || communityStore.isModerator)
+                  _MenuTile(
+                    icon: Icons.admin_panel_settings_outlined,
+                    title: '后台管理',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const AdminHomeScreen()),
+                    ),
+                  ),
                 _MenuTile(
                   icon: Icons.settings_outlined,
                   title: '设置',

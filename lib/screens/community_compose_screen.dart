@@ -87,6 +87,12 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(tr('login_required_body'))),
         );
+      } else if (err == '账号已被禁言' ||
+          err == '账号已被封禁' ||
+          err == '该板块已关闭') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err)),
+        );
       } else {
         // err 就是命中的敏感词。
         ScaffoldMessenger.of(context).showSnackBar(
@@ -151,6 +157,7 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
           Wrap(
             spacing: 8,
             children: communityBoards
+                .where((b) => !communityStore.disabledBoards.contains(b))
                 .map((b) => ChoiceChip(
                       label: Text(b),
                       selected: _board == b,
