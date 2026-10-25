@@ -9,7 +9,8 @@ import 'glass_dialog.dart';
 /// 外框高度严格等于昵称字号（nicknameFontSize），不比昵称字大，
 /// 保证各页视觉协调；铭牌内文字按比例缩小。
 /// 发光：初始段位铁灰不发光；其余段位按各自颜色做呼吸灯（1.8 秒一呼一吸）；
-/// 最高段位曜石另加闪电绕着铭牌转并闪烁。
+/// 最高段位曜石另加暗紫色的光：紫色光晕呼吸 + 一道紫光沿铭牌外圈旋转（带拖尾），
+/// 是光，不是闪电标志。
 class LevelBadge extends StatefulWidget {
   final CommunityAccount account;
   final double nicknameFontSize;
@@ -76,13 +77,15 @@ class _LevelBadgeState extends State<LevelBadge>
               spreadRadius: 1)
         ];
       default:
+        // 曜石的光是暗紫色，不用段位本身的深灰色。
+        const purple = Color(0xFF7B1FA2);
         return [
           BoxShadow(
-              color: c.withValues(alpha: 0.60 + 0.30 * t),
+              color: purple.withValues(alpha: 0.60 + 0.30 * t),
               blurRadius: 20 + 10 * t,
               spreadRadius: 1),
           BoxShadow(
-              color: c.withValues(alpha: 0.30 + 0.25 * t),
+              color: purple.withValues(alpha: 0.30 + 0.25 * t),
               blurRadius: 30 + 12 * t,
               spreadRadius: 2),
         ];
@@ -129,7 +132,7 @@ class _LevelBadgeState extends State<LevelBadge>
               ),
               Positioned.fill(
                 child: CustomPaint(
-                  painter: _LightningPainter(_ctrl.value),
+                  painter: _ObsidianLightPainter(_ctrl.value),
                 ),
               ),
             ],
@@ -140,61 +143,45 @@ class _LevelBadgeState extends State<LevelBadge>
   }
 }
 
-/// 曜石闪电：三道小闪电沿铭牌外圈旋转，每道以固定节奏明暗闪烁。
-class _LightningPainter extends CustomPainter {
+/// 曜石暗紫色的光：一道紫光沿铭牌外圈旋转，身后带 5 段渐隐拖尾，
+/// 外加一层宽模糊的紫色光晕；画的是光弧，不是闪电标志。
+class _ObsidianLightPainter extends CustomPainter {
   final double progress;
-  const _LightningPainter(this.progress);
+  const _ObsidianLightPainter(this.progress);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final rx = size.width / 2 - 3;
-    final ry = size.height / 2 - 3;
-    final glowPaint = Paint()
-      ..color = const Color(0xFFBFEFFF).withValues(alpha: 0.25)
+    final rect = Rect.fromLTWH(1, 1, size.width - 2, size.height - 2);
+    final haloPaint = Paint()
+      ..color = const Color(0xFF7B1FA2).withValues(alpha: 0.18)
+      ..strokeWidth = 7
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    canvas.drawOval(rect, haloPaint);
+    // 旋转的光弧：头亮尾暗，6 段拖尾。
+    for (var i = 0; i < 6; i++) {
+      final start = progress * 2 * math.pi - i * 0.35;
+      final alpha = 0.55 - i * 0.08;
+      if (alpha <= 0) continue;
+      final arcPaint = Paint()
+        ..color = const Color(0xFF8E24AA).withValues(alpha: alpha)
+        ..strokeWidth = 2.5
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
+      canvas.drawArc(rect, start, 0.45, false, arcPaint);
+    }
+    // 弧头最亮的一点。
+    final headAngle = progress * 2 * math.pi;
+    final headPaint = Paint()
+      ..color = const Color(0xFFE1BEE7).withValues(alpha: 0.9)
       ..strokeWidth = 3.5
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
-    final corePaint = Paint()
-      ..strokeWidth = 1.5
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    for (var k = 0; k < 3; k++) {
-      final angle = progress * 2 * math.pi + k * 2 * math.pi / 3;
-      final bx = cx + math.cos(angle) * rx;
-      final by = cy + math.sin(angle) * ry;
-      // 切线方向的锯齿：5 个点左右交错，形成闪电折线。
-      final tx = -math.sin(angle);
-      final ty = math.cos(angle);
-      final nx = math.cos(angle);
-      final ny = math.sin(angle);
-      final points = <Offset>[];
-      for (var i = 0; i < 5; i++) {
-        final along = (i - 2) * 3.0;
-        final off = (i % 2 == 0 ? 1 : -1) * (i == 2 ? 0 : 2.5);
-        points.add(Offset(
-          bx + tx * along + nx * off,
-          by + ty * along + ny * off,
-        ));
-      }
-      final path = Path()..moveTo(points.first.dx, points.first.dy);
-      for (final p in points.skip(1)) {
-        path.lineTo(p.dx, p.dy);
-      }
-      final flicker =
-          ((progress * 12).floor() + k) % 2 == 0 ? 0.95 : 0.35;
-      canvas.drawPath(path, glowPaint);
-      canvas.drawPath(
-          path,
-          corePaint
-            ..color =
-                const Color(0xFFFFFFFF).withValues(alpha: flicker));
-    }
+    canvas.drawArc(rect, headAngle, 0.12, false, headPaint);
   }
 
   @override
-  bool shouldRepaint(_LightningPainter old) =>
+  bool shouldRepaint(_ObsidianLightPainter old) =>
       old.progress != progress;
 }
 

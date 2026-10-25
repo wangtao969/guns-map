@@ -1172,8 +1172,9 @@ class CommunityStore extends ChangeNotifier {
           current!.role == 'admin');
 
   /// 下一个系统分配 ID：从 10000 起，按已有数字 ID 顺序递增。
+  /// ID 分配从 10001 开始：10000 只留给创始用户，新设备首个注册不再是创始。
   String get nextUserId {
-    var maxId = 9999;
+    var maxId = 10000;
     for (final a in accounts) {
       final n = int.tryParse(a.id);
       if (n != null && n > maxId) maxId = n;
