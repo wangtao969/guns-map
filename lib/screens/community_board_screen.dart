@@ -123,25 +123,13 @@ class _CommunityBoardScreenState extends State<CommunityBoardScreen> {
             widget.board != '全部' &&
             me.followedBoards.contains(widget.board);
         return Scaffold(
-          appBar: const GunsMapAppBar(),
+          appBar: SubPageAppBar(title: widget.board == '全部' ? '全部帖子' : widget.board),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               Row(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  Expanded(
-                    child: Text(
-                      widget.board == '全部'
-                          ? '全部帖子'
-                          : widget.board,
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                  const Spacer(),
                   IconButton(
                     onPressed: () =>
                         setState(() => _showSearch = !_showSearch),

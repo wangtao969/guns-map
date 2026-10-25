@@ -23,7 +23,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         ? reloadComponents
         : reloadComponents.where((c) => c.kind == _kind).toList();
     return Scaffold(
-      appBar: const GunsMapAppBar(),
+      appBar: SubPageAppBar(title: '组件供应商'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

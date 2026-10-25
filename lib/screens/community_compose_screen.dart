@@ -95,7 +95,13 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
       }
       return;
     }
-    Navigator.of(context).pop();
+    // 发动态自动签到：当天还没签到就顺手签了，返回 true 让动态页提示。
+    var autoChecked = false;
+    final me = communityStore.current;
+    if (me != null && !me.checkedInToday) {
+      autoChecked = communityStore.checkIn() >= 0;
+    }
+    Navigator.of(context).pop(autoChecked);
   }
 
   @override
@@ -104,21 +110,13 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
     final hasDraft = communityStore.draft != null;
     return Scaffold(
-      appBar: const GunsMapAppBar(),
+      appBar: SubPageAppBar(title: tr('post_new')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Row(
             children: [
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back),
-              ),
-              Expanded(
-                child: Text(tr('post_new'),
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
-              ),
+              const Spacer(),
               if (hasDraft)
                 TextButton(
                   onPressed: () {

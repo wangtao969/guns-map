@@ -61,12 +61,17 @@ class MedalRingBadge extends StatelessWidget {
   }
 }
 
-/// 今日经验条：今日 X/120 + 橙色进度，点击进任务页。
+/// 今日经验条：今日 X/120 + 进度，点击进任务页。
+/// 默认橙色；社区签到区传入暗红。
 class XpProgressRow extends StatelessWidget {
   final CommunityAccount account;
   final VoidCallback onTap;
+  final Color accent;
   const XpProgressRow(
-      {super.key, required this.account, required this.onTap});
+      {super.key,
+      required this.account,
+      required this.onTap,
+      this.accent = communityAccent});
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +85,7 @@ class XpProgressRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: [
-            const Icon(Icons.bolt, size: 18, color: communityAccent),
+            Icon(Icons.bolt, size: 18, color: accent),
             const SizedBox(width: 6),
             Text('今日 $today/$cap',
                 style: const TextStyle(
@@ -93,8 +98,7 @@ class XpProgressRow extends StatelessWidget {
                   value: progress,
                   minHeight: 8,
                   backgroundColor: Colors.grey.withValues(alpha: 0.25),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                      communityAccent),
+                  valueColor: AlwaysStoppedAnimation<Color>(accent),
                 ),
               ),
             ),

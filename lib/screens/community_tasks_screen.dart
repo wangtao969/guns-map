@@ -24,24 +24,11 @@ class CommunityTasksScreen extends StatelessWidget {
       builder: (_, __) {
         final me = communityStore.current;
         return Scaffold(
-          appBar: const GunsMapAppBar(),
+          appBar: SubPageAppBar(title: '任务'),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  const Expanded(
-                    child: Text('任务',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
+
               if (me == null)
                 Card(
                   child: Padding(

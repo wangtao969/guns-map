@@ -21,7 +21,7 @@ class CommunityDmScreen extends StatelessWidget {
       builder: (_, __) {
         if (me == null) {
           return Scaffold(
-            appBar: const GunsMapAppBar(),
+            appBar: SubPageAppBar(title: '私信'),
             body: Center(child: Text(tr('login_required_body'))),
           );
         }
@@ -34,24 +34,11 @@ class CommunityDmScreen extends StatelessWidget {
             .where((a) => a.id != me.id)
             .toList();
         return Scaffold(
-          appBar: const GunsMapAppBar(),
+          appBar: SubPageAppBar(title: '私信'),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  const Expanded(
-                    child: Text('私信',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
+
               if (peerIds.isEmpty)
                 const Text('还没有私信会话，点下面的人名开始聊'),
               ...peerIds.map((pid) {
@@ -136,7 +123,7 @@ class _CommunityDmThreadScreenState extends State<CommunityDmThreadScreen> {
       builder: (_, __) {
         if (me == null || peer == null) {
           return Scaffold(
-            appBar: const GunsMapAppBar(),
+            appBar: SubPageAppBar(title: '私信'),
             body: const Center(child: Text('对方账号不存在')),
           );
         }
@@ -146,17 +133,13 @@ class _CommunityDmThreadScreenState extends State<CommunityDmThreadScreen> {
                 (m.fromId == peer.id && m.toId == me.id))
             .toList();
         return Scaffold(
-          appBar: const GunsMapAppBar(),
+          appBar: SubPageAppBar(title: '私信'),
           body: Column(
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 16, 16, 0),
                 child: Row(
                   children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back),
-                    ),
                     GestureDetector(
                       onTap: () => Navigator.push(
                         context,

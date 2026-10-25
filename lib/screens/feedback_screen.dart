@@ -120,7 +120,7 @@ Widget build(BuildContext context) {
 final dark = Theme.of(context).brightness == Brightness.dark;
 final grey = dark? const Color(0xFF8A8578): const Color(0xFF9A917F);
 return Scaffold(
-appBar: const GunsMapAppBar(),
+appBar: SubPageAppBar(title: tr('feedback')),
 body: ListView(
 padding: const EdgeInsets.all(16),
 children: [

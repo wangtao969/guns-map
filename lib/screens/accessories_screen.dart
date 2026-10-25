@@ -54,7 +54,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
       return true;
     }).toList();
     return Scaffold(
-      appBar: const GunsMapAppBar(),
+      appBar: SubPageAppBar(title: '配件目录'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -208,7 +208,7 @@ class AccessoryDetailScreen extends StatelessWidget {
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
     final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
     return Scaffold(
-      appBar: const GunsMapAppBar(),
+      appBar: SubPageAppBar(title: item.name),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

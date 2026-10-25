@@ -16,9 +16,11 @@ class ToolsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const GunsMapAppBar(),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+            16, MediaQuery.of(context).padding.top + kToolbarHeight + 16, 16, 16),
         children: [
           const Text('工具',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),

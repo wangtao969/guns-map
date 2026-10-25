@@ -159,21 +159,13 @@ class CommunityCollectionScreen extends StatelessWidget {
       builder: (_, __) {
         final me = communityStore.current;
         return Scaffold(
-          appBar: const GunsMapAppBar(),
+          appBar: SubPageAppBar(title: '我的收藏柜'),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               Row(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  const Expanded(
-                    child: Text('我的收藏柜',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold)),
-                  ),
+                  const Spacer(),
                   if (me != null)
                     OutlinedButton.icon(
                       onPressed: () => _shareCard(context, me),

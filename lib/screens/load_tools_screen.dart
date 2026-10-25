@@ -69,24 +69,11 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
     final recoilFtLb = recoilJ * 0.737562;
 
     return Scaffold(
-      appBar: const GunsMapAppBar(),
+      appBar: SubPageAppBar(title: '装药工具'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back),
-              ),
-              const Expanded(
-                child: Text('装药工具',
-                    style: TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
+
           const Text('只做物理换算，不给装药建议；装药请以手册原文为准。',
               style: TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 16),

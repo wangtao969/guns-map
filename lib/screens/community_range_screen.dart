@@ -100,21 +100,13 @@ class CommunityRangeScreen extends StatelessWidget {
       builder: (_, __) {
         final me = communityStore.current;
         return Scaffold(
-          appBar: const GunsMapAppBar(),
+          appBar: SubPageAppBar(title: '靶场成绩'),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               Row(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back),
-                  ),
-                  const Expanded(
-                    child: Text('靶场成绩',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold)),
-                  ),
+                  const Spacer(),
                   if (me != null)
                     OutlinedButton.icon(
                       onPressed: () => _addScore(context),

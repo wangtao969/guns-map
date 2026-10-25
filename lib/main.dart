@@ -156,21 +156,13 @@ class _HomePageState extends State<HomePage> {
         body: Padding(
           // 给悬浮导航留出空间，避免遮住各页底部内容。
           padding: const EdgeInsets.only(bottom: 96),
-          // 底部 Tab 切换带淡入 + 轻微上移动画，衔接不生硬。
+          // 底部 Tab 切换只淡入：上下滑动会让页面一震一震像 bug，已去掉。
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeIn,
-            transitionBuilder: (child, anim) => FadeTransition(
-              opacity: anim,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.02),
-                  end: Offset.zero,
-                ).animate(anim),
-                child: child,
-              ),
-            ),
+            transitionBuilder: (child, anim) =>
+                FadeTransition(opacity: anim, child: child),
             child: KeyedSubtree(
               key: ValueKey(_index),
               child: pages[_index],

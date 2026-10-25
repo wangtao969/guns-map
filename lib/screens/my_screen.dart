@@ -24,9 +24,14 @@ class MyScreen extends StatelessWidget {
       builder: (_, __) {
         final me = communityStore.current;
         return Scaffold(
+          extendBodyBehindAppBar: true,
           appBar: const GunsMapAppBar(),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(
+                16,
+                MediaQuery.of(context).padding.top + kToolbarHeight + 16,
+                16,
+                16),
             children: [
               const Text('我的',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),

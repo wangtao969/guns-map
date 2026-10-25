@@ -42,7 +42,7 @@ class CommunityLeaderboardScreen extends StatelessWidget {
         boards.sort((a, b) =>
             communityStore.boardHeat(b).compareTo(communityStore.boardHeat(a)));
         return Scaffold(
-          appBar: const GunsMapAppBar(),
+          appBar: SubPageAppBar(title: '排行榜'),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [

@@ -46,22 +46,14 @@ class _CommunityNotificationsScreenState
           'dm': mine.where((n) => n.kind == 'dm').toList(),
         };
         return Scaffold(
-          appBar: const GunsMapAppBar(),
+          appBar: SubPageAppBar(title: '通知'),
           body: Column(
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: Row(
                   children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back),
-                    ),
-                    const Expanded(
-                      child: Text('通知',
-                          style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold)),
-                    ),
+                    const Spacer(),
                     TextButton(
                       onPressed: me == null
                           ? null

@@ -79,7 +79,7 @@ class _CommunityOnboardingScreenState
         final canNextStep1 = _interests.isNotEmpty;
         final canNextStep2 = _boards.length >= 2;
         return Scaffold(
-          appBar: const GunsMapAppBar(),
+          appBar: SubPageAppBar(title: '新手引导'),
           body: ListView(
             padding: const EdgeInsets.all(24),
             children: [

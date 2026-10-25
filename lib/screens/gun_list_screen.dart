@@ -20,7 +20,7 @@ class GunListScreen extends StatelessWidget {
     }
     final vendors = byVendor.keys.toList()..sort();
     return Scaffold(
-      appBar: const GunsMapAppBar(),
+      appBar: SubPageAppBar(title: trCategory(category)),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

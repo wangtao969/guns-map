@@ -48,7 +48,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
   Widget build(BuildContext context) {
     final gun = widget.gun;
     return Scaffold(
-      appBar: const GunsMapAppBar(),
+      appBar: SubPageAppBar(title: gun.name),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [

@@ -74,7 +74,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
     final doneCount = _done.where((d) => d).length;
     final allDone = doneCount == reloadSopSteps.length;
     return Scaffold(
-      appBar: const GunsMapAppBar(),
+      appBar: SubPageAppBar(title: '复装记录 · SOP 执行'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

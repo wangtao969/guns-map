@@ -59,15 +59,30 @@ class _CommunityScreenState extends State<CommunityScreen> {
     });
   }
 
-  void _openComposer() {
+  Future<void> _openComposer() async {
     if (communityStore.current == null) {
       askLoginDialog(context);
       return;
     }
-    Navigator.push(
+    final autoChecked = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => const CommunityComposeScreen()),
     );
+    if (autoChecked == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('发布成功，已自动签到')),
+      );
+    }
+  }
+
+  void _openDraft() {
+    if (communityStore.draft == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('暂无草稿')),
+      );
+      return;
+    }
+    _openComposer();
   }
 
   void _search(String q) {
@@ -128,29 +143,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
     }
   }
 
-  /// 热聊板块：按板块热度取前 3；其余板块进“其它板块”。
-  List<String> get _hotBoards {
-    final boards = communityBoards.toList();
-    boards.sort((a, b) =>
-        communityStore.boardHeat(b).compareTo(communityStore.boardHeat(a)));
-    return boards.take(3).toList();
-  }
-
-  List<String> get _otherBoards {
-    final hot = _hotBoards.toSet();
-    return communityBoards.where((b) => !hot.contains(b)).toList();
-  }
-
   int _boardCount(String board) =>
       communityStore.posts.where((p) => p.board == board).length;
-
-  String? _boardLatest(String board) {
-    final ps =
-        communityStore.posts.where((p) => p.board == board).toList();
-    if (ps.isEmpty) return null;
-    ps.sort((a, b) => b.time.compareTo(a.time));
-    return ps.first.title;
-  }
 
   void _openBoard(String board) {
     Navigator.push(
@@ -360,48 +354,34 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Widget _feedView(CommunityAccount? current, Color grey) {
     final feed = _feedPosts(current);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
       children: [
         if (!kReleaseMode) ...[
           Text(tr('community_note'),
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 10),
         ],
-        // 两个主行动并排：发动态 + 每日签到，搜索收进放大镜。
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _openComposer,
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: Text(communityStore.draft == null
-                    ? tr('post_new')
-                    : '继续写草稿'),
-              ),
+        // 搜索收进小药丸，点击展开输入框；发动态与草稿箱在右下角小圆钮。
+        InkWell(
+          onTap: () => setState(() => _showSearch = !_showSearch),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _checkIn,
-                icon: Icon(
-                    current != null && current.checkedInToday
-                        ? Icons.check_circle
-                        : Icons.event_available_outlined,
-                    size: 18),
-                label: Text(current != null && current.checkedInToday
-                    ? '已签到 · 连签 ${current.checkInStreak} 天'
-                    : '每日签到'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: communityAccent,
-                  foregroundColor: Colors.white,
-                ),
-              ),
+            child: Row(
+              children: [
+                const Icon(Icons.search, size: 18),
+                const SizedBox(width: 8),
+                Text('搜索帖子标题、内容、话题',
+                    style: TextStyle(color: grey, fontSize: 13)),
+                const Spacer(),
+                if (_showSearch) const Icon(Icons.close, size: 18),
+              ],
             ),
-            IconButton(
-              onPressed: () => setState(() => _showSearch = !_showSearch),
-              icon: const Icon(Icons.search),
-            ),
-          ],
+          ),
         ),
         if (_showSearch) ...[
           const SizedBox(height: 10),
@@ -663,10 +643,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
+  /// 签到区：做小一点、暗红色，放在活动下面。
   Widget _tasksSection(CommunityAccount? current, Color grey) {
+    const darkRed = Color(0xFF8B1E1E);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -686,13 +668,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
             else ...[
               XpProgressRow(
                 account: current,
+                accent: darkRed,
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (_) => const CommunityTasksScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
@@ -707,8 +690,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           ? '已签到 · 连签 ${current.checkInStreak} 天'
                           : '每日签到'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: communityAccent,
+                        backgroundColor: darkRed,
                         foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                       ),
                     ),
                   ),
@@ -732,82 +716,27 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
-  Widget _hotBoardCard(String board, Color grey) {
-    final latest = communityStore.posts.where((p) => p.board == board).toList();
-    latest.sort((a, b) => b.time.compareTo(a.time));
-    final hasImage = latest.isNotEmpty && latest.first.images.isNotEmpty;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: () => _openBoard(board),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 56,
-                height: 56,
-                child: hasImage
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.memory(latest.first.images.first,
-                            fit: BoxFit.cover),
-                      )
-                    : Image.asset(boardCover(board), fit: BoxFit.contain),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: const Color(0xFF8C6A2F), width: 1.5),
-                          ),
-                          child: Icon(boardIcon(board),
-                              size: 14, color: const Color(0xFF8C6A2F)),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(board,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 15)),
-                        ),
-                        Text('${_boardCount(board)} 帖',
-                            style: TextStyle(color: grey, fontSize: 12)),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _boardLatest(board) ?? '来发第一条',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: grey, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _homeView(CommunityAccount? current, Color grey) {
-    final hot = _hotBoards;
-    final others = _otherBoards;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _sectionTitle('板块'),
+        _sectionTitle('平台活动'),
+        const SizedBox(height: 10),
+        Card(
+          child: Column(
+            children: [
+              _eventRow(Icons.emoji_events_outlined, '晒枪大赛', '全站晒枪主题活动'),
+              const Divider(height: 1),
+              _eventRow(Icons.calendar_month_outlined, '每月主题', '每月一期枪械主题讨论'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _sectionTitle('签到'),
+        const SizedBox(height: 10),
+        _tasksSection(current, grey),
+        const SizedBox(height: 20),
+        _sectionTitle('全部板块'),
         const SizedBox(height: 10),
         GridView.count(
           crossAxisCount: 3,
@@ -821,18 +750,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
           ],
         ),
         const SizedBox(height: 20),
-        _sectionTitle('平台活动'),
-        const SizedBox(height: 10),
-        Card(
-          child: Column(
-            children: [
-              _eventRow(Icons.emoji_events_outlined, '晒枪大赛', '全站晒枪主题活动'),
-              const Divider(height: 1),
-              _eventRow(Icons.calendar_month_outlined, '每月主题', '每月一期枪械主题讨论'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
         _sectionTitle('排行榜', onViewAll: () {
           Navigator.push(
             context,
@@ -842,45 +759,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
         }),
         const SizedBox(height: 10),
         _rankingSection(current, grey),
-        const SizedBox(height: 20),
-        _sectionTitle('任务'),
-        const SizedBox(height: 10),
-        _tasksSection(current, grey),
-        const SizedBox(height: 20),
-        _sectionTitle('热聊板块'),
-        const SizedBox(height: 10),
-        for (final b in hot) _hotBoardCard(b, grey),
-        const SizedBox(height: 12),
-        _sectionTitle('其它板块'),
-        const SizedBox(height: 10),
-        Card(
-          child: Column(
-            children: [
-              for (var i = 0; i < others.length; i++) ...[
-                if (i > 0) const Divider(height: 1),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: const Color(0xFF8C6A2F), width: 1.5),
-                    ),
-                    child: Icon(boardIcon(others[i]),
-                        size: 16, color: const Color(0xFF8C6A2F)),
-                  ),
-                  title: Text(others[i],
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(
-                      '${_boardCount(others[i])} 帖${_boardLatest(others[i]) == null ? '' : ' · 最新：${_boardLatest(others[i])}'}'),
-                  trailing:
-                      const Icon(Icons.chevron_right, color: Colors.grey),
-                  onTap: () => _openBoard(others[i]),
-                ),
-              ],
-            ],
-          ),
-        ),
         const SizedBox(height: 8),
       ],
     );
@@ -898,28 +776,27 @@ class _CommunityScreenState extends State<CommunityScreen> {
           final current = communityStore.current;
           _maybeOnboarding(current);
           return Scaffold(
+            extendBodyBehindAppBar: true,
             appBar: const GunsMapAppBar(),
-            body: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: _topSwitch(),
-                ),
+            body: Padding(
+              padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + kToolbarHeight),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: _topSwitch(),
+                  ),
                 Expanded(
-                  child: AnimatedSwitcher(
+                  child: Stack(
+                    children: [
+                      AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
                     switchInCurve: Curves.easeOutCubic,
                     switchOutCurve: Curves.easeIn,
-                    transitionBuilder: (child, anim) => FadeTransition(
-                      opacity: anim,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 0.02),
-                          end: Offset.zero,
-                        ).animate(anim),
-                        child: child,
-                      ),
-                    ),
+                    // 只淡入，不上下滑动：上下一震的动效就是这里的 Slide 造成的。
+                    transitionBuilder: (child, anim) =>
+                        FadeTransition(opacity: anim, child: child),
                     child: KeyedSubtree(
                       key: ValueKey(_view),
                       child: _view == 'feed'
@@ -927,8 +804,39 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           : _homeView(current, grey),
                     ),
                   ),
+                      // 动态页右下角小圆钮：上面草稿箱、下面发动态。
+                      if (_view == 'feed')
+                        Positioned(
+                          right: 16,
+                          bottom: 16,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              FloatingActionButton.small(
+                                heroTag: 'draft',
+                                onPressed: _openDraft,
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF6B5B3E),
+                                child: const Icon(Icons.drafts_outlined,
+                                    size: 20),
+                              ),
+                              const SizedBox(height: 10),
+                              FloatingActionButton.small(
+                                heroTag: 'compose',
+                                onPressed: _openComposer,
+                                backgroundColor: const Color(0xFF6B5B3E),
+                                foregroundColor: Colors.white,
+                                child: const Icon(Icons.edit_outlined,
+                                    size: 20),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                 ),
-              ],
+                ),
+                ],
+              ),
             ),
           );
         },

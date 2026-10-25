@@ -31,24 +31,11 @@ class _GunCompareScreenState extends State<GunCompareScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const GunsMapAppBar(),
+      appBar: SubPageAppBar(title: '两枪参数对比'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back),
-              ),
-              const Expanded(
-                child: Text('两枪参数对比',
-                    style: TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
+
           const Text('只对照纸面参数；初速与弹道系数未收录，不画弹道曲线。',
               style: TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 16),

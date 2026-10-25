@@ -40,12 +40,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
             .toList();
     return Scaffold(
       backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: const GunsMapAppBar(),
       body: SafeArea(
         top: true,
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 12 + kToolbarHeight, 16, 16),
           children: [
             // 药丸形搜索框
             Container(

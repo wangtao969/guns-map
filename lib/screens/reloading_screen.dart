@@ -73,7 +73,7 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
       return c.bullets.any((b) => b.toLowerCase().contains(q));
     }).toList();
     return Scaffold(
-      appBar: const GunsMapAppBar(),
+      appBar: SubPageAppBar(title: '复装手册'),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
@@ -346,7 +346,7 @@ class CaliberDetailScreen extends StatelessWidget {
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
     final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
     return Scaffold(
-      appBar: const GunsMapAppBar(),
+      appBar: SubPageAppBar(title: info.caliber),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

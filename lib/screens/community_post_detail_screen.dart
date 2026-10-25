@@ -180,7 +180,7 @@ class _CommunityPostDetailScreenState
         final favorited = me != null && p.favoritedBy.contains(me.id);
         final authorAccount = communityStore.findAccount(p.authorId);
         return Scaffold(
-          appBar: const GunsMapAppBar(),
+          appBar: SubPageAppBar(title: '帖子详情'),
           body: Column(
             children: [
               Expanded(

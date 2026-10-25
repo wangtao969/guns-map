@@ -7,12 +7,14 @@ import '../community_store.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../main.dart';
+import '../system_actions.dart';
 import '../widgets/app_top_bar.dart';
+import 'about_screen.dart';
 import 'community_account_dialogs.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '1.9.0';
+const String appVersion = '1.9.1';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -26,10 +28,47 @@ class SettingsScreen extends StatelessWidget {
     return ValueListenableBuilder<String>(
       valueListenable: localeNotifier,
       builder: (_, __, ___) => Scaffold(
-      appBar: const GunsMapAppBar(showSettingsButton: false),
+      extendBodyBehindAppBar: true,
+      appBar: SubPageAppBar(title: '设置'),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+            16, MediaQuery.of(context).padding.top + kToolbarHeight + 16, 16, 16),
         children: [
+          // 顶部：App 图标 + 名称 + 同色小药丸当前版本号。
+          Center(
+            child: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Image.asset('assets/images/app-icon.png',
+                      width: 72, height: 72, fit: BoxFit.cover),
+                ),
+                const SizedBox(height: 10),
+                const Text("Gun's Map",
+                    style: TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: dark
+                        ? const Color(0xFFC9A86A)
+                        : const Color(0xFF6B5B3E),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text('v$appVersion',
+                      style: TextStyle(
+                          color: dark
+                              ? const Color(0xFF121110)
+                              : Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           Text(tr('theme'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
@@ -119,6 +158,29 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const FeedbackScreen()),
+            ),
+          ),
+          ListTile(
+            title: const Text('GitHub 开源代码'),
+            subtitle: const Text('wangtao969/guns-map'),
+            trailing: const Icon(Icons.open_in_new, size: 20),
+            onTap: () async {
+              final ok = await openSystemUrl(
+                  'https://github.com/wangtao969/guns-map');
+              if (!ok && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('未能打开浏览器')),
+                );
+              }
+            },
+          ),
+          ListTile(
+            title: const Text('项目介绍与操作手册'),
+            subtitle: const Text('Gun\'s Map 是什么、每块怎么用'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AboutScreen()),
             ),
           ),
           ListTile(
@@ -276,6 +338,13 @@ class SettingsScreen extends StatelessWidget {
               },
               child: Text(tr('copy_link')),
             ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _downloadAndInstall(context, apkUrl ?? link, latest);
+              },
+              child: const Text('下载并安装'),
+            ),
           ],
         ),
       );
@@ -299,6 +368,42 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
+  /// 下载安装包并拉起系统安装器：只用 Dart 核心库下载到本机缓存，
+  /// 再经 gunsmap/system 通道走 FileProvider 安装，不引第三方包。
+  Future<void> _downloadAndInstall(
+      BuildContext context, String apkUrl, String latest) async {
+    if (!apkUrl.endsWith('.apk')) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('未找到安装包，请复制链接到浏览器下载')),
+        );
+      }
+      return;
+    }
+    final path = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _DownloadDialog(url: apkUrl, version: latest),
+    );
+    if (path == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('下载失败，请检查网络后重试')),
+        );
+      }
+      return;
+    }
+    final ok = await installDownloadedApk(path);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? '安装器已拉起，请按提示完成安装'
+            : '未能拉起安装：请在系统设置中允许本应用安装未知应用后重试'),
+      ),
+    );
+  }
+
   /// 版本号比较：1.4.0 这种三段数字，返回负数表示 a 更旧。
   int _compareVersions(String a, String b) {
     final pa = a.split('.').map((e) => int.tryParse(e) ?? 0).toList();
@@ -309,5 +414,86 @@ class SettingsScreen extends StatelessWidget {
       if (x != y) return x.compareTo(y);
     }
     return 0;
+  }
+}
+
+/// 下载进度对话框：弹出即开始下载，完成后带文件路径退出，失败带 null 退出。
+class _DownloadDialog extends StatefulWidget {
+  final String url;
+  final String version;
+  const _DownloadDialog({required this.url, required this.version});
+
+  @override
+  State<_DownloadDialog> createState() => _DownloadDialogState();
+}
+
+class _DownloadDialogState extends State<_DownloadDialog> {
+  double _progress = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _start();
+  }
+
+  Future<void> _start() async {
+    try {
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 15);
+      final request = await client.getUrl(Uri.parse(widget.url));
+      request.headers.set('User-Agent', 'GunsMap');
+      final response =
+          await request.close().timeout(const Duration(seconds: 30));
+      if (response.statusCode != 200) {
+        throw HttpException('HTTP ${response.statusCode}');
+      }
+      final total = response.contentLength;
+      final file = File(
+          '${Directory.systemTemp.path}/GunsMap-v${widget.version}-arm64.apk');
+      final sink = file.openWrite();
+      var received = 0;
+      await for (final chunk in response) {
+        received += chunk.length;
+        sink.add(chunk);
+        if (mounted && total > 0) {
+          setState(() => _progress = received / total);
+        }
+      }
+      await sink.close();
+      client.close();
+      if (!mounted) return;
+      Navigator.of(context).pop(file.path);
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.of(context).pop(null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      content: Row(
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('正在下载安装包…'),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                    value: _progress > 0 ? _progress : null),
+                const SizedBox(height: 4),
+                Text(_progress > 0
+                    ? '${(_progress * 100).toStringAsFixed(0)}%'
+                    : '…'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
