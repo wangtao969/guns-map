@@ -13,7 +13,7 @@ import 'about_screen.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '1.12.0';
+const String appVersion = '2.0.0';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -43,7 +43,7 @@ class SettingsScreen extends StatelessWidget {
                       width: 72, height: 72, fit: BoxFit.cover),
                 ),
                 const SizedBox(height: 10),
-                const Text("Gun's Map",
+                const Text("Ordnance",
                     style: TextStyle(
                         fontFamily: 'serif',
                         fontSize: 20,
@@ -143,7 +143,7 @@ class SettingsScreen extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           ListTile(
-            title: const Text("Gun's Map"),
+            title: const Text("Ordnance"),
             subtitle: Text('${tr('version_prefix')}v$appVersion${tr('version_suffix')}'),
           ),
           ListTile(
@@ -163,11 +163,11 @@ class SettingsScreen extends StatelessWidget {
           ),
           ListTile(
             title: const Text('GitHub 开源代码'),
-            subtitle: const Text('wangtao969/guns-map'),
+            subtitle: const Text('wangtao969/ordnance'),
             trailing: const Icon(Icons.open_in_new, size: 20),
             onTap: () async {
               final ok = await openSystemUrl(
-                  'https://github.com/wangtao969/guns-map');
+                  'https://github.com/wangtao969/ordnance');
               if (!ok && context.mounted) {
                 showAppToast(context, '未能打开浏览器');
               }
@@ -226,9 +226,9 @@ class SettingsScreen extends StatelessWidget {
       final client = HttpClient()
         ..connectionTimeout = const Duration(seconds: 10);
       final request = await client.getUrl(Uri.parse(
-          'https://api.github.com/repos/wangtao969/guns-map/releases/latest'));
+          'https://api.github.com/repos/wangtao969/ordnance/releases/latest'));
       request.headers.set('Accept', 'application/vnd.github+json');
-      request.headers.set('User-Agent', 'GunsMap');
+      request.headers.set('User-Agent', 'Ordnance');
       final response =
           await request.close().timeout(const Duration(seconds: 15));
       final body = await response.transform(utf8.decoder).join();
@@ -250,7 +250,7 @@ class SettingsScreen extends StatelessWidget {
         }
       }
       final link =
-          apkUrl ?? (data['html_url'] as String? ?? 'https://github.com/wangtao969/guns-map/releases');
+          apkUrl ?? (data['html_url'] as String? ?? 'https://github.com/wangtao969/ordnance/releases');
       if (!context.mounted) return;
       Navigator.of(context).pop();
       if (latest.isEmpty || _compareVersions(latest, appVersion) <= 0) {
@@ -395,7 +395,7 @@ class _DownloadDialogState extends State<_DownloadDialog> {
       final client = HttpClient()
         ..connectionTimeout = const Duration(seconds: 15);
       final request = await client.getUrl(Uri.parse(widget.url));
-      request.headers.set('User-Agent', 'GunsMap');
+      request.headers.set('User-Agent', 'Ordnance');
       final response =
           await request.close().timeout(const Duration(seconds: 30));
       if (response.statusCode != 200) {
@@ -403,7 +403,7 @@ class _DownloadDialogState extends State<_DownloadDialog> {
       }
       final total = response.contentLength;
       final file =
-          File('${widget.dir}/GunsMap-v${widget.version}-arm64.apk');
+          File('${widget.dir}/Ordnance-v${widget.version}-arm64.apk');
       final sink = file.openWrite();
       var received = 0;
       await for (final chunk in response) {

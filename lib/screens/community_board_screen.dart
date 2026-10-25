@@ -382,6 +382,10 @@ class _ThreadRow extends StatelessWidget {
     final reportedHidden = p.reported && !reportedExpanded;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: grey.withValues(alpha: 0.3)),
+      ),
       child: InkWell(
         onTap: reportedHidden ? onExpandReported : onOpen,
         borderRadius: BorderRadius.circular(12),

@@ -25,10 +25,10 @@ class _GlassBackground extends StatelessWidget {
 
 /// 主 Tab 顶栏（毛玻璃）：应用名靠左，右上角齿轮圆形设置按钮。
 /// 只在首页四个主页面显示；子页面一律用 SubPageAppBar，不再出现应用名与齿轮。
-class GunsMapAppBar extends StatelessWidget implements PreferredSizeWidget {
+class OrdnanceAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// 设置页本身不再放齿轮按钮，避免重复进设置页。
   final bool showSettingsButton;
-  const GunsMapAppBar({super.key, this.showSettingsButton = true});
+  const OrdnanceAppBar({super.key, this.showSettingsButton = true});
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -45,7 +45,7 @@ class GunsMapAppBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       flexibleSpace: const _GlassBackground(),
       title: Text(
-        "Gun's Map",
+        "Ordnance",
         style: TextStyle(
           // 线衬体（系统 serif）：比无衬线多一点设计感。
           fontFamily: 'serif',
@@ -112,7 +112,7 @@ class SubPageAppBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       flexibleSpace: const _GlassBackground(),
       title: Text(
-        "Gun's Map",
+        "Ordnance",
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(

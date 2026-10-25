@@ -5,7 +5,6 @@ import '../widgets/app_top_bar.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/app_toast.dart';
 import 'community_account_dialogs.dart';
-import 'community_compose_screen.dart';
 import 'community_collection_screen.dart';
 import 'community_dm_screen.dart';
 import 'community_notifications_screen.dart';
@@ -28,7 +27,7 @@ class MyScreen extends StatelessWidget {
         final me = communityStore.current;
         return Scaffold(
           extendBodyBehindAppBar: true,
-          appBar: const GunsMapAppBar(),
+          appBar: const OrdnanceAppBar(),
           body: ListView(
             padding: EdgeInsets.fromLTRB(
                 16,
@@ -156,35 +155,6 @@ class MyScreen extends StatelessWidget {
                   );
                 }),
                 const SizedBox(height: 16),
-                _MenuTile(
-                  icon: Icons.dynamic_feed_outlined,
-                  title: '我的动态',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => CommunityProfileScreen(
-                            account: me, initialTab: 0)),
-                  ),
-                ),
-                _MenuTile(
-                  icon: Icons.edit_note_outlined,
-                  title: '发帖',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const CommunityComposeScreen()),
-                  ),
-                ),
-                _MenuTile(
-                  icon: Icons.emoji_events_outlined,
-                  title: '勋章墙',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => CommunityProfileScreen(
-                            account: me, initialTab: 2)),
-                  ),
-                ),
                 _MenuTile(
                   icon: Icons.person_outlined,
                   title: '我的主页',

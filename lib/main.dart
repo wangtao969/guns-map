@@ -41,7 +41,7 @@ class FirearmsApp extends StatelessWidget {
       builder: (_, mode, __) => ValueListenableBuilder<String>(
         valueListenable: localeNotifier,
         builder: (_, ___, ____) => MaterialApp(
-        title: "Gun's Map",
+        title: "Ordnance",
         themeMode: mode,
       theme: ThemeData.light().copyWith(
         pageTransitionsTheme: const PageTransitionsTheme(

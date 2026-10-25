@@ -187,6 +187,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final authorAccount = communityStore.findAccount(p.authorId);
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: grey.withValues(alpha: 0.3)),
+      ),
       child: InkWell(
         onTap: () => Navigator.push(
           context,
@@ -770,7 +774,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           _maybeOnboarding(current);
           return Scaffold(
             extendBodyBehindAppBar: true,
-            appBar: const GunsMapAppBar(),
+            appBar: const OrdnanceAppBar(),
             body: Padding(
               padding: EdgeInsets.only(
                   top: MediaQuery.of(context).padding.top + kToolbarHeight),

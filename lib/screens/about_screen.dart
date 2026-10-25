@@ -3,7 +3,7 @@ import '../widgets/app_toast.dart';
 import '../system_actions.dart';
 import '../widgets/app_top_bar.dart';
 
-/// 项目介绍与操作手册：Gun's Map 是什么、能干什么、每块怎么用。
+/// 项目介绍与操作手册：Ordnance 是什么、能干什么、每块怎么用。
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
@@ -47,7 +47,7 @@ class AboutScreen extends StatelessWidget {
             '图鉴收录 738 支真实枪械（8 个品类），每支含厂商、口径、动作、枪管、全长、重量、弹容量、产地与美国零售参考价；品类图片与名枪照片来自 Wikimedia Commons 免费授权图，详情页脚已署名。',
             '配件目录收录 163 条国内外知名厂商配件，按品类筛选；复装手册收录口径图鉴、装药表、供应商与 SOP，只收录 Hornady 等公开手册原文，查不到出处的留空，绝不现编、不推算。',
             '社区目前为本机版：账号、帖子、收藏、等级、勋章、靶场成绩都只保存在本机，换设备或联网版上线后需重新注册；平台活动、排行榜为本机数据预留位。',
-            '本项目开源：GitHub 仓库 wangtao969/guns-map，设置页“GitHub 开源代码”可直达。',
+            '本项目开源：GitHub 仓库 wangtao969/ordnance，设置页“GitHub 开源代码”可直达。',
           ], grey),
           _section('操作手册 · 图鉴', [
             '首页图鉴页顶部搜索框可按名称、厂商、口径搜索；品类卡点进去按厂商分组折叠浏览。',
@@ -73,11 +73,11 @@ class AboutScreen extends StatelessWidget {
             child: ListTile(
               leading: const Icon(Icons.code),
               title: const Text('GitHub 开源代码'),
-              subtitle: const Text('wangtao969/guns-map'),
+              subtitle: const Text('wangtao969/ordnance'),
               trailing: const Icon(Icons.open_in_new, size: 18),
               onTap: () async {
                 final ok = await openSystemUrl(
-                    'https://github.com/wangtao969/guns-map');
+                    'https://github.com/wangtao969/ordnance');
                 if (!ok && context.mounted) {
                   showAppToast(context, '未能打开浏览器');
                 }

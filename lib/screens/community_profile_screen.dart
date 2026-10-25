@@ -6,6 +6,7 @@ import '../widgets/level_badge.dart';
 import 'community_account_dialogs.dart';
 import 'community_dm_screen.dart';
 import 'community_post_detail_screen.dart';
+import 'community_tasks_screen.dart';
 
 /// 用户主页：头像 + LV + 铭牌 + 统计，下分 帖子 / 收藏 / 勋章墙 / 历史 四栏。
 /// 自己的主页全可见；别人的主页：收藏按对方的“收藏对外可见”开关决定是否展示。
@@ -251,25 +252,70 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                           Text('${tr('id_field')}：${account.id}',
                               style:
                                   TextStyle(color: grey, fontSize: 12)),
-                          Text(account.displayRole,
-                              style: TextStyle(
-                                  color: account.isFounder
-                                      ? const Color(0xFFD4A017)
-                                      : grey,
-                                  fontSize: 12,
-                                  fontWeight: account.isFounder
-                                      ? FontWeight.bold
-                                      : FontWeight.normal)),
+                          InkWell(
+                            onTap: () => showRoleSystemDialog(context),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('身份：${account.displayRole}',
+                                    style: TextStyle(
+                                        color: account.isFounder
+                                            ? const Color(0xFFD4A017)
+                                            : grey,
+                                        fontSize: 12,
+                                        fontWeight: account.isFounder
+                                            ? FontWeight.bold
+                                            : FontWeight.normal)),
+                                const SizedBox(width: 4),
+                                Icon(Icons.info_outline,
+                                    size: 13, color: grey),
+                              ],
+                            ),
+                          ),
+                          if (account.bio.isNotEmpty || isMine) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    account.bio.isNotEmpty
+                                        ? account.bio
+                                        : '还没有个性签名，点击编辑添加',
+                                    style: TextStyle(
+                                        color: account.bio.isNotEmpty
+                                            ? null
+                                            : grey,
+                                        fontSize: 13),
+                                  ),
+                                ),
+                                if (isMine)
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined,
+                                        size: 18),
+                                    tooltip: '编辑个性签名',
+                                    onPressed: () =>
+                                        showEditProfileDialog(context),
+                                  ),
+                              ],
+                            ),
+                          ],
                           Text(
                               '赛季声望 ${communityStore.seasonPrestige(account)} · 还剩 ${communityStore.seasonRemainingDays} 天',
                               style: TextStyle(
                                   color: communityAccent,
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold)),
-                          if (account.bio.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(account.bio),
-                          ],
+                          const SizedBox(height: 4),
+                          XpProgressRow(
+                            account: account,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const CommunityTasksScreen()),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -287,11 +333,6 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                   _Stat('收藏',
                       canSeeFavorites ? '${myFavorites.length}' : '—', null),
                 ],
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _UserSystemCard(account: account),
               ),
               if (!isMine && me != null) ...[
                 const SizedBox(height: 12),
@@ -325,14 +366,54 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                 ),
               ],
               const SizedBox(height: 12),
-              TabBar(
-                controller: _tabs,
-                tabs: const [
-                  Tab(text: '帖子'),
-                  Tab(text: '收藏'),
-                  Tab(text: '勋章墙'),
-                  Tab(text: '历史'),
-                ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: AnimatedBuilder(
+                  animation: _tabs,
+                  builder: (_, __) {
+                    const labels = ['帖子', '收藏', '勋章墙', '历史'];
+                    return Row(
+                      children: [
+                        for (var i = 0; i < labels.length; i++)
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                  left: i == 0 ? 0 : 4,
+                                  right: i == labels.length - 1 ? 0 : 4),
+                              child: SizedBox(
+                                height: 44,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: () => _tabs.animateTo(i),
+                                  child: Container(
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: _tabs.index == i
+                                          ? communityAccent
+                                          : Colors.transparent,
+                                      borderRadius:
+                                          BorderRadius.circular(12),
+                                      border: Border.all(
+                                          color: _tabs.index == i
+                                              ? communityAccent
+                                              : grey.withValues(
+                                                  alpha: 0.35)),
+                                    ),
+                                    child: Text(labels[i],
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: _tabs.index == i
+                                                ? Colors.white
+                                                : null)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
               ),
               Expanded(
                 child: TabBarView(
@@ -348,7 +429,14 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                             itemCount: myPosts.length,
                             itemBuilder: (_, i) {
                               final p = myPosts[i];
-                              return ListTile(
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: grey.withValues(alpha: 0.25)),
+                                ),
+                                child: ListTile(
                                 leading: p.images.isEmpty
                                     ? null
                                     : ClipRRect(
@@ -365,6 +453,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                                 subtitle: Text(
                                     '${CommunityStore.formatTime(p.time)} · ${p.board} · ${p.likedBy.length}赞 ${p.comments.length}评'),
                                 onTap: () => _openPost(p),
+                              ),
                               );
                             },
                           ),
@@ -382,7 +471,16 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                                 itemCount: myFavorites.length,
                                 itemBuilder: (_, i) {
                                   final p = myFavorites[i];
-                                  return ListTile(
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    decoration: BoxDecoration(
+                                      borderRadius:
+                                          BorderRadius.circular(12),
+                                      border: Border.all(
+                                          color:
+                                              grey.withValues(alpha: 0.25)),
+                                    ),
+                                    child: ListTile(
                                     leading: p.images.isEmpty
                                         ? null
                                         : ClipRRect(
@@ -399,6 +497,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                                     subtitle: Text(
                                         '${CommunityStore.formatTime(p.time)} · ${p.authorNickname} · ${p.board}'),
                                     onTap: () => _openPost(p),
+                                  ),
                                   );
                                 },
                               ),
@@ -430,119 +529,6 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
           ),
         );
       },
-    );
-  }
-}
-
-/// 用户制度卡：身份、等级与下一级进度、赛季声望、勋章，以及六档段位阶梯。
-class _UserSystemCard extends StatelessWidget {
-  final CommunityAccount account;
-  const _UserSystemCard({required this.account});
-
-  @override
-  Widget build(BuildContext context) {
-    final earned = communityStore.earnedMedals(account).length;
-    final lv = account.level;
-    final toNext = lv >= 60
-        ? '已满级'
-        : '距 LV${lv + 1} 还差 ${CommunityAccount.xpForLevel(lv + 1) - account.totalXp} 经验';
-    const tiers = [
-      ('铁灰', 'LV 1–10', Color(0xFF8A8D91)),
-      ('铜', 'LV 11–20', Color(0xFFB08D57)),
-      ('银', 'LV 21–35', Color(0xFFB9C0C7)),
-      ('金', 'LV 36–48', Color(0xFFD4A017)),
-      ('钛', 'LV 49–55', Color(0xFF7FA8BC)),
-      ('曜石', 'LV 56–60', Color(0xFF4A4A5A)),
-    ];
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.badge_outlined, color: communityAccent),
-                SizedBox(width: 8),
-                Text('用户制度',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _UserSystemRow('身份', account.displayRole,
-                highlight: account.isFounder),
-            _UserSystemRow('等级', 'LV$lv · ${account.tierName}'),
-            _UserSystemRow('经验', '${account.totalXp}（$toNext）'),
-            _UserSystemRow(
-                '赛季声望', '${communityStore.seasonPrestige(account)}'),
-            _UserSystemRow('勋章', '$earned / ${medalCatalog.length}'),
-            const SizedBox(height: 8),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
-            for (final t in tiers)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                          color: t.$3, shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(t.$1,
-                        style: TextStyle(
-                            fontWeight: account.tierName == t.$1
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: account.tierName == t.$1 ? t.$3 : null)),
-                    const SizedBox(width: 8),
-                    Text(t.$2,
-                        style: const TextStyle(
-                            color: Colors.grey, fontSize: 12)),
-                    if (account.tierName == t.$1) ...[
-                      const Spacer(),
-                      const Text('当前段位',
-                          style: TextStyle(
-                              color: communityAccent,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold)),
-                    ],
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _UserSystemRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool highlight;
-  const _UserSystemRow(this.label, this.value, {this.highlight = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(value,
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: highlight ? const Color(0xFFD4A017) : null)),
-          ),
-        ],
-      ),
     );
   }
 }

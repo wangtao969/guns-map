@@ -15,25 +15,137 @@ class LevelBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = account.tierColor;
     final h = nicknameFontSize;
-    return Container(
-      height: h,
-      padding: EdgeInsets.symmetric(horizontal: h * 0.32),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(h / 2),
-        border: Border.all(color: c),
-      ),
-      child: Text(
-        'LV${account.level} · ${account.tierName}',
-        style: TextStyle(
-            color: c,
-            fontSize: h * 0.68,
-            fontWeight: FontWeight.bold,
-            height: 1),
+    return GestureDetector(
+      onTap: () => showLevelSystemDialog(context, account),
+      child: Container(
+        height: h,
+        padding: EdgeInsets.symmetric(horizontal: h * 0.32),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: c.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(h / 2),
+          border: Border.all(color: c),
+        ),
+        child: Text(
+          'LV${account.level} · ${account.tierName}',
+          style: TextStyle(
+              color: c,
+              fontSize: h * 0.68,
+              fontWeight: FontWeight.bold,
+              height: 1),
+        ),
       ),
     );
   }
+}
+
+/// 等级制度弹窗：点铭牌弹出，列出六档段位、等级区间与所需累计经验。
+void showLevelSystemDialog(BuildContext context, CommunityAccount account) {
+  const tiers = [
+    ('铁灰', 'LV 1–10', 1, Color(0xFF8A8D91)),
+    ('铜', 'LV 11–20', 11, Color(0xFFB08D57)),
+    ('银', 'LV 21–35', 21, Color(0xFFB9C0C7)),
+    ('金', 'LV 36–48', 36, Color(0xFFD4A017)),
+    ('钛', 'LV 49–55', 49, Color(0xFF7FA8BC)),
+    ('曜石', 'LV 56–60', 56, Color(0xFF4A4A5A)),
+  ];
+  final lv = account.level;
+  final toNext = lv >= 60
+      ? '已满级'
+      : '距 LV${lv + 1} 还差 ${CommunityAccount.xpForLevel(lv + 1) - account.totalXp} 经验';
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('用户等级'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('当前：LV$lv · ${account.tierName}（累计 ${account.totalXp} 经验）',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(toNext, style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 12),
+            for (final t in tiers)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                          color: t.$4, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(t.$1,
+                        style: TextStyle(
+                            fontWeight: account.tierName == t.$1
+                                ? FontWeight.bold
+                                : FontWeight.normal)),
+                    const SizedBox(width: 8),
+                    Text(t.$2,
+                        style: const TextStyle(
+                            color: Colors.grey, fontSize: 12)),
+                    const Spacer(),
+                    Text(
+                        t.$3 == 1
+                            ? '0 经验起'
+                            : '需 ${CommunityAccount.xpForLevel(t.$3)} 经验',
+                        style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 8),
+            const Text('经验来源：签到、发帖、评论、获赞、收藏登记、靶场成绩；每日封顶 120。',
+                style: TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('知道了'),
+        ),
+      ],
+    ),
+  );
+}
+
+/// 身份制度弹窗：点身份弹出，列出软件内设定的全部用户身份与权限。
+void showRoleSystemDialog(BuildContext context) {
+  const roles = [
+    ('创始用户', 'ID 10000 的账号', '软件全部权限：人员管理、帖子审核、板块开关、赛季与公告配置，不受禁言封禁限制。'),
+    ('管理员', 'role 为 admin 的账号', '人员管理、帖子审核、板块开关、赛季与公告配置。'),
+    ('版主', 'role 为 moderator 的账号', '帖子审核：取消举报、置顶、加精、删除。'),
+    ('普通用户', '默认身份', '发帖、评论、收藏、关注、私信，参与赛季、签到与勋章。'),
+  ];
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('用户身份'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final r in roles) ...[
+              Text(r.$1, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(r.$2, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              Text(r.$3, style: const TextStyle(fontSize: 13)),
+              const SizedBox(height: 10),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('知道了'),
+        ),
+      ],
+    ),
+  );
 }
 
 /// 创始用户铭牌：金底小药丸，与等级铭牌同高（等于昵称字号）。

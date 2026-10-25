@@ -1,10 +1,14 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../data.dart';
 import '../widgets/app_top_bar.dart';
 import '../i18n.dart';
 
 /// 复装记录：按 SOP 一步步打勾执行，并记下每次复装的实际参数。
-/// 记录仅保存在本次打开期间，退出后不保留；正式记录请同步记在纸质复装日志上。
+/// 记录经 gunsmap/prefs 存本机（key reload_log_v1），重启不丢；
+/// 字段按 Hornady / Lyman 手册的记录要求：弹头、火药与批号、底火与批号、
+/// 弹壳品牌与使用次数、装药量、COL、试射枪械、初速、散布、天气与备注。
 class ReloadLogEntry {
   final String date;
   final String caliber;
@@ -14,6 +18,14 @@ class ReloadLogEntry {
   final String col;
   final String rounds;
   final String note;
+  final String primer;
+  final String caseBrand;
+  final String caseTimes;
+  final String velocity;
+  final String group;
+  final String firearm;
+  final String lot;
+  final String weather;
   ReloadLogEntry({
     required this.date,
     required this.caliber,
@@ -23,7 +35,53 @@ class ReloadLogEntry {
     required this.col,
     required this.rounds,
     required this.note,
+    this.primer = '',
+    this.caseBrand = '',
+    this.caseTimes = '',
+    this.velocity = '',
+    this.group = '',
+    this.firearm = '',
+    this.lot = '',
+    this.weather = '',
   });
+
+  Map<String, dynamic> toJson() => {
+        'date': date,
+        'caliber': caliber,
+        'bullet': bullet,
+        'powder': powder,
+        'charge': charge,
+        'col': col,
+        'rounds': rounds,
+        'note': note,
+        'primer': primer,
+        'caseBrand': caseBrand,
+        'caseTimes': caseTimes,
+        'velocity': velocity,
+        'group': group,
+        'firearm': firearm,
+        'lot': lot,
+        'weather': weather,
+      };
+
+  factory ReloadLogEntry.fromJson(Map<String, dynamic> j) => ReloadLogEntry(
+        date: j['date'] as String? ?? '',
+        caliber: j['caliber'] as String? ?? '',
+        bullet: j['bullet'] as String? ?? '',
+        powder: j['powder'] as String? ?? '',
+        charge: j['charge'] as String? ?? '',
+        col: j['col'] as String? ?? '',
+        rounds: j['rounds'] as String? ?? '',
+        note: j['note'] as String? ?? '',
+        primer: j['primer'] as String? ?? '',
+        caseBrand: j['caseBrand'] as String? ?? '',
+        caseTimes: j['caseTimes'] as String? ?? '',
+        velocity: j['velocity'] as String? ?? '',
+        group: j['group'] as String? ?? '',
+        firearm: j['firearm'] as String? ?? '',
+        lot: j['lot'] as String? ?? '',
+        weather: j['weather'] as String? ?? '',
+      );
 }
 
 class ReloadLogScreen extends StatefulWidget {
@@ -43,11 +101,48 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
   final _colCtrl = TextEditingController();
   final _roundsCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
+  final _primerCtrl = TextEditingController();
+  final _caseBrandCtrl = TextEditingController();
+  final _caseTimesCtrl = TextEditingController();
+  final _velocityCtrl = TextEditingController();
+  final _groupCtrl = TextEditingController();
+  final _firearmCtrl = TextEditingController();
+  final _lotCtrl = TextEditingController();
+  final _weatherCtrl = TextEditingController();
+  static const _prefsChannel = MethodChannel('gunsmap/prefs');
+  static const _prefsKey = 'reload_log_v1';
 
   @override
   void initState() {
     super.initState();
     _done = List<bool>.filled(reloadSopSteps.length, false);
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final raw = await _prefsChannel
+          .invokeMethod<String>('getString', {'key': _prefsKey}).timeout(
+              const Duration(seconds: 2));
+      if (raw == null || raw.isEmpty || !mounted) return;
+      final list = (jsonDecode(raw) as List)
+          .map((e) => ReloadLogEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+      setState(() {
+        _logs
+          ..clear()
+          ..addAll(list);
+      });
+    } catch (_) {}
+  }
+
+  void _save() {
+    try {
+      _prefsChannel.invokeMethod('setString', {
+        'key': _prefsKey,
+        'value': jsonEncode(_logs.map((e) => e.toJson()).toList()),
+      });
+    } catch (_) {}
   }
 
   @override
@@ -58,6 +153,14 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
     _colCtrl.dispose();
     _roundsCtrl.dispose();
     _noteCtrl.dispose();
+    _primerCtrl.dispose();
+    _caseBrandCtrl.dispose();
+    _caseTimesCtrl.dispose();
+    _velocityCtrl.dispose();
+    _groupCtrl.dispose();
+    _firearmCtrl.dispose();
+    _lotCtrl.dispose();
+    _weatherCtrl.dispose();
     super.dispose();
   }
 
@@ -81,7 +184,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
           const Text('复装记录 · SOP 执行',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text('按步骤打勾，全部完成才能记一条；记录仅保存在本次打开期间。',
+          Text('按步骤打勾，全部完成才能记一条；记录保存在本机，重启不丢。',
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 12),
           Row(
@@ -204,6 +307,102 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
             ),
           ),
           const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _primerCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '底火（品牌/型号）',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _lotCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '火药/底火批号',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _caseBrandCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '弹壳品牌',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _caseTimesCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '弹壳使用次数',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _velocityCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '初速（fps）',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _groupCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '散布（100 码，″）',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _firearmCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '试射枪械',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _weatherCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '天气/温度',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           TextField(
             controller: _noteCtrl,
             maxLines: 2,
@@ -229,13 +428,30 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                             col: _colCtrl.text.trim(),
                             rounds: _roundsCtrl.text.trim(),
                             note: _noteCtrl.text.trim(),
+                            primer: _primerCtrl.text.trim(),
+                            caseBrand: _caseBrandCtrl.text.trim(),
+                            caseTimes: _caseTimesCtrl.text.trim(),
+                            velocity: _velocityCtrl.text.trim(),
+                            group: _groupCtrl.text.trim(),
+                            firearm: _firearmCtrl.text.trim(),
+                            lot: _lotCtrl.text.trim(),
+                            weather: _weatherCtrl.text.trim(),
                           ));
+                      _save();
                       _bulletCtrl.clear();
                       _powderCtrl.clear();
                       _chargeCtrl.clear();
                       _colCtrl.clear();
                       _roundsCtrl.clear();
                       _noteCtrl.clear();
+                      _primerCtrl.clear();
+                      _caseBrandCtrl.clear();
+                      _caseTimesCtrl.clear();
+                      _velocityCtrl.clear();
+                      _groupCtrl.clear();
+                      _firearmCtrl.clear();
+                      _lotCtrl.clear();
+                      _weatherCtrl.clear();
                       _done = List<bool>.filled(
                           reloadSopSteps.length, false);
                     });
@@ -275,8 +491,10 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline, size: 20),
-                            onPressed: () =>
-                                setState(() => _logs.remove(l)),
+                            onPressed: () {
+                              setState(() => _logs.remove(l));
+                              _save();
+                            },
                           ),
                         ],
                       ),
@@ -285,6 +503,14 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                       if (l.charge.isNotEmpty) Text('装药：${l.charge} gr'),
                       if (l.col.isNotEmpty) Text('弹长 COL：${l.col}″'),
                       if (l.rounds.isNotEmpty) Text('数量：${l.rounds} 发'),
+                      if (l.primer.isNotEmpty) Text('底火：${l.primer}'),
+                      if (l.lot.isNotEmpty) Text('批号：${l.lot}'),
+                      if (l.caseBrand.isNotEmpty)
+                        Text('弹壳：${l.caseBrand}${l.caseTimes.isNotEmpty ? '（第 ${l.caseTimes} 次）' : ''}'),
+                      if (l.velocity.isNotEmpty) Text('初速：${l.velocity} fps'),
+                      if (l.group.isNotEmpty) Text('散布：${l.group}″'),
+                      if (l.firearm.isNotEmpty) Text('试射枪械：${l.firearm}'),
+                      if (l.weather.isNotEmpty) Text('天气：${l.weather}'),
                       if (l.note.isNotEmpty) Text('备注：${l.note}'),
                     ],
                   ),

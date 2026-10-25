@@ -61,7 +61,7 @@ bool opened = false;
 try {
 opened = await _mailChannel.invokeMethod<bool>('openMail', {
 'email': 'Toryphoto77@gmail.com',
-'subject': "Gun's Map 反馈",
+'subject': "Ordnance 反馈",
 'body': _contentCtrl.text.trim(),
 }) ??
 false;
