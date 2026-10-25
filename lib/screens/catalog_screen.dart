@@ -143,20 +143,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // 品类代表枪型的真实照片：固定高度 + cover 裁切，
-                          // 不管原图是宽幅还是高幅，摆放位置和尺寸全部统一。
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              color: Colors.white,
-                              height: 76,
-                              width: double.infinity,
-                              child: Image.asset(
-                                categoryPhoto[c] ??
-                                    'assets/images/category-rifle.webp',
-                                fit: BoxFit.cover,
-                                alignment: Alignment.center,
-                              ),
+                          // 品类图：固定高度 + contain 全枪可见、居中摆放。
+                          // cover 会裁掉枪身两端（之前显示不全就是它造成的），
+                          // 透明底抠图用 contain 才能保证整枪可见且位置统一。
+                          SizedBox(
+                            height: 76,
+                            width: double.infinity,
+                            child: Image.asset(
+                              categoryPhoto[c] ??
+                                  'assets/images/category-rifle.png',
+                              fit: BoxFit.contain,
+                              alignment: Alignment.center,
                             ),
                           ),
                           const SizedBox(height: 10),

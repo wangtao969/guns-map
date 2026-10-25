@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
+import '../widgets/expandable_search_bar.dart';
 import 'community_board_screen.dart';
 import 'community_compose_screen.dart';
 import 'community_dm_screen.dart';
@@ -622,13 +623,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       : '继续写草稿'),
                 ),
                 const SizedBox(height: 12),
-                TextField(
+                ExpandableSearchBar(
+                  hint: '搜索帖子标题、内容、话题',
                   onSubmitted: _search,
-                  decoration: const InputDecoration(
-                    hintText: '搜索帖子标题、内容、话题',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                  ),
                 ),
                 const SizedBox(height: 16),
                 const Text('板块',

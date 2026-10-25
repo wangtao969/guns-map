@@ -40,17 +40,20 @@ const Map<String, String> categoryPrototype = {
   '霰弹枪': 'Mossberg 500',
 };
 
-/// 各品类代表枪型的真实照片（Wikimedia Commons 免费授权，见品类页脚署名）。
-/// 品类卡和详情页无图占位都用它，替代之前太抽象的剪影。
+/// 各品类代表枪型的透明底 PNG 抠图（像 CS:GO、CF 武器栏的干净侧视图，
+/// 枪口一律朝右，全枪可见；M4/MP5 来自 Commons 透明底原图，SVD/Glock
+/// 由透明底图水平翻转而来，AWM/M82A1/M249 由白底官方照抠图，
+/// Mossberg 500 由瓷砖底实拍抠图；授权见品类页脚署名）。
+/// 品类卡和详情页无图占位都用它。
 const Map<String, String> categoryPhoto = {
-  '手枪': 'assets/images/category-handgun.webp',
-  '步枪': 'assets/images/category-rifle.webp',
-  '精确射手步枪': 'assets/images/category-dmr.webp',
-  '狙击步枪': 'assets/images/category-sniper.webp',
-  '反器材步枪': 'assets/images/category-antimateriel.webp',
-  '冲锋枪': 'assets/images/category-smg.webp',
-  '机枪': 'assets/images/category-mg.webp',
-  '霰弹枪': 'assets/images/category-shotgun.webp',
+  '手枪': 'assets/images/category-handgun.png',
+  '步枪': 'assets/images/category-rifle.png',
+  '精确射手步枪': 'assets/images/category-dmr.png',
+  '狙击步枪': 'assets/images/category-sniper.png',
+  '反器材步枪': 'assets/images/category-antimateriel.png',
+  '冲锋枪': 'assets/images/category-smg.png',
+  '机枪': 'assets/images/category-mg.png',
+  '霰弹枪': 'assets/images/category-shotgun.png',
 };
 
 Path _rrect(double x, double y, double w, double h, [double r = 2]) {

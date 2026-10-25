@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
+import '../widgets/expandable_search_bar.dart';
 import 'community_compose_screen.dart';
 import 'community_post_detail_screen.dart';
 import 'community_profile_screen.dart';
@@ -167,14 +168,11 @@ class _CommunityBoardScreenState extends State<CommunityBoardScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
+              ExpandableSearchBar(
+                hint: '搜索本板块的帖子标题、内容、话题',
                 controller: _searchCtrl,
+                initiallyExpanded: widget.initialQuery.isNotEmpty,
                 onChanged: (v) => setState(() => _query = v.trim()),
-                decoration: const InputDecoration(
-                  hintText: '搜索本板块的帖子标题、内容、话题',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                ),
               ),
               const SizedBox(height: 8),
               Row(

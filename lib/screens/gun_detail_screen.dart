@@ -79,7 +79,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
                         ? Image.asset(gun.image!, fit: BoxFit.contain)
                         : Image.asset(
                             categoryPhoto[gun.category] ??
-                                'assets/images/category-rifle.webp',
+                                'assets/images/category-rifle.png',
                             fit: BoxFit.contain,
                           ),
                   ),
