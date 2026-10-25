@@ -1,71 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
+import 'community_compose_screen.dart';
+import 'community_dm_screen.dart';
+import 'community_notifications_screen.dart';
+import 'community_post_detail_screen.dart';
+import 'community_profile_screen.dart';
 
-/// 社区板块：本地动态 + 本地账号（注册 / 登录）。
-/// 暂未接后端：账号与帖子仅保存在本次打开期间，密码只留在内存里；
-/// 后续接后端时再做真正的注册登录与同步，届时账号体系直接沿用。
-class CommunityPost {
-  final String title;
-  final String content;
-  final String time;
-  final String authorNickname;
-  final String authorId;
-  final Color authorColor;
-  final Uint8List? authorAvatar;
-  CommunityPost({
-    required this.title,
-    required this.content,
-    required this.time,
-    required this.authorNickname,
-    required this.authorId,
-    required this.authorColor,
-    this.authorAvatar,
-  });
-}
-
-/// 本地账号：昵称、ID、密码、头像颜色或上传头像。ID 注册后不可改。
-/// 上传头像只保存在内存里（与账号体系一样，本次打开期间有效）。
-class CommunityAccount {
-  String nickname;
-  final String id;
-  final String password;
-  Color avatarColor;
-  Uint8List? avatarBytes;
-  CommunityAccount({
-    required this.nickname,
-    required this.id,
-    required this.password,
-    required this.avatarColor,
-    this.avatarBytes,
-  });
-}
-
-/// 头像显示：有上传头像用图片，没有则用颜色圆 + 昵称首字。
-Widget communityAvatar({
-  required Uint8List? bytes,
-  required Color color,
-  required String nickname,
-  required double radius,
-}) {
-  if (bytes != null) {
-    return CircleAvatar(
-      backgroundImage: MemoryImage(bytes),
-      radius: radius,
-    );
-  }
-  return CircleAvatar(
-    backgroundColor: color,
-    foregroundColor: Colors.white,
-    radius: radius,
-    child: Text(
-      nickname.isEmpty ? '枪' : nickname.characters.first,
-      style: TextStyle(fontSize: radius * 0.75),
-    ),
-  );
-}
-
+/// 社区本机版首页：账号卡、搜索、板块、排序、帖子列表。
+/// 数据只在内存里（见 community_store.dart），不联网、不落盘。
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
 
@@ -74,12 +19,11 @@ class CommunityScreen extends StatefulWidget {
 }
 
 class _CommunityScreenState extends State<CommunityScreen> {
-  final _posts = <CommunityPost>[];
-  final _accounts = <CommunityAccount>[];
-  CommunityAccount? _current;
-  final _titleCtrl = TextEditingController();
-  final _contentCtrl = TextEditingController();
-  bool _composing = false;
+  String _query = '';
+  String _board = '全部';
+  String _sort = 'time'; // time 最新 / hot 最热
+  String? _tag;
+  final _expandedReported = <String>{};
 
   static const _avatarColors = [
     Color(0xFF6B5B3E),
@@ -90,20 +34,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
     Color(0xFF8C8C3E),
   ];
 
-  @override
-  void dispose() {
-    _titleCtrl.dispose();
-    _contentCtrl.dispose();
-    super.dispose();
-  }
-
-  String _now() {
-    final n = DateTime.now();
-    return '${n.month}月${n.day}日 ${n.hour.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')}';
-  }
-
-  /// 原生选图：走 gunsmap/pick_image 通道调系统相册，原生侧缩放到 512px 内再回传。
-  /// 没装相册应用或用户没选图时返回 null。
   static const _pickImageChannel = MethodChannel('gunsmap/pick_image');
 
   Future<Uint8List?> _pickAvatar() async {
@@ -116,7 +46,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
     }
   }
 
-  /// 注册/编辑资料共用的头像行：上传图片预览 + 上传按钮，已上传时可改回颜色头像。
   Widget _avatarPickerRow({
     required Uint8List? picked,
     required Color color,
@@ -161,7 +90,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
-  /// 注册：昵称、ID、密码、确认密码；ID 不可重复，注册成功自动登录。
   Future<void> _register() async {
     final nickCtrl = TextEditingController();
     final idCtrl = TextEditingController();
@@ -224,7 +152,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   controller: nickCtrl,
                   decoration: InputDecoration(
                     labelText: tr('nickname_label'),
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -232,7 +160,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   controller: idCtrl,
                   decoration: InputDecoration(
                     labelText: tr('id_login_hint'),
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -241,7 +169,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   obscureText: true,
                   decoration: InputDecoration(
                     labelText: tr('password_label'),
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -250,7 +178,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   obscureText: true,
                   decoration: InputDecoration(
                     labelText: tr('confirm_password'),
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 if (error != null) ...[
@@ -270,28 +198,22 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 final nick = nickCtrl.text.trim();
                 final id = idCtrl.text.trim();
                 final pass = passCtrl.text;
-                final confirm = confirmCtrl.text;
                 String? e;
-                if (nick.isEmpty || id.isEmpty || pass.isEmpty) {
-                  e = tr('err_empty');
-                } else if (pass != confirm) {
+                if (pass != confirmCtrl.text) {
                   e = tr('err_mismatch');
-                } else if (_accounts.any((a) => a.id == id)) {
-                  e = tr('err_dup');
+                } else {
+                  e = communityStore.register(
+                    nickname: nick,
+                    id: id,
+                    password: pass,
+                    avatarColor: color,
+                    avatarBytes: pickedAvatar,
+                  );
                 }
                 if (e != null) {
                   setDialogState(() => error = e);
                   return;
                 }
-                final account = CommunityAccount(
-                  nickname: nick,
-                  id: id,
-                  password: pass,
-                  avatarColor: color,
-                  avatarBytes: pickedAvatar,
-                );
-                _accounts.add(account);
-                _current = account;
                 Navigator.of(dialogContext).pop(true);
               },
               child: Text(tr('register')),
@@ -307,7 +229,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
     if (ok == true) setState(() {});
   }
 
-  /// 登录：ID + 密码，对上本地账号才能进。
   Future<void> _login() async {
     final idCtrl = TextEditingController();
     final passCtrl = TextEditingController();
@@ -324,7 +245,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 controller: idCtrl,
                 decoration: InputDecoration(
                   labelText: tr('id_field'),
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
@@ -333,7 +254,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: tr('password_label'),
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               if (error != null) ...[
@@ -349,17 +270,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
             ),
             TextButton(
               onPressed: () {
-                final id = idCtrl.text.trim();
-                final pass = passCtrl.text;
-                CommunityAccount? found;
-                for (final a in _accounts) {
-                  if (a.id == id && a.password == pass) found = a;
-                }
-                if (found == null) {
-                  setDialogState(() => error = tr('err_login'));
+                final e = communityStore.login(
+                  id: idCtrl.text.trim(),
+                  password: passCtrl.text,
+                );
+                if (e != null) {
+                  setDialogState(() => error = e);
                   return;
                 }
-                _current = found;
                 Navigator.of(dialogContext).pop(true);
               },
               child: Text(tr('login')),
@@ -373,72 +291,96 @@ class _CommunityScreenState extends State<CommunityScreen> {
     if (ok == true) setState(() {});
   }
 
-  /// 已登录账号改资料：昵称与头像颜色可改，ID 注册后固定。
   Future<void> _editProfile() async {
-    final account = _current;
+    final account = communityStore.current;
     if (account == null) return;
     final nickCtrl = TextEditingController(text: account.nickname);
+    final bioCtrl = TextEditingController(text: account.bio);
     var color = account.avatarColor;
     Uint8List? pickedAvatar = account.avatarBytes;
+    var showId = account.showIdPublic;
+    var favPublic = account.favoritesPublic;
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (_, setDialogState) => AlertDialog(
           title: Text(tr('edit_profile')),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(tr('avatar_color')),
-              const SizedBox(height: 8),
-              Row(
-                children: _avatarColors.map((c) {
-                  final selected = c == color;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onTap: () => setDialogState(() => color = c),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: c,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color:
-                                selected ? Colors.white : Colors.transparent,
-                            width: 2,
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tr('avatar_color')),
+                const SizedBox(height: 8),
+                Row(
+                  children: _avatarColors.map((c) {
+                    final selected = c == color;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: () => setDialogState(() => color = c),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: c,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color:
+                                  selected ? Colors.white : Colors.transparent,
+                              width: 2,
+                            ),
                           ),
+                          child: selected
+                              ? const Icon(Icons.check,
+                                  size: 18, color: Colors.white)
+                              : null,
                         ),
-                        child: selected
-                            ? const Icon(Icons.check,
-                                size: 18, color: Colors.white)
-                            : null,
                       ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 12),
-              _avatarPickerRow(
-                picked: pickedAvatar,
-                color: color,
-                nickname: nickCtrl.text,
-                setDialogState: setDialogState,
-                onPicked: (b) => pickedAvatar = b,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nickCtrl,
-                decoration: InputDecoration(
-                  labelText: tr('nickname_label'),
-                  border: OutlineInputBorder(),
+                    );
+                  }).toList(),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text('${tr('id_field')}：${account.id}${tr('id_fixed_suffix')}',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            ],
+                const SizedBox(height: 12),
+                _avatarPickerRow(
+                  picked: pickedAvatar,
+                  color: color,
+                  nickname: nickCtrl.text,
+                  setDialogState: setDialogState,
+                  onPicked: (b) => pickedAvatar = b,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nickCtrl,
+                  decoration: InputDecoration(
+                    labelText: tr('nickname_label'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: bioCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: '个人简介',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  title: const Text('帖子旁显示 ID'),
+                  value: showId,
+                  onChanged: (v) => setDialogState(() => showId = v),
+                ),
+                SwitchListTile(
+                  title: const Text('收藏对外可见'),
+                  value: favPublic,
+                  onChanged: (v) => setDialogState(() => favPublic = v),
+                ),
+                Text(
+                    '${tr('id_field')}：${account.id}${tr('id_fixed_suffix')}',
+                    style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -454,15 +396,18 @@ class _CommunityScreenState extends State<CommunityScreen> {
       ),
     );
     if (saved == true) {
-      setState(() {
-        if (nickCtrl.text.trim().isNotEmpty) {
-          account.nickname = nickCtrl.text.trim();
-        }
-        account.avatarColor = color;
-        account.avatarBytes = pickedAvatar;
-      });
+      if (nickCtrl.text.trim().isNotEmpty) {
+        account.nickname = nickCtrl.text.trim();
+      }
+      account.bio = bioCtrl.text.trim();
+      account.avatarColor = color;
+      account.avatarBytes = pickedAvatar;
+      account.showIdPublic = showId;
+      account.favoritesPublic = favPublic;
+      communityStore.refresh();
     }
     nickCtrl.dispose();
+    bioCtrl.dispose();
   }
 
   void _askLogin() {
@@ -495,230 +440,501 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
+  void _openComposer() {
+    if (communityStore.current == null) {
+      _askLogin();
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CommunityComposeScreen()),
+    );
+  }
+
+  List<CommunityPost> _visiblePosts() {
+    var list = communityStore.posts.where((p) {
+      if (_board != '全部' && p.board != _board) return false;
+      if (_tag != null && !p.tags.contains(_tag)) return false;
+      if (_query.isNotEmpty) {
+        final q = _query.toLowerCase();
+        if (!p.title.toLowerCase().contains(q) &&
+            !p.content.toLowerCase().contains(q) &&
+            !p.tags.any((t) => t.toLowerCase().contains(q))) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
+    final pinned = list.where((p) => p.pinned).toList();
+    final rest = list.where((p) => !p.pinned).toList();
+    if (_sort == 'hot') {
+      rest.sort((a, b) => b.hotScore.compareTo(a.hotScore));
+    } else {
+      rest.sort((a, b) => b.time.compareTo(a.time));
+    }
+    return [...pinned, ...rest];
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
-    final current = _current;
-    // 语言切换时整页重译。
     return ValueListenableBuilder<String>(
       valueListenable: localeNotifier,
-      builder: (_, __, ___) => Scaffold(
-      appBar: const GunsMapAppBar(),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(tr('tab_community'),
-              style:
-                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(tr('community_note'),
-              style: TextStyle(color: grey, fontSize: 12)),
-          const SizedBox(height: 12),
-          // 账号区：未登录显示登录/注册，已登录显示资料卡。
-          if (current == null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(tr('not_logged'),
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(tr('not_logged_sub'),
-                        style: TextStyle(color: grey, fontSize: 12)),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        ElevatedButton(
-                          onPressed: _login,
-                          child: Text(tr('login')),
-                        ),
-                        const SizedBox(width: 8),
-                        OutlinedButton(
-                          onPressed: _register,
-                          child: Text(tr('register')),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          if (current != null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    communityAvatar(
-                      bytes: current.avatarBytes,
-                      color: current.avatarColor,
-                      nickname: current.nickname,
-                      radius: 24,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
+      builder: (_, __, ___) => AnimatedBuilder(
+        animation: communityStore,
+        builder: (_, __) {
+          final current = communityStore.current;
+          final visible = _visiblePosts();
+          final unread =
+              current == null ? 0 : communityStore.unreadCount(current.id);
+          return Scaffold(
+            appBar: const GunsMapAppBar(),
+            body: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(tr('tab_community'),
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(tr('community_note'),
+                    style: TextStyle(color: grey, fontSize: 12)),
+                const SizedBox(height: 12),
+                if (current == null)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(current.nickname,
+                          Text(tr('not_logged'),
                               style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16)),
-                          const SizedBox(height: 2),
-                          Text('${tr('id_field')}：${current.id}',
+                                  fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text(tr('not_logged_sub'),
                               style: TextStyle(color: grey, fontSize: 12)),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              ElevatedButton(
+                                onPressed: _login,
+                                child: Text(tr('login')),
+                              ),
+                              const SizedBox(width: 8),
+                              OutlinedButton(
+                                onPressed: _register,
+                                child: Text(tr('register')),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
-                    TextButton(
-                      onPressed: _editProfile,
-                      child: Text(tr('edit_profile')),
-                    ),
-                    TextButton(
-                      onPressed: () => setState(() => _current = null),
-                      child: Text(tr('logout')),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          const SizedBox(height: 12),
-          if (!_composing)
-            OutlinedButton.icon(
-              onPressed: () {
-                if (_current == null) {
-                  _askLogin();
-                } else {
-                  setState(() => _composing = true);
-                }
-              },
-              icon: const Icon(Icons.edit_outlined),
-              label: Text(tr('post_new')),
-            ),
-          if (_composing) ...[
-            TextField(
-              controller: _titleCtrl,
-              decoration: InputDecoration(
-                labelText: tr('post_title_label'),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _contentCtrl,
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: tr('post_content_label'),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    final author = _current;
-                    if (author == null) return;
-                    if (_titleCtrl.text.trim().isEmpty &&
-                        _contentCtrl.text.trim().isEmpty) {
-                      return;
-                    }
-                    setState(() {
-                      _posts.insert(
-                          0,
-                          CommunityPost(
-                            title: _titleCtrl.text.trim().isEmpty
-                                ? tr('post_no_title')
-                                : _titleCtrl.text.trim(),
-                            content: _contentCtrl.text.trim(),
-                            time: _now(),
-                            authorNickname: author.nickname,
-                            authorId: author.id,
-                            authorColor: author.avatarColor,
-                            authorAvatar: author.avatarBytes,
-                          ));
-                      _titleCtrl.clear();
-                      _contentCtrl.clear();
-                      _composing = false;
-                    });
-                  },
-                  child: Text(tr('publish')),
-                ),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: () => setState(() => _composing = false),
-                  child: Text(tr('cancel')),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 16),
-          if (_posts.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 32),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(Icons.forum_outlined, size: 48, color: grey),
-                    const SizedBox(height: 12),
-                    Text(tr('no_posts'), style: TextStyle(color: grey)),
-                    const SizedBox(height: 4),
-                    Text(tr('no_posts_sub'),
-                        style: TextStyle(color: grey, fontSize: 12)),
-                  ],
-                ),
-              ),
-            ),
-          ..._posts.map((p) => Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                  ),
+                if (current != null)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
                         children: [
-                          communityAvatar(
-                            bytes: p.authorAvatar,
-                            color: p.authorColor,
-                            nickname: p.authorNickname,
-                            radius: 16,
+                          Row(
+                            children: [
+                              communityAvatar(
+                                bytes: current.avatarBytes,
+                                color: current.avatarColor,
+                                nickname: current.nickname,
+                                radius: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(current.nickname,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16)),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                        '${tr('id_field')}：${current.id}',
+                                        style: TextStyle(
+                                            color: grey, fontSize: 12)),
+                                    if (current.bio.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(current.bio,
+                                          style: TextStyle(
+                                              color: grey, fontSize: 12)),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: _editProfile,
+                                child: Text(tr('edit_profile')),
+                              ),
+                              TextButton(
+                                onPressed: () => communityStore.logout(),
+                                child: Text(tr('logout')),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(p.authorNickname,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold)),
-                                Text('${tr('id_field')}：${p.authorId}',
-                                    style: TextStyle(
-                                        color: grey, fontSize: 11)),
-                              ],
-                            ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            CommunityProfileScreen(
+                                                account: current)),
+                                  ),
+                                  icon: const Icon(Icons.person_outlined,
+                                      size: 18),
+                                  label: const Text('我的主页'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            const CommunityNotificationsScreen()),
+                                  ),
+                                  icon: Badge(
+                                    isLabelVisible: unread > 0,
+                                    label: Text('$unread'),
+                                    child: const Icon(
+                                        Icons.notifications_outlined,
+                                        size: 18),
+                                  ),
+                                  label: const Text('通知'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            const CommunityDmScreen()),
+                                  ),
+                                  icon: const Icon(Icons.mail_outlined,
+                                      size: 18),
+                                  label: const Text('私信'),
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(p.time,
-                              style: TextStyle(color: grey, fontSize: 12)),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(p.title,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16)),
-                      if (p.content.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(p.content),
-                      ],
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _openComposer,
+                  icon: const Icon(Icons.edit_outlined),
+                  label: Text(communityStore.draft == null
+                      ? tr('post_new')
+                      : '继续写草稿'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  onChanged: (v) => setState(() => _query = v.trim()),
+                  decoration: const InputDecoration(
+                    hintText: '搜索帖子标题、内容、话题',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final b in ['全部', ...communityBoards])
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(b),
+                            selected: _board == b,
+                            onSelected: (_) => setState(() => _board = b),
+                          ),
+                        ),
                     ],
                   ),
                 ),
-              )),
-        ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    ChoiceChip(
+                      label: const Text('最新'),
+                      selected: _sort == 'time',
+                      onSelected: (_) => setState(() => _sort = 'time'),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('最热'),
+                      selected: _sort == 'hot',
+                      onSelected: (_) => setState(() => _sort = 'hot'),
+                    ),
+                    if (_tag != null) ...[
+                      const SizedBox(width: 8),
+                      InputChip(
+                        label: Text('#$_tag#'),
+                        onDeleted: () => setState(() => _tag = null),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (visible.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 32),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.forum_outlined, size: 48, color: grey),
+                          const SizedBox(height: 12),
+                          Text(tr('no_posts'),
+                              style: TextStyle(color: grey)),
+                          const SizedBox(height: 4),
+                          Text(tr('no_posts_sub'),
+                              style: TextStyle(color: grey, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ...visible.map((p) => _PostCard(
+                      post: p,
+                      grey: grey,
+                      reportedExpanded:
+                          _expandedReported.contains(p.id),
+                      onExpandReported: () =>
+                          setState(() => _expandedReported.add(p.id)),
+                      onTagTap: (t) => setState(() => _tag = t),
+                      onOpen: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                CommunityPostDetailScreen(post: p)),
+                      ),
+                    )),
+              ],
+            ),
+          );
+        },
       ),
+    );
+  }
+}
+
+/// 帖子卡片：作者、板块、置顶/精华、内容预览、首图、标签、互动数。
+class _PostCard extends StatelessWidget {
+  final CommunityPost post;
+  final Color grey;
+  final bool reportedExpanded;
+  final VoidCallback onExpandReported;
+  final ValueChanged<String> onTagTap;
+  final VoidCallback onOpen;
+  const _PostCard({
+    required this.post,
+    required this.grey,
+    required this.reportedExpanded,
+    required this.onExpandReported,
+    required this.onTagTap,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = post;
+    final me = communityStore.current;
+    final authorAccount = communityStore.findAccount(p.authorId);
+    final showId = authorAccount?.showIdPublic ?? true;
+    final reportedHidden = p.reported && !reportedExpanded;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        onTap: reportedHidden ? onExpandReported : onOpen,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      final account =
+                          communityStore.findAccount(p.authorId);
+                      if (account != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  CommunityProfileScreen(account: account)),
+                        );
+                      }
+                    },
+                    child: communityAvatar(
+                      bytes: p.authorAvatar,
+                      color: p.authorColor,
+                      nickname: p.authorNickname,
+                      radius: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(p.authorNickname,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                            if (p.pinned) ...[
+                              const SizedBox(width: 6),
+                              const _Badge('置顶', Colors.red),
+                            ],
+                            if (p.essence) ...[
+                              const SizedBox(width: 6),
+                              const _Badge('精华', Colors.amber),
+                            ],
+                          ],
+                        ),
+                        if (showId)
+                          Text('${tr('id_field')}：${p.authorId}',
+                              style:
+                                  TextStyle(color: grey, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                  Text(CommunityStore.formatTime(p.time),
+                      style: TextStyle(color: grey, fontSize: 12)),
+                ],
+              ),
+              if (reportedHidden) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: grey.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text('该帖已被举报，待审核，点击查看原文'),
+                ),
+              ] else ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: grey.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(p.board, style: const TextStyle(fontSize: 11)),
+                    ),
+                    if (p.reported) ...[
+                      const SizedBox(width: 6),
+                      const _Badge('已举报', Colors.orange),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(p.title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
+                if (p.content.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    p.content,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (p.images.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      p.images.first,
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ],
+                if (p.tags.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    children: p.tags
+                        .map((t) => GestureDetector(
+                              onTap: () => onTagTap(t),
+                              child: Chip(
+                                label: Text('#$t#'),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.thumb_up_outlined, size: 15, color: grey),
+                    Text(' ${p.likedBy.length}',
+                        style: TextStyle(color: grey, fontSize: 12)),
+                    const SizedBox(width: 12),
+                    Icon(Icons.star_border, size: 15, color: grey),
+                    Text(' ${p.favoritedBy.length}',
+                        style: TextStyle(color: grey, fontSize: 12)),
+                    const SizedBox(width: 12),
+                    Icon(Icons.comment_outlined, size: 15, color: grey),
+                    Text(' ${p.comments.length}',
+                        style: TextStyle(color: grey, fontSize: 12)),
+                    const Spacer(),
+                    if (me != null && me.id == p.authorId)
+                      Text('我的帖子',
+                          style: TextStyle(color: grey, fontSize: 11)),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _Badge(this.text, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(text,
+          style: const TextStyle(color: Colors.white, fontSize: 10)),
     );
   }
 }

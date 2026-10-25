@@ -10,7 +10,7 @@ import '../widgets/app_top_bar.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '1.5.1';
+const String appVersion = '1.6.0';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {

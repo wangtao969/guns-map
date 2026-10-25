@@ -26,7 +26,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
     final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
     final ink = dark ? const Color(0xFFEDE8DF) : const Color(0xFF2E2A24);
     final cardBg = dark ? const Color(0xFF1E1C19) : Colors.white;
-    final silhouette = dark ? const Color(0xFFE8E0D0) : const Color(0xFF4A4238);
     final q = _query.trim().toLowerCase();
     final results = q.isEmpty
         ? <Gun>[]
@@ -144,11 +143,21 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // 剪影直接落在卡片上，不再套米色底块。
+                          // 品类代表枪型的真实照片（白底照片卡），替代抽象剪影。
                           Center(
-                            child: CategorySilhouette(
-                              category: c,
-                              color: silhouette,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Image.asset(
+                                categoryPhoto[c] ??
+                                    'assets/images/category-rifle.webp',
+                                height: 64,
+                                width: double.infinity,
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -171,6 +180,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   );
                 },
               ),
+              const SizedBox(height: 6),
+              Text('品类图片来源：Wikimedia Commons（免费授权）',
+                  style: TextStyle(color: grey, fontSize: 11)),
               // 停售名枪鉴赏：首页下方的大类入口。
               const SizedBox(height: 24),
               Text(tr('legends'),

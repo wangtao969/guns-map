@@ -77,11 +77,10 @@ class _GunDetailScreenState extends State<GunDetailScreen>
                     },
                     child: gun.image != null
                         ? Image.asset(gun.image!, fit: BoxFit.contain)
-                        : CategorySilhouette(
-                            category: gun.category,
-                            width: 220,
-                            height: 96,
-                            color: const Color(0xFFE8E0D0),
+                        : Image.asset(
+                            categoryPhoto[gun.category] ??
+                                'assets/images/category-rifle.webp',
+                            fit: BoxFit.contain,
                           ),
                   ),
                 ),
