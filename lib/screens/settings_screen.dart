@@ -3,14 +3,16 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../community_store.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../main.dart';
 import '../widgets/app_top_bar.dart';
+import 'community_account_dialogs.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '1.6.2';
+const String appVersion = '1.7.0';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -125,6 +127,46 @@ class SettingsScreen extends StatelessWidget {
               tr('data_note_body'),
               style: TextStyle(color: grey, fontSize: 13),
             ),
+          ),
+          const SizedBox(height: 24),
+          Text('社区账号',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          AnimatedBuilder(
+            animation: communityStore,
+            builder: (_, __) {
+              final me = communityStore.current;
+              if (me == null) {
+                return const ListTile(
+                  title: Text('未登录'),
+                  subtitle: Text('请到社区 Tab 登录或注册'),
+                );
+              }
+              return Column(
+                children: [
+                  ListTile(
+                    title: Text(me.nickname),
+                    subtitle: Text(
+                        '${tr('id_field')}：${me.id} · LV${me.level} ${me.tierName}'),
+                  ),
+                  ListTile(
+                    title: Text(tr('edit_profile')),
+                    trailing: const Icon(Icons.edit_outlined),
+                    onTap: () => showEditProfileDialog(context),
+                  ),
+                  ListTile(
+                    title: Text(tr('logout')),
+                    trailing: const Icon(Icons.logout_outlined),
+                    onTap: () {
+                      communityStore.logout();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('已退出登录')),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 32),
           const Divider(),

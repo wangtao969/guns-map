@@ -200,6 +200,48 @@ class MainActivity : FlutterActivity() {
                     } catch (e: Exception) {
                         result.success(false)
                     }
+                } else if (call.method == "shareImage") {
+                    val bytes = call.argument<ByteArray>("bytes")
+                    if (bytes == null) {
+                        result.success(false)
+                        return@setMethodCallHandler
+                    }
+                    try {
+                        val values = android.content.ContentValues().apply {
+                            put(MediaStore.Images.Media.DISPLAY_NAME, "gunsmap_collection.png")
+                            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+                        }
+                        val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                        if (uri == null) {
+                            result.success(false)
+                            return@setMethodCallHandler
+                        }
+                        contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "image/png"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        startActivity(Intent.createChooser(intent, "分享到"))
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                } else {
+                    result.notImplemented()
+                }
+            }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "gunsmap/prefs")
+            .setMethodCallHandler { call, result ->
+                val prefs = getSharedPreferences("gunsmap_prefs", MODE_PRIVATE)
+                if (call.method == "getString") {
+                    val key = call.argument<String>("key") ?: ""
+                    result.success(prefs.getString(key, null))
+                } else if (call.method == "setString") {
+                    val key = call.argument<String>("key") ?: ""
+                    val value = call.argument<String>("value") ?: ""
+                    prefs.edit().putString(key, value).apply()
+                    result.success(true)
                 } else {
                     result.notImplemented()
                 }

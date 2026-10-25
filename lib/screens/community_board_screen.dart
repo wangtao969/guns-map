@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
-import '../widgets/expandable_search_bar.dart';
+import '../widgets/community_theme.dart';
+import '../widgets/level_badge.dart';
+import 'community_account_dialogs.dart';
 import 'community_compose_screen.dart';
 import 'community_post_detail_screen.dart';
 import 'community_profile_screen.dart';
@@ -28,6 +30,7 @@ class _CommunityBoardScreenState extends State<CommunityBoardScreen> {
   late String _query;
   String _sort = 'time'; // time 最新 / hot 最热
   String? _tag;
+  bool _showSearch = false;
   final _expandedReported = <String>{};
   late final TextEditingController _searchCtrl;
 
@@ -100,11 +103,25 @@ class _CommunityBoardScreenState extends State<CommunityBoardScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
+    final grey = communitySecondary(dark);
     return AnimatedBuilder(
       animation: communityStore,
       builder: (_, __) {
         final visible = _visiblePosts();
+        final me = communityStore.current;
+        final boardPosts = widget.board == '全部'
+            ? communityStore.posts
+            : communityStore.posts
+                .where((p) => p.board == widget.board)
+                .toList();
+        final heat = boardPosts.fold<int>(
+            0, (sum, p) => sum + p.likedBy.length + p.comments.length);
+        final latestWithImage = boardPosts
+            .where((p) => p.images.isNotEmpty)
+            .toList();
+        final followed = me != null &&
+            widget.board != '全部' &&
+            me.followedBoards.contains(widget.board);
         return Scaffold(
           appBar: const GunsMapAppBar(),
           body: ListView(
@@ -125,6 +142,11 @@ class _CommunityBoardScreenState extends State<CommunityBoardScreen> {
                           fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
+                  IconButton(
+                    onPressed: () =>
+                        setState(() => _showSearch = !_showSearch),
+                    icon: const Icon(Icons.search),
+                  ),
                   OutlinedButton.icon(
                     onPressed: _openComposer,
                     icon: const Icon(Icons.edit_outlined, size: 18),
@@ -133,59 +155,155 @@ class _CommunityBoardScreenState extends State<CommunityBoardScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              // 板块头：贴吧式板块信息区（图标、简介、帖子数）。
+              // 板块头：封面图 + 图标圆环 + 简介 + 帖子数 + 热度 + 关注。
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(14),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Icon(_boardIcon(widget.board),
-                          size: 28, color: const Color(0xFF8C6A2F)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.board == '全部' ? '全部帖子' : widget.board,
-                              style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _boardDescription(widget.board),
-                              style:
-                                  TextStyle(color: grey, fontSize: 13),
-                            ),
-                          ],
-                        ),
+                      SizedBox(
+                        height: 72,
+                        width: double.infinity,
+                        child: latestWithImage.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.memory(
+                                  latestWithImage.first.images.first,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : Image.asset(
+                                boardCover(widget.board),
+                                fit: BoxFit.contain,
+                              ),
                       ),
-                      Text('${visible.length} 帖',
-                          style: TextStyle(color: grey, fontSize: 12)),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: const Color(0xFF8C6A2F),
+                                  width: 1.5),
+                            ),
+                            child: Icon(boardIcon(widget.board),
+                                size: 22,
+                                color: const Color(0xFF8C6A2F)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.board == '全部' ? '全部帖子' : widget.board,
+                                  style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _boardDescription(widget.board),
+                                  style: TextStyle(
+                                      color: grey, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text('${boardPosts.length} 帖',
+                                  style: TextStyle(
+                                      color: grey, fontSize: 12)),
+                              Text('热度 $heat',
+                                  style: TextStyle(
+                                      color: grey, fontSize: 12)),
+                            ],
+                          ),
+                        ],
+                      ),
+                      if (widget.board != '全部') ...[
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: () {
+                              if (me == null) {
+                                askLoginDialog(context);
+                                return;
+                              }
+                              communityStore
+                                  .toggleBoardFollow(widget.board);
+                            },
+                            child: Text(followed ? '已关注' : '关注板块'),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              ExpandableSearchBar(
-                hint: '搜索本板块的帖子标题、内容、话题',
-                controller: _searchCtrl,
-                initiallyExpanded: widget.initialQuery.isNotEmpty,
-                onChanged: (v) => setState(() => _query = v.trim()),
-              ),
+              if (_showSearch) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchCtrl,
+                        autofocus: true,
+                        onChanged: (v) =>
+                            setState(() => _query = v.trim()),
+                        decoration: const InputDecoration(
+                          hintText: '搜索本板块的帖子标题、内容、话题',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(20)),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() {
+                          _query = '';
+                          _showSearch = false;
+                        });
+                      },
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 8),
               Row(
                 children: [
                   ChoiceChip(
                     label: const Text('最新'),
                     selected: _sort == 'time',
+                    selectedColor: const Color(0xFF6B5B3E),
+                    labelStyle: TextStyle(
+                        color: _sort == 'time' ? Colors.white : null),
+                    side: _sort == 'time'
+                        ? const BorderSide(color: Color(0xFF6B5B3E))
+                        : null,
                     onSelected: (_) => setState(() => _sort = 'time'),
                   ),
                   const SizedBox(width: 8),
                   ChoiceChip(
                     label: const Text('最热'),
                     selected: _sort == 'hot',
+                    selectedColor: const Color(0xFF6B5B3E),
+                    labelStyle: TextStyle(
+                        color: _sort == 'hot' ? Colors.white : null),
+                    side: _sort == 'hot'
+                        ? const BorderSide(color: Color(0xFF6B5B3E))
+                        : null,
                     onSelected: (_) => setState(() => _sort = 'hot'),
                   ),
                   if (_tag != null) ...[
@@ -206,11 +324,30 @@ class _CommunityBoardScreenState extends State<CommunityBoardScreen> {
                       children: [
                         Icon(Icons.forum_outlined, size: 48, color: grey),
                         const SizedBox(height: 12),
-                        Text(tr('no_posts'),
+                        Text(
+                            boardPosts.isEmpty &&
+                                    _query.isEmpty &&
+                                    _tag == null
+                                ? '这个板块还没有帖子'
+                                : tr('no_posts'),
                             style: TextStyle(color: grey)),
                         const SizedBox(height: 4),
-                        Text(tr('no_posts_sub'),
+                        Text(
+                            boardPosts.isEmpty &&
+                                    _query.isEmpty &&
+                                    _tag == null
+                                ? '还没有人晒枪 · 去图鉴选一把，发第一条'
+                                : tr('no_posts_sub'),
                             style: TextStyle(color: grey, fontSize: 12)),
+                        if (boardPosts.isEmpty &&
+                            _query.isEmpty &&
+                            _tag == null) ...[
+                          const SizedBox(height: 12),
+                          OutlinedButton(
+                            onPressed: _openComposer,
+                            child: const Text('来发第一条'),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -346,6 +483,18 @@ class _ThreadRow extends StatelessWidget {
                                   TextStyle(color: grey, fontSize: 12),
                             ),
                           ),
+                          Builder(builder: (context) {
+                            final account =
+                                communityStore.findAccount(p.authorId);
+                            if (account == null) {
+                              return const SizedBox.shrink();
+                            }
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.only(left: 6),
+                              child: LevelBadge(account: account),
+                            );
+                          }),
                           Text(
                             '回复 ${p.comments.length} · 点赞 ${p.likedBy.length}',
                             style: TextStyle(color: grey, fontSize: 12),
@@ -412,7 +561,7 @@ String _boardDescription(String board) {
     case '晒枪':
       return '晒出你的装备与收藏';
     case '复装心得':
-      return '装药、弹头、工具的实战经验';
+      return '装药、弹头、工具的实战经验（这里是讨论区，查装药数据请用底部复装工具）';
     case '求助问答':
       return '新手提问，老手解答';
     case '资讯':
@@ -431,35 +580,6 @@ String _boardDescription(String board) {
       return '打靶记录与日常';
     default:
       return '什么都能聊的综合区';
-  }
-}
-
-IconData _boardIcon(String board) {
-  switch (board) {
-    case '全部':
-      return Icons.forum_outlined;
-    case '晒枪':
-      return Icons.photo_camera_outlined;
-    case '复装心得':
-      return Icons.build_outlined;
-    case '求助问答':
-      return Icons.help_outline;
-    case '资讯':
-      return Icons.newspaper_outlined;
-    case '枪械评测':
-      return Icons.rate_review_outlined;
-    case '新手入门':
-      return Icons.school_outlined;
-    case '配件分享':
-      return Icons.widgets_outlined;
-    case '射击技巧':
-      return Icons.gps_fixed;
-    case '历史名枪':
-      return Icons.history;
-    case '靶场日记':
-      return Icons.book_outlined;
-    default:
-      return Icons.forum_outlined;
   }
 }
 

@@ -5,8 +5,8 @@ import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
 
 /// 发帖器：标题、板块、图文混排（文字 + 多张图片）、话题标签、自动草稿。
-/// 每敲一个字都把草稿存进内存：写一半切后台再回来，内容还在；
-/// 发布成功自动清草稿；草稿只在本次打开期间有效。
+/// 每敲一个字都更新草稿：写一半切后台再回来，内容还在；
+/// 发布成功自动清草稿；草稿保存在本机。
 class CommunityComposeScreen extends StatefulWidget {
   const CommunityComposeScreen({super.key});
 
@@ -32,6 +32,8 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
 
   @override
   void dispose() {
+    _saveDraft();
+    communityStore.persist();
     _titleCtrl.dispose();
     _contentCtrl.dispose();
     super.dispose();
@@ -224,7 +226,7 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
             }).toList(),
           ),
           const SizedBox(height: 16),
-          Text('本机版说明：短视频上传需要后端存储和播放器，暂不支持，先用图片；草稿只保存在本次打开期间。',
+          Text('草稿会自动保存，下次打开可以继续写。',
               style: TextStyle(color: grey, fontSize: 12)),
         ],
       ),

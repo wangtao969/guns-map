@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import '../community_store.dart';
 import '../data.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../models.dart';
 import '../widgets/category_silhouette.dart';
 import '../widgets/app_top_bar.dart';
+import 'community_collection_screen.dart';
+import 'community_tasks_screen.dart';
 import 'gun_list_screen.dart';
 import 'gun_detail_screen.dart';
 import 'legend_list_screen.dart';
@@ -67,6 +70,54 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 ),
                 onChanged: (v) => setState(() => _query = v),
               ),
+            ),
+            const SizedBox(height: 12),
+            // 收藏完成度 + 赛季倒计时（登录后显示，点进收藏柜 / 任务页）。
+            AnimatedBuilder(
+              animation: communityStore,
+              builder: (_, __) {
+                final me = communityStore.current;
+                if (me == null) return const SizedBox.shrink();
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const CommunityCollectionScreen()),
+                            ),
+                            child: Text(
+                                '我的收藏 ${me.collection.length} / ${guns.length}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13)),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    const CommunityTasksScreen()),
+                          ),
+                          child: Text(
+                              '赛季声望 ${communityStore.seasonPrestige(me)} · 还剩 ${communityStore.seasonRemainingDays} 天',
+                              style: const TextStyle(
+                                  color: Color(0xFFE86A1C),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13)),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 20),
             if (_query.isNotEmpty) ...[

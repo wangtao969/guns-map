@@ -83,7 +83,7 @@ class CommunityDmScreen extends StatelessWidget {
                 );
               }),
               const Divider(),
-              const Text('本机账号',
+              const Text('选择账号',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               ...others.map((a) => ListTile(
                     leading: communityAvatar(

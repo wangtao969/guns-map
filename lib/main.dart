@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'community_store.dart';
 import 'haptics.dart';
 import 'i18n.dart';
 import 'screens/catalog_screen.dart';
@@ -13,7 +14,12 @@ import 'screens/community_screen.dart';
 final ValueNotifier<ThemeMode> themeModeNotifier =
     ValueNotifier(ThemeMode.system);
 
-void main() => runApp(const FirearmsApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // 先从本机读回社区数据（带超时兜底，不阻塞启动太久），再进首页。
+  await communityStore.init();
+  runApp(const FirearmsApp());
+}
 
 /// 白天米白、夜晚黑底白字，跟随系统自动切换。
 class FirearmsApp extends StatelessWidget {

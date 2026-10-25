@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
+import '../widgets/community_theme.dart';
+import '../widgets/level_badge.dart';
 import 'community_board_screen.dart';
 import 'community_profile_screen.dart';
 
@@ -168,7 +170,7 @@ class _CommunityPostDetailScreenState
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
+    final grey = communitySecondary(dark);
     return AnimatedBuilder(
       animation: communityStore,
       builder: (_, __) {
@@ -210,9 +212,21 @@ class _CommunityPostDetailScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(p.authorNickname,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(p.authorNickname,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                  ),
+                                  if (authorAccount != null) ...[
+                                    const SizedBox(width: 6),
+                                    LevelBadge(account: authorAccount),
+                                  ],
+                                ],
+                              ),
                               Text(
                                   '${CommunityStore.formatTime(p.time)} · ${p.board}',
                                   style: TextStyle(color: grey, fontSize: 12)),
@@ -329,6 +343,18 @@ class _CommunityPostDetailScreenState
                                             fontWeight: FontWeight.bold,
                                             fontSize: 13)),
                                   ),
+                                  Builder(builder: (_) {
+                                    final account = communityStore
+                                        .findAccount(c.authorId);
+                                    if (account == null) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                          right: 6),
+                                      child: LevelBadge(account: account),
+                                    );
+                                  }),
                                   Text(CommunityStore.formatTime(c.time),
                                       style: TextStyle(
                                           color: grey, fontSize: 11)),
