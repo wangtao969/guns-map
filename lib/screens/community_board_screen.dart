@@ -561,7 +561,7 @@ String _boardDescription(String board) {
     case '晒枪':
       return '晒出你的装备与收藏';
     case '复装心得':
-      return '装药、弹头、工具的实战经验（这里是讨论区，查装药数据请用底部复装工具）';
+      return '装药、弹头、工具的实战经验（这里是讨论区，查装药数据请用工具 Tab 里的复装手册）';
     case '求助问答':
       return '新手提问，老手解答';
     case '资讯':

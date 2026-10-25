@@ -15815,6 +15815,26 @@ const List<CaliberInfo> caliberInfos = [
     fitGuns: ['格洛克 37', '格洛克 38', '格洛克 39'],
     bullets: ['185gr Gold Dot JHP', '200gr Gold Dot JHP', '230gr Gold Dot JHP', '230gr FMJ-FP'],
   ),
+  CaliberInfo(
+    caliber: '.300 WSM',
+    bulletDiameter: '7.82mm (.308″)',
+    bulletWeightRange: '150–180gr',
+    caseLength: '53.34mm',
+    maxOal: '72.64mm',
+    use: '狩猎、远程精确射击',
+    fitGuns: ['雷明顿 7', '十字军战术栓动步枪'],
+    bullets: ['150gr 猎用弹', '165gr 猎用弹', '180gr 猎用弹'],
+  ),
+  CaliberInfo(
+    caliber: '7mm PRC',
+    bulletDiameter: '7.21mm (.284″)',
+    bulletWeightRange: '160–180gr',
+    caseLength: '57.91mm',
+    maxOal: '84.84mm',
+    use: '远程狩猎、精确射击',
+    fitGuns: ['西格绍尔 Cross Magnum', '萨维奇 110 超轻型', '萨科 90 Finnlight', '贝加拉 B-14 荒野山脊步枪'],
+    bullets: ['160gr Hornady CX', '175gr Hornady ELD-X', '180gr Hornady ELD Match'],
+  ),
 ];
 
 const List<ReloadCaliber> reloadCalibers = [

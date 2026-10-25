@@ -5,9 +5,9 @@ import 'community_store.dart';
 import 'haptics.dart';
 import 'i18n.dart';
 import 'screens/catalog_screen.dart';
-import 'screens/accessories_screen.dart';
-import 'screens/reloading_screen.dart';
 import 'screens/community_screen.dart';
+import 'screens/my_screen.dart';
+import 'screens/tools_screen.dart';
 
 /// 主题选择状态：设置页写入，MaterialApp 监听切换。
 /// 仅本次打开期间生效，不做持久化。
@@ -99,9 +99,9 @@ class _HomePageState extends State<HomePage> {
 
   static const _tabs = [
     (Icons.grid_view_rounded, Icons.grid_view_rounded, 'tab_catalog'),
-    (Icons.handyman_outlined, Icons.handyman_rounded, 'tab_accessories'),
-    (Icons.science_outlined, Icons.science_rounded, 'tab_reloading'),
     (Icons.forum_outlined, Icons.forum_rounded, 'tab_community'),
+    (Icons.handyman_outlined, Icons.handyman_rounded, 'tab_tools'),
+    (Icons.person_outlined, Icons.person_rounded, 'tab_mine'),
   ];
 
   @override
@@ -113,9 +113,9 @@ class _HomePageState extends State<HomePage> {
     // 元素复用保证 State 不丢，社区当次数据不会因切语言清空。
     final pages = [
       CatalogScreen(),
-      AccessoriesScreen(),
-      ReloadingScreen(),
       CommunityScreen(),
+      ToolsScreen(),
+      MyScreen(),
     ];
     // 语言切换时重建导航（含底部 Tab 文案）；各页内部另有自己的语言监听。
     return ValueListenableBuilder<String>(
