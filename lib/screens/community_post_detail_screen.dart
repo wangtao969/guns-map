@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
+import 'community_board_screen.dart';
 import 'community_profile_screen.dart';
 
 /// 帖子详情：完整内容、图片、@高亮、点赞收藏分享、评论列表、底部快捷回复。
@@ -236,9 +237,19 @@ class _CommunityPostDetailScreenState
                       Wrap(
                         spacing: 6,
                         children: p.tags
-                            .map((t) => Chip(
-                                  label: Text('#$t#'),
-                                  visualDensity: VisualDensity.compact,
+                            .map((t) => GestureDetector(
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            CommunityBoardScreen(
+                                                board: '全部',
+                                                initialTag: t)),
+                                  ),
+                                  child: Chip(
+                                    label: Text('#$t#'),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
                                 ))
                             .toList(),
                       ),

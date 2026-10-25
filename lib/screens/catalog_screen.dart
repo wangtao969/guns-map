@@ -109,7 +109,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 1.05,
+                  childAspectRatio: 0.95,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
@@ -143,37 +143,35 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // 品类代表枪型的真实照片（白底照片卡），替代抽象剪影。
-                          Center(
+                          // 品类代表枪型的真实照片：固定高度 + cover 裁切，
+                          // 不管原图是宽幅还是高幅，摆放位置和尺寸全部统一。
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
                             child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
+                              color: Colors.white,
+                              height: 76,
+                              width: double.infinity,
                               child: Image.asset(
                                 categoryPhoto[c] ??
                                     'assets/images/category-rifle.webp',
-                                height: 64,
-                                width: double.infinity,
-                                fit: BoxFit.contain,
+                                fit: BoxFit.cover,
+                                alignment: Alignment.center,
                               ),
                             ),
                           ),
                           const SizedBox(height: 10),
                           Text(trCategory(c),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
                                   color: ink)),
-                          if (localeNotifier.value != localeEn)
-                          Text(categoryEn[c] ?? '',
-                              style: TextStyle(color: grey, fontSize: 11)),
                           const SizedBox(height: 2),
                           Text(countText(count),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(color: grey, fontSize: 12)),
-                          Text('${tr('prototype_prefix')}${categoryPrototype[c] ?? ''}',
-                              style: TextStyle(color: grey, fontSize: 10)),
                         ],
                       ),
                     ),

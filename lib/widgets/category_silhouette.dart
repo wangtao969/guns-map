@@ -37,7 +37,7 @@ const Map<String, String> categoryPrototype = {
   '反器材步枪': 'Barrett M82A1',
   '冲锋枪': 'MP5',
   '机枪': 'M249 SAW',
-  '霰弹枪': 'Remington 870',
+  '霰弹枪': 'Mossberg 500',
 };
 
 /// 各品类代表枪型的真实照片（Wikimedia Commons 免费授权，见品类页脚署名）。

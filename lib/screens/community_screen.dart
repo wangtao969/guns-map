@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import '../community_store.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
+import 'community_board_screen.dart';
 import 'community_compose_screen.dart';
 import 'community_dm_screen.dart';
 import 'community_notifications_screen.dart';
-import 'community_post_detail_screen.dart';
 import 'community_profile_screen.dart';
 
 /// 社区本机版首页：账号卡、搜索、板块、排序、帖子列表。
@@ -19,11 +19,6 @@ class CommunityScreen extends StatefulWidget {
 }
 
 class _CommunityScreenState extends State<CommunityScreen> {
-  String _query = '';
-  String _board = '全部';
-  String _sort = 'time'; // time 最新 / hot 最热
-  String? _tag;
-  final _expandedReported = <String>{};
 
   static const _avatarColors = [
     Color(0xFF6B5B3E),
@@ -451,28 +446,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
-  List<CommunityPost> _visiblePosts() {
-    var list = communityStore.posts.where((p) {
-      if (_board != '全部' && p.board != _board) return false;
-      if (_tag != null && !p.tags.contains(_tag)) return false;
-      if (_query.isNotEmpty) {
-        final q = _query.toLowerCase();
-        if (!p.title.toLowerCase().contains(q) &&
-            !p.content.toLowerCase().contains(q) &&
-            !p.tags.any((t) => t.toLowerCase().contains(q))) {
-          return false;
-        }
-      }
-      return true;
-    }).toList();
-    final pinned = list.where((p) => p.pinned).toList();
-    final rest = list.where((p) => !p.pinned).toList();
-    if (_sort == 'hot') {
-      rest.sort((a, b) => b.hotScore.compareTo(a.hotScore));
-    } else {
-      rest.sort((a, b) => b.time.compareTo(a.time));
-    }
-    return [...pinned, ...rest];
+  void _search(String q) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) =>
+              CommunityBoardScreen(board: '全部', initialQuery: q.trim())),
+    );
   }
 
   @override
@@ -485,7 +465,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
         animation: communityStore,
         builder: (_, __) {
           final current = communityStore.current;
-          final visible = _visiblePosts();
           final unread =
               current == null ? 0 : communityStore.unreadCount(current.id);
           return Scaffold(
@@ -644,86 +623,64 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 ),
                 const SizedBox(height: 12),
                 TextField(
-                  onChanged: (v) => setState(() => _query = v.trim()),
+                  onSubmitted: _search,
                   decoration: const InputDecoration(
                     hintText: '搜索帖子标题、内容、话题',
                     prefixIcon: Icon(Icons.search),
                     border: OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final b in ['全部', ...communityBoards])
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: Text(b),
-                            selected: _board == b,
-                            onSelected: (_) => setState(() => _board = b),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    ChoiceChip(
-                      label: const Text('最新'),
-                      selected: _sort == 'time',
-                      onSelected: (_) => setState(() => _sort = 'time'),
-                    ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: const Text('最热'),
-                      selected: _sort == 'hot',
-                      onSelected: (_) => setState(() => _sort = 'hot'),
-                    ),
-                    if (_tag != null) ...[
-                      const SizedBox(width: 8),
-                      InputChip(
-                        label: Text('#$_tag#'),
-                        onDeleted: () => setState(() => _tag = null),
-                      ),
-                    ],
-                  ],
-                ),
                 const SizedBox(height: 16),
-                if (visible.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 32),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(Icons.forum_outlined, size: 48, color: grey),
-                          const SizedBox(height: 12),
-                          Text(tr('no_posts'),
-                              style: TextStyle(color: grey)),
-                          const SizedBox(height: 4),
-                          Text(tr('no_posts_sub'),
-                              style: TextStyle(color: grey, fontSize: 12)),
-                        ],
-                      ),
-                    ),
+                const Text('板块',
+                    style: TextStyle(
+                        fontSize: 17, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 1.6,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
                   ),
-                ...visible.map((p) => _PostCard(
-                      post: p,
-                      grey: grey,
-                      reportedExpanded:
-                          _expandedReported.contains(p.id),
-                      onExpandReported: () =>
-                          setState(() => _expandedReported.add(p.id)),
-                      onTagTap: (t) => setState(() => _tag = t),
-                      onOpen: () => Navigator.push(
+                  itemCount: communityBoards.length + 1,
+                  itemBuilder: (context, i) {
+                    if (i == 0) {
+                      final all = communityStore.posts;
+                      return _BoardCard(
+                        icon: Icons.forum_outlined,
+                        name: '全部帖子',
+                        count: all.length,
+                        latest: all.isEmpty ? null : all.first.title,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const CommunityBoardScreen(
+                                  board: '全部')),
+                        ),
+                      );
+                    }
+                    final b = communityBoards[i - 1];
+                    final inBoard = communityStore.posts
+                        .where((p) => p.board == b)
+                        .toList();
+                    return _BoardCard(
+                      icon: _boardIcon(b),
+                      name: b,
+                      count: inBoard.length,
+                      latest:
+                          inBoard.isEmpty ? null : inBoard.first.title,
+                      onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
                             builder: (_) =>
-                                CommunityPostDetailScreen(post: p)),
+                                CommunityBoardScreen(board: b)),
                       ),
-                    )),
+                    );
+                  },
+                ),
               ],
             ),
           );
@@ -733,34 +690,29 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 }
 
-/// 帖子卡片：作者、板块、置顶/精华、内容预览、首图、标签、互动数。
-class _PostCard extends StatelessWidget {
-  final CommunityPost post;
-  final Color grey;
-  final bool reportedExpanded;
-  final VoidCallback onExpandReported;
-  final ValueChanged<String> onTagTap;
-  final VoidCallback onOpen;
-  const _PostCard({
-    required this.post,
-    required this.grey,
-    required this.reportedExpanded,
-    required this.onExpandReported,
-    required this.onTagTap,
-    required this.onOpen,
+/// 板块大卡片：图标 + 板块名 + 帖子数 + 最新帖标题，点进去是论坛式列表。
+class _BoardCard extends StatelessWidget {
+  final IconData icon;
+  final String name;
+  final int count;
+  final String? latest;
+  final VoidCallback onTap;
+  const _BoardCard({
+    required this.icon,
+    required this.name,
+    required this.count,
+    required this.latest,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final p = post;
-    final me = communityStore.current;
-    final authorAccount = communityStore.findAccount(p.authorId);
-    final showId = authorAccount?.showIdPublic ?? true;
-    final reportedHidden = p.reported && !reportedExpanded;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.zero,
       child: InkWell(
-        onTap: reportedHidden ? onExpandReported : onOpen,
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -769,149 +721,27 @@ class _PostCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  GestureDetector(
-                    onTap: () {
-                      final account =
-                          communityStore.findAccount(p.authorId);
-                      if (account != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  CommunityProfileScreen(account: account)),
-                        );
-                      }
-                    },
-                    child: communityAvatar(
-                      bytes: p.authorAvatar,
-                      color: p.authorColor,
-                      nickname: p.authorNickname,
-                      radius: 16,
-                    ),
-                  ),
+                  Icon(icon, size: 22, color: const Color(0xFF8C6A2F)),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(p.authorNickname,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                            if (p.pinned) ...[
-                              const SizedBox(width: 6),
-                              const _Badge('置顶', Colors.red),
-                            ],
-                            if (p.essence) ...[
-                              const SizedBox(width: 6),
-                              const _Badge('精华', Colors.amber),
-                            ],
-                          ],
-                        ),
-                        if (showId)
-                          Text('${tr('id_field')}：${p.authorId}',
-                              style:
-                                  TextStyle(color: grey, fontSize: 11)),
-                      ],
-                    ),
+                    child: Text(name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
-                  Text(CommunityStore.formatTime(p.time),
-                      style: TextStyle(color: grey, fontSize: 12)),
                 ],
               ),
-              if (reportedHidden) ...[
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: grey.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text('该帖已被举报，待审核，点击查看原文'),
-                ),
-              ] else ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: grey.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(p.board, style: const TextStyle(fontSize: 11)),
-                    ),
-                    if (p.reported) ...[
-                      const SizedBox(width: 6),
-                      const _Badge('已举报', Colors.orange),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(p.title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
-                if (p.content.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    p.content,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-                if (p.images.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(
-                      p.images.first,
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ],
-                if (p.tags.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    children: p.tags
-                        .map((t) => GestureDetector(
-                              onTap: () => onTagTap(t),
-                              child: Chip(
-                                label: Text('#$t#'),
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ))
-                        .toList(),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.thumb_up_outlined, size: 15, color: grey),
-                    Text(' ${p.likedBy.length}',
-                        style: TextStyle(color: grey, fontSize: 12)),
-                    const SizedBox(width: 12),
-                    Icon(Icons.star_border, size: 15, color: grey),
-                    Text(' ${p.favoritedBy.length}',
-                        style: TextStyle(color: grey, fontSize: 12)),
-                    const SizedBox(width: 12),
-                    Icon(Icons.comment_outlined, size: 15, color: grey),
-                    Text(' ${p.comments.length}',
-                        style: TextStyle(color: grey, fontSize: 12)),
-                    const Spacer(),
-                    if (me != null && me.id == p.authorId)
-                      Text('我的帖子',
-                          style: TextStyle(color: grey, fontSize: 11)),
-                  ],
-                ),
-              ],
+              const SizedBox(height: 8),
+              Text('$count 帖',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: grey, fontSize: 12)),
+              const SizedBox(height: 4),
+              Text(latest == null ? '暂无帖子' : '最新：$latest',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: grey, fontSize: 12)),
             ],
           ),
         ),
@@ -920,21 +750,29 @@ class _PostCard extends StatelessWidget {
   }
 }
 
-class _Badge extends StatelessWidget {
-  final String text;
-  final Color color;
-  const _Badge(this.text, this.color);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(text,
-          style: const TextStyle(color: Colors.white, fontSize: 10)),
-    );
+IconData _boardIcon(String board) {
+  switch (board) {
+    case '晒枪':
+      return Icons.photo_camera_outlined;
+    case '复装心得':
+      return Icons.build_outlined;
+    case '求助问答':
+      return Icons.help_outline;
+    case '资讯':
+      return Icons.newspaper_outlined;
+    case '枪械评测':
+      return Icons.rate_review_outlined;
+    case '新手入门':
+      return Icons.school_outlined;
+    case '配件分享':
+      return Icons.widgets_outlined;
+    case '射击技巧':
+      return Icons.gps_fixed;
+    case '历史名枪':
+      return Icons.history;
+    case '靶场日记':
+      return Icons.book_outlined;
+    default:
+      return Icons.forum_outlined;
   }
 }
