@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../screens/settings_screen.dart';
 
-/// 毛玻璃底：半透明底色 + 模糊 + 底部细线。
+/// 毛玻璃底：半透明底色 + 模糊（底部细线已按要求去掉）。
 /// 主 Tab 页与设置页用 extendBodyBehindAppBar 让内容从栏下滚动而过，
 /// 模糊效果才真实可见；其余子页正常布局，栏本身仍是半透明毛玻璃样式。
 class _GlassBackground extends StatelessWidget {
@@ -14,29 +14,24 @@ class _GlassBackground extends StatelessWidget {
     final tint = dark
         ? const Color(0xFF121110).withValues(alpha: 0.72)
         : const Color(0xFFF7F2E9).withValues(alpha: 0.72);
-    final line = dark
-        ? Colors.white.withValues(alpha: 0.12)
-        : Colors.black.withValues(alpha: 0.08);
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: tint,
-            border: Border(bottom: BorderSide(color: line)),
-          ),
-        ),
+        child: Container(color: tint),
       ),
     );
   }
 }
 
-/// 全局统一顶栏（毛玻璃）：左上角 App 名（加粗放大），右上角齿轮圆形设置按钮。
-/// 只在首页四个主页面显示；子页面一律用 SubPageAppBar，不再出现 App 名与齿轮。
+/// 主 Tab 顶栏（毛玻璃）：左上角显示当前板块名，右上角齿轮圆形设置按钮。
+/// 只在首页四个主页面显示；子页面一律用 SubPageAppBar，不再出现板块名与齿轮。
 class GunsMapAppBar extends StatelessWidget implements PreferredSizeWidget {
+  /// 左上角板块名（图鉴 / 社区 / 工具 / 我的）。
+  final String title;
   /// 设置页本身不再放齿轮按钮，避免重复进设置页。
   final bool showSettingsButton;
-  const GunsMapAppBar({super.key, this.showSettingsButton = true});
+  const GunsMapAppBar(
+      {super.key, required this.title, this.showSettingsButton = true});
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -53,7 +48,7 @@ class GunsMapAppBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       flexibleSpace: const _GlassBackground(),
       title: Text(
-        "Gun's Map",
+        title,
         style: TextStyle(
           // 无衬线现代简洁体：Android 系统默认无衬线 Roboto，加粗字重。
           fontFamily: 'Roboto',

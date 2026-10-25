@@ -199,39 +199,70 @@ class _FloatingNavBar extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(34),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              height: 68,
-              decoration: BoxDecoration(
-                color: dark
-                    ? const Color(0xFF1E1C19).withValues(alpha: 0.72)
-                    : Colors.white.withValues(alpha: 0.72),
-                borderRadius: BorderRadius.circular(34),
-                border: Border.all(
-                  color: dark
-                      ? Colors.white.withValues(alpha: 0.12)
-                      : Colors.white.withValues(alpha: 0.6),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.10),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
+            filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+            child: Stack(
+              children: [
+                Container(
+                  height: 68,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: dark
+                          ? [
+                              const Color(0xFF2E2A26).withValues(alpha: 0.62),
+                              const Color(0xFF1E1C19).withValues(alpha: 0.42),
+                            ]
+                          : [
+                              Colors.white.withValues(alpha: 0.58),
+                              Colors.white.withValues(alpha: 0.32),
+                            ],
+                    ),
+                    borderRadius: BorderRadius.circular(34),
+                    border: Border.all(
+                      color: dark
+                          ? Colors.white.withValues(alpha: 0.20)
+                          : Colors.white.withValues(alpha: 0.65),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.10),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  for (var i = 0; i < _HomePageState._tabs.length; i++)
-                    Expanded(child: _NavItem(
-                      icon: _HomePageState._tabs[i].$1,
-                      activeIcon: _HomePageState._tabs[i].$2,
-                      label: tr(_HomePageState._tabs[i].$3),
-                      selected: index == i,
-                      onTap: () => onTap(i),
-                    )),
-                ],
-              ),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < _HomePageState._tabs.length; i++)
+                        Expanded(child: _NavItem(
+                          icon: _HomePageState._tabs[i].$1,
+                          activeIcon: _HomePageState._tabs[i].$2,
+                          selected: index == i,
+                          onTap: () => onTap(i),
+                        )),
+                    ],
+                  ),
+                ),
+                // 顶部高光线：液态玻璃的反光边缘。
+                Positioned(
+                  top: 0,
+                  left: 28,
+                  right: 28,
+                  child: Container(
+                    height: 1.5,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: 0.0),
+                          Colors.white.withValues(alpha: 0.55),
+                          Colors.white.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -240,16 +271,15 @@ class _FloatingNavBar extends StatelessWidget {
   }
 }
 
+/// 底部导航项：只显示图标，不显示文字；选中态为铜色药丸。
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final IconData activeIcon;
-  final String label;
   final bool selected;
   final VoidCallback onTap;
   const _NavItem({
     required this.icon,
     required this.activeIcon,
-    required this.label,
     required this.selected,
     required this.onTap,
   });
@@ -262,34 +292,22 @@ class _NavItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-            decoration: BoxDecoration(
-              color: selected ? bronze : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Icon(
-              selected ? activeIcon : icon,
-              size: 24,
-              color: selected
-                  ? (dark ? const Color(0xFF121110) : Colors.white)
-                  : grey,
-            ),
+      child: Center(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected ? bronze : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-              color: selected ? bronze : grey,
-            ),
+          child: Icon(
+            selected ? activeIcon : icon,
+            size: 26,
+            color: selected
+                ? (dark ? const Color(0xFF121110) : Colors.white)
+                : grey,
           ),
-        ],
+        ),
       ),
     );
   }

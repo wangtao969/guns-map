@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
 import 'accessories_screen.dart';
 import 'community_collection_screen.dart';
@@ -17,7 +18,7 @@ class ToolsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: const GunsMapAppBar(),
+      appBar: GunsMapAppBar(title: tr('tab_tools')),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
             16, MediaQuery.of(context).padding.top + kToolbarHeight + 16, 16, 16),

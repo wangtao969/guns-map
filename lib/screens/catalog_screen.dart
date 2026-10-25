@@ -21,6 +21,7 @@ class CatalogScreen extends StatefulWidget {
 
 class _CatalogScreenState extends State<CatalogScreen> {
   String _query = '';
+  bool _searchExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -41,37 +42,95 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      appBar: const GunsMapAppBar(),
+      appBar: GunsMapAppBar(title: tr('tab_catalog')),
       body: SafeArea(
         top: true,
         bottom: false,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12 + kToolbarHeight, 16, 16),
           children: [
-            // 药丸形搜索框
-            Container(
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+            // 搜索：平时只显示一个放大镜圆钮，点开才展开成输入框；
+            // 收起时清空搜索，避免看不见的筛选条件留在后台。
+            if (!_searchExpanded)
+              Row(
+                children: [
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => setState(() => _searchExpanded = true),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: cardBg,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(Icons.search, color: bronze, size: 22),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          hintText: tr('search_gun_hint'),
+                          hintStyle: TextStyle(color: grey),
+                          prefixIcon: Icon(Icons.search, color: bronze),
+                          border: InputBorder.none,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onChanged: (v) => setState(() => _query = v),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => setState(() {
+                      _searchExpanded = false;
+                      _query = '';
+                    }),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: cardBg,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(Icons.close, color: grey, size: 20),
+                    ),
                   ),
                 ],
               ),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: tr('search_gun_hint'),
-                  hintStyle: TextStyle(color: grey),
-                  prefixIcon: Icon(Icons.search, color: bronze),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                onChanged: (v) => setState(() => _query = v),
-              ),
-            ),
             const SizedBox(height: 12),
             // 收藏完成度 + 赛季倒计时（登录后显示，点进收藏柜 / 任务页）。
             AnimatedBuilder(

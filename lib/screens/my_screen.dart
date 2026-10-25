@@ -25,7 +25,7 @@ class MyScreen extends StatelessWidget {
         final me = communityStore.current;
         return Scaffold(
           extendBodyBehindAppBar: true,
-          appBar: const GunsMapAppBar(),
+          appBar: GunsMapAppBar(title: tr('tab_mine')),
           body: ListView(
             padding: EdgeInsets.fromLTRB(
                 16,

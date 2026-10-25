@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../community_store.dart';
@@ -75,15 +76,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
     }
   }
 
-  void _openDraft() {
-    if (communityStore.draft == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('暂无草稿')),
-      );
-      return;
-    }
-    _openComposer();
-  }
 
   void _search(String q) {
     Navigator.push(
@@ -777,7 +769,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           _maybeOnboarding(current);
           return Scaffold(
             extendBodyBehindAppBar: true,
-            appBar: const GunsMapAppBar(),
+            appBar: GunsMapAppBar(title: tr('tab_community')),
             body: Padding(
               padding: EdgeInsets.only(
                   top: MediaQuery.of(context).padding.top + kToolbarHeight),
@@ -804,32 +796,64 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           : _homeView(current, grey),
                     ),
                   ),
-                      // 动态页右下角小圆钮：上面草稿箱、下面发动态。
+                      // 动态页右下角发帖钮：大号圆形液态玻璃（草稿箱已去掉，
+                      // 草稿仍在发帖器里自动带出，不用单独入口）。
                       if (_view == 'feed')
                         Positioned(
                           right: 16,
                           bottom: 16,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              FloatingActionButton.small(
-                                heroTag: 'draft',
-                                onPressed: _openDraft,
-                                backgroundColor: Colors.white,
-                                foregroundColor: const Color(0xFF6B5B3E),
-                                child: const Icon(Icons.drafts_outlined,
-                                    size: 20),
+                          child: GestureDetector(
+                            onTap: _openComposer,
+                            child: ClipOval(
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(
+                                    sigmaX: 25, sigmaY: 25),
+                                child: Container(
+                                  width: 64,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: dark
+                                          ? [
+                                              const Color(0xFFC9A86A)
+                                                  .withValues(alpha: 0.85),
+                                              const Color(0xFF6B5B3E)
+                                                  .withValues(alpha: 0.60),
+                                            ]
+                                          : [
+                                              const Color(0xFF6B5B3E)
+                                                  .withValues(alpha: 0.85),
+                                              const Color(0xFF6B5B3E)
+                                                  .withValues(alpha: 0.60),
+                                            ],
+                                    ),
+                                    border: Border.all(
+                                      color: Colors.white
+                                          .withValues(alpha: 0.45),
+                                      width: 1.2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black
+                                            .withValues(alpha: 0.18),
+                                        blurRadius: 16,
+                                        offset: const Offset(0, 6),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    Icons.edit_outlined,
+                                    size: 28,
+                                    color: dark
+                                        ? const Color(0xFF121110)
+                                        : Colors.white,
+                                  ),
+                                ),
                               ),
-                              const SizedBox(height: 10),
-                              FloatingActionButton.small(
-                                heroTag: 'compose',
-                                onPressed: _openComposer,
-                                backgroundColor: const Color(0xFF6B5B3E),
-                                foregroundColor: Colors.white,
-                                child: const Icon(Icons.edit_outlined,
-                                    size: 20),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                     ],
