@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
 import 'accessories_screen.dart';
 import 'community_collection_screen.dart';
@@ -18,14 +17,11 @@ class ToolsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: GunsMapAppBar(title: tr('tab_tools')),
+      appBar: const GunsMapAppBar(),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
             16, MediaQuery.of(context).padding.top + kToolbarHeight + 16, 16, 16),
         children: [
-          const Text('工具',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
           const Text('查数据、算单位、对照参数都在这里；讨论请去社区板块。',
               style: TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 16),

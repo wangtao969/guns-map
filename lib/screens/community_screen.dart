@@ -769,7 +769,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           _maybeOnboarding(current);
           return Scaffold(
             extendBodyBehindAppBar: true,
-            appBar: GunsMapAppBar(title: tr('tab_community')),
+            appBar: const GunsMapAppBar(),
             body: Padding(
               padding: EdgeInsets.only(
                   top: MediaQuery.of(context).padding.top + kToolbarHeight),

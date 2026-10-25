@@ -25,7 +25,7 @@ class MyScreen extends StatelessWidget {
         final me = communityStore.current;
         return Scaffold(
           extendBodyBehindAppBar: true,
-          appBar: GunsMapAppBar(title: tr('tab_mine')),
+          appBar: const GunsMapAppBar(),
           body: ListView(
             padding: EdgeInsets.fromLTRB(
                 16,
@@ -33,9 +33,6 @@ class MyScreen extends StatelessWidget {
                 16,
                 16),
             children: [
-              const Text('我的',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
               if (me == null)
                 Card(
                   child: Padding(

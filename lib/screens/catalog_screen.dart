@@ -7,6 +7,8 @@ import '../models.dart';
 import '../widgets/category_silhouette.dart';
 import '../widgets/app_top_bar.dart';
 import 'community_collection_screen.dart';
+import '../news_data.dart';
+import 'news_screen.dart';
 import 'community_tasks_screen.dart';
 import 'gun_list_screen.dart';
 import 'gun_detail_screen.dart';
@@ -42,7 +44,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      appBar: GunsMapAppBar(title: tr('tab_catalog')),
+      appBar: const GunsMapAppBar(),
       body: SafeArea(
         top: true,
         bottom: false,
@@ -132,6 +134,65 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 ],
               ),
             const SizedBox(height: 12),
+            // 枪械资讯入口：页头太空，补一条厂商与弹药商资讯快讯；搜索时隐藏。
+            if (_query.isEmpty)
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    tapHaptic();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const NewsScreen()),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: bronze,
+                          ),
+                          child: Icon(Icons.newspaper_outlined,
+                              size: 20,
+                              color: dark
+                                  ? const Color(0xFF121110)
+                                  : Colors.white),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('枪械资讯',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14)),
+                              const SizedBox(height: 2),
+                              Text(
+                                newsItems.first.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: grey, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right, color: grey),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             // 收藏完成度 + 赛季倒计时（登录后显示，点进收藏柜 / 任务页）。
             AnimatedBuilder(
               animation: communityStore,
