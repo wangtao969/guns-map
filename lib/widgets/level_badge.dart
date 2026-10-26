@@ -254,10 +254,10 @@ void showLevelSystemDialog(BuildContext context, CommunityAccount account) {
 /// 身份制度弹窗：点身份弹出，列出软件内设定的全部用户身份与权限。
 void showRoleSystemDialog(BuildContext context) {
   const roles = [
-    ('创始用户', 'ID 10000 的账号', '软件全部权限：人员管理、帖子审核、板块开关、赛季与公告配置，不受禁言封禁限制。'),
-    ('管理员', 'role 为 admin 的账号', '人员管理、帖子审核、板块开关、赛季与公告配置。'),
+    ('创始用户', 'ID 10000 的账号', '软件全部权限：人员管理、帖子审核、板块开关与公告配置，不受禁言封禁限制。'),
+    ('管理员', 'role 为 admin 的账号', '人员管理、帖子审核、板块开关与公告配置。'),
     ('版主', 'role 为 moderator 的账号', '帖子审核：取消举报、置顶、加精、删除。'),
-    ('普通用户', '默认身份', '发帖、评论、收藏、关注、私信，参与赛季、签到与勋章。'),
+    ('普通用户', '默认身份', '发帖、评论、收藏、关注、私信，参与挑战、签到与勋章。'),
   ];
   showDialog(
     context: context,

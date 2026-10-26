@@ -44,7 +44,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      appBar: const GunsMapAppBar(),
+      appBar: const OrdnanceAppBar(),
       body: SafeArea(
         top: true,
         bottom: false,
@@ -200,7 +200,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
               ),
             const SizedBox(height: 12),
             const SizedBox(height: 12),
-            // 收藏完成度 + 赛季倒计时（登录后显示，点进收藏柜 / 任务页）。
+            // 收藏完成度 + 本期挑战（登录后显示，点进收藏柜 / 任务页）。
             AnimatedBuilder(
               animation: communityStore,
               builder: (_, __) {
@@ -235,7 +235,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                     const CommunityTasksScreen()),
                           ),
                           child: Text(
-                              '赛季声望 ${communityStore.seasonPrestige(me)} · 还剩 ${communityStore.seasonRemainingDays} 天',
+                              '本期挑战 ${communityStore.challengeDone(me)}/${challengeCatalog.length} 已完成',
                               style: const TextStyle(
                                   color: Color(0xFFE86A1C),
                                   fontWeight: FontWeight.bold,

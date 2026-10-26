@@ -11,7 +11,7 @@ import 'community_collection_screen.dart';
 import 'community_compose_screen.dart';
 import 'community_range_screen.dart';
 
-/// 任务页：今日经验进度 + 等级 / 赛季状态 + 每日任务 + 经验规则。
+/// 任务页：今日经验进度 + 等级 / 本期挑战 + 每日任务 + 经验规则。
 /// 经验只来自真实动作：签到、发帖（满 20 字）、评论、收藏登记、靶场成绩。
 class CommunityTasksScreen extends StatelessWidget {
   const CommunityTasksScreen({super.key});
@@ -84,11 +84,43 @@ class CommunityTasksScreen extends StatelessWidget {
                             style: TextStyle(color: grey, fontSize: 12)),
                         const SizedBox(height: 8),
                         Text(
-                            '赛季声望 ${communityStore.seasonPrestige(me)} · 本赛季还剩 ${communityStore.seasonRemainingDays} 天',
+                            '本期挑战 ${communityStore.challengeDone(me)}/${challengeCatalog.length} 已完成',
                             style: const TextStyle(
                                 color: communityAccent,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 12),
+                        const Text('本期挑战',
+                            style: TextStyle(
+                                fontSize: 17, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        for (final c in challengeCatalog)
+                          _TaskTile(
+                            title: c.title,
+                            subtitle: c.desc,
+                            done: c.test(communityStore, me),
+                            actionLabel: c.test(communityStore, me)
+                                ? '已完成'
+                                : (c.id == 'challenge_streak_3'
+                                    ? '见上方签到'
+                                    : '去做'),
+                            onAction: c.test(communityStore, me)
+                                ? null
+                                : () {
+                                    if (c.id == 'challenge_streak_3') return;
+                                    final target =
+                                        c.id.contains('range')
+                                            ? const CommunityRangeScreen()
+                                            : c.id.contains('post')
+                                                ? const CommunityComposeScreen()
+                                                : const CommunityCollectionScreen();
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => target),
+                                    );
+                                  },
+                          ),
                       ],
                     ),
                   ),
@@ -169,7 +201,7 @@ class CommunityTasksScreen extends StatelessWidget {
                   '· 每日经验封顶 120，封顶后当天不再涨经验，明天再来。\n'
                   '· 水贴不计经验：帖子内容不满 20 字不给经验。\n'
                   '· 精华、置顶不直接给经验，防自授；获赞给作者 +1。\n'
-                  '· 赛季 70 天一季，赛季声望按本季签到与发帖现算，清零后新赛季重新开始。',
+                  '· 本期挑战不过期、不清零：完成一项算一项，奖励永久保留。',
                   style: TextStyle(color: grey, fontSize: 13),
                 ),
               ],

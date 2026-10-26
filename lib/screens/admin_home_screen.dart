@@ -54,7 +54,6 @@ class AdminHomeScreen extends StatelessWidget {
                   _stat('评论', '$comments'),
                   _stat('被举报帖子', '$reported'),
                   _stat('系统公告', '$announcements'),
-                  _stat('赛季剩余', '${communityStore.seasonRemainingDays} 天'),
                 ],
               ),
               const SizedBox(height: 16),
@@ -121,8 +120,8 @@ class AdminHomeScreen extends StatelessWidget {
                   ),
                 ),
               if (isAdmin)
-                _entry(context, Icons.tune_outlined, '板块 / 赛季 / 公告',
-                    '板块开关、赛季长度、发布系统公告', () {
+                _entry(context, Icons.tune_outlined, '板块 / 公告',
+                    '板块开关、发布系统公告', () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(

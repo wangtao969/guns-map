@@ -16,7 +16,7 @@ import 'admin_home_screen.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '2.0.2';
+const String appVersion = '2.1.0';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -222,7 +222,7 @@ class SettingsScreen extends StatelessWidget {
               leading:
                   const Icon(Icons.admin_panel_settings_outlined, size: 22),
               title: const Text('后台管理'),
-              subtitle: const Text('人员、帖子、板块、赛季与公告'),
+              subtitle: const Text('人员、帖子、板块与公告'),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const AdminHomeScreen()),
@@ -236,6 +236,45 @@ class SettingsScreen extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (_) => const AboutScreen()),
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.file_download_outlined, size: 22),
+            title: const Text('导出我的数据'),
+            subtitle: const Text('收藏柜、靶场成绩、等级与勋章，分享为 JSON 文本'),
+            onTap: () async {
+              final me = communityStore.current;
+              if (me == null) {
+                showAppToast(context, '请先登录，再导出我的数据');
+                return;
+              }
+              final data = {
+                'app': 'Ordnance',
+                'version': appVersion,
+                'exportedAt': DateTime.now().toIso8601String(),
+                'account': {
+                  'id': me.id,
+                  'nickname': me.nickname,
+                  'level': me.level,
+                  'totalXp': me.totalXp,
+                },
+                'collection': me.collection.map((c) => c.toJson()).toList(),
+                'rangeScores': me.rangeScores.map((r) => r.toJson()).toList(),
+                'earnedMedals': communityStore
+                    .earnedMedals(me)
+                    .map((m) => m.id)
+                    .toList(),
+              };
+              try {
+                const share = MethodChannel('gunsmap/share');
+                final ok = await share.invokeMethod<bool>('shareText',
+                    {'text': jsonEncode(data)});
+                if (ok != true && context.mounted) {
+                  showAppToast(context, '分享未完成，请重试');
+                }
+              } catch (_) {
+                if (context.mounted) showAppToast(context, '导出失败，请重试');
+              }
+            },
           ),
           ListTile(
             title: Text(tr('data_note')),

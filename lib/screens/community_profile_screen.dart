@@ -98,7 +98,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
   Widget _medalWall(CommunityAccount account, Color grey) {
     final earned = communityStore.earnedMedals(account);
     final earnedIds = earned.map((m) => m.id).toSet();
-    const groups = ['签到', '收藏', '发帖', '获赞', '靶场', '品类', '赛季', '彩蛋'];
+    const groups = ['签到', '收藏', '发帖', '获赞', '靶场', '品类', '挑战', '彩蛋'];
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -303,7 +303,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                             ),
                           ],
                           Text(
-                              '赛季声望 ${communityStore.seasonPrestige(account)} · 还剩 ${communityStore.seasonRemainingDays} 天',
+                              '本期挑战 ${communityStore.challengeDone(account)}/${challengeCatalog.length} 已完成',
                               style: TextStyle(
                                   color: communityAccent,
                                   fontSize: 12,

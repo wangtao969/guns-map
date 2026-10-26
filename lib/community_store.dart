@@ -327,6 +327,7 @@ class CollectionItem {
   final String caliber;
   final String category;
   String status; // owned 拥有 / handled 上手过 / wanted 想收集
+  int rounds; // 本机弹数记录：该枪累计打过的发数，只增不减（清零除外）
   final DateTime addedTime;
 
   CollectionItem({
@@ -335,6 +336,7 @@ class CollectionItem {
     required this.caliber,
     required this.category,
     required this.status,
+    this.rounds = 0,
     DateTime? addedTime,
   }) : addedTime = addedTime ?? DateTime.now();
 
@@ -344,6 +346,7 @@ class CollectionItem {
         'caliber': caliber,
         'category': category,
         'status': status,
+        'rounds': rounds,
         'addedTime': addedTime.toIso8601String(),
       };
 
@@ -353,6 +356,7 @@ class CollectionItem {
         caliber: j['caliber'] as String? ?? '',
         category: j['category'] as String? ?? '',
         status: j['status'] as String? ?? 'wanted',
+        rounds: j['rounds'] as int? ?? 0,
         addedTime: DateTime.tryParse(j['addedTime'] as String? ?? '') ??
             DateTime.now(),
       );
@@ -717,7 +721,7 @@ int _commentsToday(CommunityStore s, CommunityAccount a) {
   return n;
 }
 
-/// 勋章目录（共 28 枚）：签到 4、收藏 4、发帖 3、获赞 3、靶场 3、品类 8、赛季 1、彩蛋 2。
+/// 勋章目录（共 28 枚）：签到 4、收藏 4、发帖 3、获赞 3、靶场 3、品类 8、挑战 1、彩蛋 2。赛季已拿掉，挑战不过期。
 final medalCatalog = <MedalDef>[
   MedalDef(
       id: 'checkin_1',
@@ -858,18 +862,12 @@ final medalCatalog = <MedalDef>[
         rarity: 'R',
         test: (s, a) => a.collection.any((i) => i.category == c)),
   MedalDef(
-      id: 'season_joined',
-      name: '本季参与者',
-      desc: '本赛季完成一次签到',
-      group: '赛季',
+      id: 'challenge_1',
+      name: '挑战新手',
+      desc: '完成 1 项本期挑战',
+      group: '挑战',
       rarity: 'SR',
-      test: (s, a) {
-        final start = s.seasonStartCurrent;
-        return a.checkInDates.any((d) {
-          final dt = DateTime.tryParse(d);
-          return dt != null && !dt.isBefore(start);
-        });
-      }),
+      test: (s, a) => s.challengeDone(a) >= 1),
   MedalDef(
       id: 'egg_night',
       name: '夜猫子',
@@ -886,6 +884,54 @@ final medalCatalog = <MedalDef>[
       rarity: 'SSR',
       test: (s, a) => s.posts
           .any((p) => p.authorId == a.id && p.images.isNotEmpty)),
+];
+
+/// 本期挑战（不过期、不清零）：全部由已有数据现算，错过也不丢进度。
+/// 这是拿掉赛季后的活动线：挑战完成一项算一项，奖励永久保留。
+class ChallengeDef {
+  final String id;
+  final String title;
+  final String desc;
+  final bool Function(CommunityStore s, CommunityAccount a) test;
+  const ChallengeDef(
+      {required this.id,
+      required this.title,
+      required this.desc,
+      required this.test});
+}
+
+final challengeCatalog = <ChallengeDef>[
+  ChallengeDef(
+      id: 'challenge_collect_1',
+      title: '登记第一把藏枪',
+      desc: '在收藏柜登记 1 把枪',
+      test: (s, a) => a.collection.isNotEmpty),
+  ChallengeDef(
+      id: 'challenge_range_1',
+      title: '第一次打靶记录',
+      desc: '记录 1 条靶场成绩',
+      test: (s, a) => a.rangeScores.isNotEmpty),
+  ChallengeDef(
+      id: 'challenge_post_1',
+      title: '发表第一条动态',
+      desc: '发表 1 条动态',
+      test: (s, a) => s.posts.any((p) => p.authorId == a.id)),
+  ChallengeDef(
+      id: 'challenge_streak_3',
+      title: '连签 3 天',
+      desc: '连续签到 3 天',
+      test: (s, a) => a.checkInStreak >= 3),
+  ChallengeDef(
+      id: 'challenge_categories_3',
+      title: '横跨 3 个品类',
+      desc: '收藏柜覆盖 3 个不同品类',
+      test: (s, a) =>
+          a.collection.map((c) => c.category).toSet().length >= 3),
+  ChallengeDef(
+      id: 'challenge_collect_10',
+      title: '收藏 10 把',
+      desc: '收藏柜登记 10 把枪',
+      test: (s, a) => a.collection.length >= 10),
 ];
 
 /// 社区全局状态（单例）。界面用 AnimatedBuilder 监听它。
@@ -905,14 +951,11 @@ class CommunityStore extends ChangeNotifier {
   bool notifyInteraction = true;
   bool notifyDm = true;
 
-  /// 赛季起点（全社区共用一季）；赛季声望按窗口内数据现算。
-  DateTime firstSeasonStart = DateTime.now();
-
   /// 被管理员关闭的板块：关闭后不再出现在板块入口与发帖板块选择里。
   final Set<String> disabledBoards = {};
 
-  /// 赛季长度（天），管理员可调；每日经验封顶 120 固定不变。
-  int seasonLengthDays = 70;
+  /// 每日经验封顶 120 固定不变。赛季系统已在 v2.1.0 拿掉：
+  /// 不再有赛季起点、赛季长度、赛季声望与赛季倒计时。
 
   bool _loaded = false;
   int _seq = 0;
@@ -956,13 +999,9 @@ class CommunityStore extends ChangeNotifier {
         notifySystem = j['notifySystem'] as bool? ?? true;
         notifyInteraction = j['notifyInteraction'] as bool? ?? true;
         notifyDm = j['notifyDm'] as bool? ?? true;
-        firstSeasonStart =
-            DateTime.tryParse(j['firstSeasonStart'] as String? ?? '') ??
-                DateTime.now();
         disabledBoards.clear();
         disabledBoards.addAll(
             (j['disabledBoards'] as List? ?? []).map((e) => e.toString()));
-        seasonLengthDays = j['seasonLengthDays'] as int? ?? 70;
         final currentId = j['currentId'] as String?;
         current = currentId == null ? null : findAccount(currentId);
       }
@@ -983,9 +1022,7 @@ class CommunityStore extends ChangeNotifier {
         'notifySystem': notifySystem,
         'notifyInteraction': notifyInteraction,
         'notifyDm': notifyDm,
-        'firstSeasonStart': firstSeasonStart.toIso8601String(),
         'disabledBoards': disabledBoards.toList(),
-        'seasonLengthDays': seasonLengthDays,
       };
 
   void _save() {
@@ -1005,33 +1042,9 @@ class CommunityStore extends ChangeNotifier {
     _save();
   }
 
-  /// 本赛季起点与剩余天数（70 天一季）。
-  DateTime get seasonStartCurrent {
-    final elapsed = DateTime.now().difference(firstSeasonStart).inDays;
-    if (elapsed < 0) return firstSeasonStart;
-    return firstSeasonStart.add(
-        Duration(days: (elapsed ~/ seasonLengthDays) * seasonLengthDays));
-  }
-
-  int get seasonRemainingDays {
-    final elapsed = DateTime.now().difference(firstSeasonStart).inDays;
-    if (elapsed < 0) return seasonLengthDays;
-    final left = seasonLengthDays - (elapsed % seasonLengthDays);
-    return left == 0 ? seasonLengthDays : left;
-  }
-
-  /// 赛季声望（本机版）：本赛季签到 10 分/天 + 发帖 5 分/条，现算。
-  int seasonPrestige(CommunityAccount a) {
-    final start = seasonStartCurrent;
-    final checkins = a.checkInDates.where((d) {
-      final dt = DateTime.tryParse(d);
-      return dt != null && !dt.isBefore(start);
-    }).length;
-    final postCount = posts
-        .where((p) => p.authorId == a.id && !p.time.isBefore(start))
-        .length;
-    return checkins * 10 + postCount * 5;
-  }
+  /// 本期挑战已完成数（现算，不过期）。
+  int challengeDone(CommunityAccount a) =>
+      challengeCatalog.where((c) => c.test(this, a)).length;
 
   /// 某账号已获得的勋章。
   List<MedalDef> earnedMedals(CommunityAccount a) =>
@@ -1089,6 +1102,24 @@ class CommunityStore extends ChangeNotifier {
     if (me == null) return;
     for (final c in me.collection) {
       if (c.gunName == gunName) c.status = status;
+    }
+    notifyListeners();
+  }
+
+  void addCollectionRounds(String gunName, int n) {
+    final me = current;
+    if (me == null) return;
+    for (final c in me.collection) {
+      if (c.gunName == gunName) c.rounds += n;
+    }
+    notifyListeners();
+  }
+
+  void clearCollectionRounds(String gunName) {
+    final me = current;
+    if (me == null) return;
+    for (final c in me.collection) {
+      if (c.gunName == gunName) c.rounds = 0;
     }
     notifyListeners();
   }

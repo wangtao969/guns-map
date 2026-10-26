@@ -249,11 +249,20 @@ class CommunityCollectionScreen extends StatelessWidget {
                                 return ListTile(
                                   title: Text(item.gunName),
                                   subtitle: Text(
-                                      '${item.vendor} · ${item.caliber} · ${item.category}${lv > 0 ? ' · 精通${masteryNames[lv]}' : ''}'),
+                                      '${item.vendor} · ${item.caliber} · ${item.category}${lv > 0 ? ' · 精通${masteryNames[lv]}' : ''}${item.rounds > 0 ? ' · 已打 ${item.rounds} 发' : ''}'),
                                   trailing: PopupMenuButton<String>(
                                     onSelected: (v) {
                                       if (v == 'delete') {
                                         communityStore.removeCollectionItem(
+                                            item.gunName);
+                                      } else if (v == 'rounds10') {
+                                        communityStore.addCollectionRounds(
+                                            item.gunName, 10);
+                                      } else if (v == 'rounds50') {
+                                        communityStore.addCollectionRounds(
+                                            item.gunName, 50);
+                                      } else if (v == 'rounds_clear') {
+                                        communityStore.clearCollectionRounds(
                                             item.gunName);
                                       } else {
                                         communityStore.setCollectionStatus(
@@ -270,6 +279,15 @@ class CommunityCollectionScreen extends StatelessWidget {
                                       const PopupMenuItem(
                                           value: 'wanted',
                                           child: Text('改成想收集')),
+                                      const PopupMenuItem(
+                                          value: 'rounds10',
+                                          child: Text('弹数 +10 发')),
+                                      const PopupMenuItem(
+                                          value: 'rounds50',
+                                          child: Text('弹数 +50 发')),
+                                      const PopupMenuItem(
+                                          value: 'rounds_clear',
+                                          child: Text('弹数清零')),
                                       const PopupMenuItem(
                                           value: 'delete',
                                           child: Text('删除')),

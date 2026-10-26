@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../widgets/app_toast.dart';
-import 'package:flutter/services.dart';
 import '../community_store.dart';
 import '../widgets/app_top_bar.dart';
 
-/// 后台配置（仅管理员）：板块开关、赛季长度、系统公告。
+/// 后台配置（仅管理员）：板块开关、系统公告。
 class AdminConfigScreen extends StatefulWidget {
   const AdminConfigScreen({super.key});
 
@@ -13,20 +12,16 @@ class AdminConfigScreen extends StatefulWidget {
 }
 
 class _AdminConfigScreenState extends State<AdminConfigScreen> {
-  late final TextEditingController _seasonCtrl;
   final _titleCtrl = TextEditingController();
   final _bodyCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _seasonCtrl = TextEditingController(
-        text: communityStore.seasonLengthDays.toString());
   }
 
   @override
   void dispose() {
-    _seasonCtrl.dispose();
     _titleCtrl.dispose();
     _bodyCtrl.dispose();
     super.dispose();
@@ -37,7 +32,7 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
     return Scaffold(
-      appBar: const SubPageAppBar(title: '板块 / 赛季 / 公告'),
+      appBar: const SubPageAppBar(title: '板块 / 公告'),
       body: AnimatedBuilder(
         animation: communityStore,
         builder: (_, __) {
@@ -66,45 +61,6 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
                         communityStore.setBoardDisabled(b, !v),
                   ),
                 ),
-              const SizedBox(height: 20),
-              const Text('赛季长度',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(
-                  '当前赛季剩余 ${communityStore.seasonRemainingDays} 天；每日经验封顶 120 固定不变。',
-                  style: TextStyle(color: grey, fontSize: 12)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _seasonCtrl,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: '一季多少天',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      final v = int.tryParse(_seasonCtrl.text.trim());
-                      if (v == null || v < 7 || v > 365) {
-                        showAppToast(context, '请输入 7–365 之间的天数');
-                        return;
-                      }
-                      communityStore.seasonLengthDays = v;
-                      communityStore.notifyListeners();
-                      showAppToast(context, '赛季长度已改为 $v 天');
-                    },
-                    child: const Text('保存'),
-                  ),
-                ],
-              ),
               const SizedBox(height: 20),
               const Text('发布系统公告',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),

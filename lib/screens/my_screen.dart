@@ -11,7 +11,7 @@ import 'community_notifications_screen.dart';
 import 'community_profile_screen.dart';
 import 'community_range_screen.dart';
 
-/// 我的 Tab：个人中心入口。登录后显示头像、等级铭牌、赛季声望与统计，
+/// 我的 Tab：个人中心入口。登录后显示头像、等级铭牌、本期挑战与统计，
 /// 下分我的主页、收藏柜、靶场成绩、任务、设置；未登录时显示登录/注册。
 class MyScreen extends StatelessWidget {
   const MyScreen({super.key});
@@ -120,7 +120,7 @@ class MyScreen extends StatelessWidget {
                               style: const TextStyle(
                                   color: Colors.grey, fontSize: 12)),
                           Text(
-                              '赛季声望 ${communityStore.seasonPrestige(me)} · 还剩 ${communityStore.seasonRemainingDays} 天',
+                              '本期挑战 ${communityStore.challengeDone(me)}/${challengeCatalog.length} 已完成',
                               style: const TextStyle(
                                   color: Color(0xFFE86A1C),
                                   fontSize: 12,
