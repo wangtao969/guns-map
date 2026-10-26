@@ -3,7 +3,7 @@ import '../data.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../models.dart';
-import '../widgets/category_silhouette.dart';
+import '../widgets/parametric_silhouette.dart';
 import '../widgets/app_top_bar.dart';
 import 'gun_compare_screen.dart';
 import 'dope_screen.dart';
@@ -81,10 +81,13 @@ class _GunDetailScreenState extends State<GunDetailScreen>
                     },
                     child: gun.image != null
                         ? Image.asset(gun.image!, fit: BoxFit.contain)
-                        : Image.asset(
-                            categoryPhoto[gun.category] ??
-                                'assets/images/category-rifle.png',
-                            fit: BoxFit.contain,
+                        : ParametricSilhouette(
+                            gun: gun,
+                            width:
+                                MediaQuery.of(context).size.width - 72,
+                            height:
+                                (MediaQuery.of(context).size.width - 72) *
+                                    0.44,
                           ),
                   ),
                 ),
@@ -141,7 +144,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
             ],
           ),
           if (gun.image == null)
-            const Text('注：本枪暂无实拍侧视图，当前以品类剪影占位。',
+            const Text('注：本枪暂无实物照片，当前为按全长与枪管长比例生成的示意轮廓，非实物。',
                 style: TextStyle(color: Colors.grey, fontSize: 12)),
           if (_assembled.isNotEmpty)
             Padding(
