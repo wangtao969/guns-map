@@ -6,6 +6,7 @@ import '../models.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/app_top_bar.dart';
 import '../voice_actions.dart';
+import '../app_log.dart';
 import '../widgets/glass_dialog.dart';
 import '../i18n.dart';
 
@@ -387,9 +388,11 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
     final text = await recognizeSpeech();
     if (!mounted) return;
     if (text == null || text.trim().isEmpty) {
+      appLog('voice', '识别无结果或本机无识别服务');
       showAppToast(context, '没有识别到语音，或本机没有语音识别服务');
       return;
     }
+    appLog('voice', '识别成功，已填入备注草稿');
     setState(() {
       final cur = _noteCtrl.text.trim();
       _noteCtrl.text = cur.isEmpty ? text.trim() : '$cur $text'.trim();

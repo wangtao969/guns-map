@@ -290,6 +290,7 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
   String? _caliber;
   String _libQuery = '';
   String _libKind = '弹头';
+  bool _libShowAll = false;
   // 已选组件：kind -> 展示串（厂商 + 型号）。
   final Map<String, String> _picked = {};
 
@@ -331,6 +332,144 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
     return null;
   }
 
+  /// 组件库条目是否与已选口径相关：弹头按弹径、火药按手册列出该口径
+  /// 或出现在本口径建议/装药里、弹壳按壳名、底火按级别与型号。
+  /// 建议里补一个型号，过滤结果里就多一个型号，不用另改过滤逻辑。
+  bool _libRelevant(ReloadComponent c, String caliber) {
+    final identity = '${c.vendor} ${c.name}';
+    final entry =
+        reloadCalibers.where((e) => e.caliber == caliber).toList();
+    final suggestions = entry.isEmpty
+        ? const <String>[]
+        : [
+            ...entry.first.bullets,
+            ...entry.first.cases,
+            ...entry.first.powders,
+            ...entry.first.primers,
+          ];
+    if (suggestions.any((s) => s.contains(c.name))) return true;
+    if (reloadLoads.any((l) =>
+        l.caliber == caliber &&
+        (l.powder == identity || l.primer == identity))) {
+      return true;
+    }
+    final hay = '${c.name} ${c.spec}';
+    switch (c.kind) {
+      case '弹头':
+        final token = _bulletToken(caliber);
+        return token != null && hay.contains(token);
+      case '火药':
+        final token = _powderToken(caliber);
+        return token != null && c.spec.contains(token);
+      case '弹壳':
+        return _caseTokens(caliber).any(hay.contains);
+      case '底火':
+        final token = _primerToken(caliber);
+        return token != null && c.spec.contains(token);
+      default:
+        return false;
+    }
+  }
+
+  String? _bulletToken(String caliber) {
+    switch (caliber) {
+      case '9×19mm':
+        return '9×19mm';
+      case '.223 Remington':
+      case '5.56×45mm':
+        return '.223 / 5.56';
+      case '.308 Winchester':
+      case '.300 Winchester Magnum':
+      case '.300 PRC':
+        return '.308';
+      case '.45 ACP':
+        return '.45 ACP';
+      case '6.5 Creedmoor':
+        return '6.5mm';
+      case '.338 Lapua Magnum':
+      case '.338 Norma Magnum':
+        return '.338';
+      default:
+        // 12 号霰弹与 .50 BMG：库里暂无对应弹头，过滤结果为空并明示。
+        return null;
+    }
+  }
+
+  String? _powderToken(String caliber) {
+    switch (caliber) {
+      case '9×19mm':
+        return '9×19mm';
+      case '.223 Remington':
+        return '.223 Rem';
+      case '5.56×45mm':
+        return '5.56';
+      case '.308 Winchester':
+        return '.308 Win';
+      case '.45 ACP':
+        return '.45 ACP';
+      case '12号霰弹':
+        return '霰弹';
+      case '6.5 Creedmoor':
+        return '6.5 Creedmoor';
+      case '.300 Winchester Magnum':
+        return '.300 Win Mag';
+      case '.338 Lapua Magnum':
+        return '.338 Lapua';
+      case '.300 PRC':
+        return '.300 PRC';
+      case '.50 BMG':
+        return '.50 BMG';
+      case '.338 Norma Magnum':
+        return '.338 Norma';
+      default:
+        return null;
+    }
+  }
+
+  List<String> _caseTokens(String caliber) {
+    switch (caliber) {
+      case '9×19mm':
+        return ['9×19mm'];
+      case '.223 Remington':
+        return ['.223 Rem'];
+      case '5.56×45mm':
+        return ['5.56', '.223 Rem'];
+      case '.308 Winchester':
+        return ['.308 Win'];
+      case '.45 ACP':
+        return ['.45 ACP'];
+      case '12号霰弹':
+        return ['12 号'];
+      case '6.5 Creedmoor':
+        return ['6.5 Creedmoor'];
+      case '.300 Winchester Magnum':
+        return ['.300 Win Mag'];
+      case '.338 Lapua Magnum':
+        return ['.338 Lapua'];
+      case '.300 PRC':
+        return ['.300 PRC'];
+      case '.50 BMG':
+        return ['.50 BMG'];
+      case '.338 Norma Magnum':
+        return ['.338 Norma'];
+      default:
+        return [];
+    }
+  }
+
+  String? _primerToken(String caliber) {
+    final entry =
+        reloadCalibers.where((e) => e.caliber == caliber).toList();
+    if (entry.isEmpty) return null;
+    final joined = entry.first.primers.join(' ');
+    if (joined.contains('霰弹')) return '霰弹';
+    if (joined.contains('小号手枪')) return '小型手枪';
+    if (joined.contains('小号步枪')) return '小型步枪';
+    if (joined.contains('大号手枪')) return '大型手枪';
+    if (joined.contains('大号步枪')) return '大型步枪';
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -349,8 +488,14 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
       if (l.manual.isNotEmpty) manuals.add(l.manual);
     }
     final libQ = _libQuery.trim().toLowerCase();
-    final libMatches = reloadComponents.where((c) {
+    final libFiltered = reloadComponents.where((c) {
       if (c.kind != _libKind) return false;
+      if (_caliber != null && !_libShowAll) {
+        return _libRelevant(c, _caliber!);
+      }
+      return true;
+    }).toList();
+    final libMatches = libFiltered.where((c) {
       if (libQ.isEmpty) return true;
       return ('${c.vendor} ${c.name} ${c.spec}')
           .toLowerCase()
@@ -375,7 +520,10 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
                 .map((c) => DropdownMenuItem(
                     value: c.caliber, child: Text(c.caliber)))
                 .toList(),
-            onChanged: (v) => setState(() => _caliber = v),
+            onChanged: (v) => setState(() {
+              _caliber = v;
+              _libShowAll = false;
+            }),
           ),
           if (caliberEntry != null) ...[
             const SizedBox(height: 16),
@@ -396,11 +544,33 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
             ...loads.map((l) => _loadCard(l)),
           ],
           const SizedBox(height: 16),
-          const Text('组件库选择（261 条，点一下即选定）',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          Text(
+              _caliber == null
+                  ? '组件库选择（${reloadComponents.length} 条，点一下即选定）'
+                  : _libShowAll
+                      ? '组件库选择（全部 ${reloadComponents.length} 条，点一下即选定）'
+                      : '组件库选择（仅显示与 $_caliber 相关，${libFiltered.length} 条）',
+              style: const TextStyle(
+                  fontSize: 17, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text('弹头、火药、弹壳、底火都从组件库里选；重量看弹头规格里的克令数与装药表里的装药量，选好后可直接带入复装记录。',
+          Text(
+              _caliber == null
+                  ? '先在顶部选口径，组件库会自动只显示该口径相关的条目；也可搜品牌或型号。'
+                  : _libShowAll
+                      ? '已显示全部组件，关掉“仅看本口径”可回到按口径过滤。'
+                      : '只显示与 $_caliber 相关的组件，点一下即选定；想看全部时可关掉“仅看本口径”。',
               style: TextStyle(color: grey, fontSize: 12)),
+          if (_caliber != null) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilterChip(
+                label: const Text('仅看本口径'),
+                selected: !_libShowAll,
+                onSelected: (v) => setState(() => _libShowAll = !v),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Wrap(
             spacing: 6,
@@ -449,6 +619,10 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
               )),
           if (libMatches.length > 20)
             Text('还有 ${libMatches.length - 20} 条，输入品牌或型号缩小范围。',
+                style: TextStyle(color: grey, fontSize: 12)),
+          if (libFiltered.isEmpty)
+            Text(
+                '本口径在组件库里暂无对应 $_libKind 条目，可用上方“手册建议组件”，或关掉“仅看本口径”看全部。',
                 style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 16),
           Card(

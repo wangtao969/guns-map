@@ -395,14 +395,13 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                         Row(
                           children: [
                             for (var i = 0; i < labels.length; i++)
-                              Padding(
-                                padding: EdgeInsets.only(
-                                    right: i == labels.length - 1 ? 0 : 28),
+                              Expanded(
                                 child: InkWell(
                                   onTap: () => _tabs.animateTo(i),
                                   child: Column(
                                     children: [
                                       Text(labels[i],
+                                          textAlign: TextAlign.center,
                                           style: TextStyle(
                                               fontSize: 17,
                                               fontWeight:

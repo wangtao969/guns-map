@@ -12,11 +12,12 @@ import '../widgets/app_top_bar.dart';
 import '../widgets/glass_dialog.dart';
 import '../community_store.dart';
 import 'about_screen.dart';
+import 'app_log_screen.dart';
 import 'admin_home_screen.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '2.1.6';
+const String appVersion = '2.1.8';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -79,73 +80,19 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          // 快捷操作面板：把最常用的四项（检查更新、清理缓存、导出数据、
-          // 管理员/版主的后台入口）从下面抽到顶部单独成面板，一眼可见。
-          // 后台入口仍只对管理员/版主显示，普通用户看不到这一行。
-          Card(
-            color: dark
-                ? const Color(0xFF3A2E1E)
-                : const Color(0xFFF3E9D8),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                  color: const Color(0xFFE86A1C).withValues(alpha: 0.35)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
-                    child: Row(
-                      children: [
-                        Icon(Icons.bolt_outlined,
-                            size: 22, color: Color(0xFFE86A1C)),
-                        SizedBox(width: 8),
-                        Text('快捷操作',
-                            style: TextStyle(
-                                fontSize: 17, fontWeight: FontWeight.bold)),
-                        SizedBox(width: 6),
-                        Text('Quick Actions',
-                            style: TextStyle(
-                                color: Colors.grey, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  ListTile(
-                    leading:
-                        const Icon(Icons.system_update_alt, size: 22),
-                    title: Text(tr('check_update')),
-                    subtitle: Text(tr('check_update_sub')),
-                    onTap: () => _checkUpdate(context),
-                  ),
-                  const _ClearCacheTile(),
-                  ListTile(
-                    leading:
-                        const Icon(Icons.file_download_outlined, size: 22),
-                    title: const Text('导出我的数据'),
-                    subtitle: const Text(
-                        '收藏柜、靶场成绩、等级与勋章，分享为 JSON 文本'),
-                    onTap: () => _exportData(context),
-                  ),
-                  if (communityStore.isAdmin || communityStore.isModerator)
-                    ListTile(
-                      leading: const Icon(
-                          Icons.admin_panel_settings_outlined,
-                          size: 22,
-                          color: Color(0xFFE86A1C)),
-                      title: const Text('后台管理',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: const Text('人员、帖子、板块与公告'),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const AdminHomeScreen()),
-                      ),
-                    ),
-                ],
-              ),
+          // 快捷操作：默认收起，只留一行入口，点开才展开四项，
+          // 免得顶部一大块面板抢眼；后台入口仍只对管理员/版主显示。
+          _QuickActionsCard(
+            onCheckUpdate: (ctx) => _checkUpdate(ctx),
+            onExportData: (ctx) => _exportData(ctx),
+          ),
+          ListTile(
+            leading: const Icon(Icons.bug_report_outlined, size: 22),
+            title: const Text('设备日志'),
+            subtitle: const Text('语音、保存失败等关键事件，定位问题时可复制'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AppLogScreen()),
             ),
           ),
           const SizedBox(height: 24),
@@ -742,3 +689,93 @@ class _DownloadDialogState extends State<_DownloadDialog> {
     );
   }
 }
+
+/// 快捷操作卡片：默认收起只留一行入口，点开才展开四项。
+class _QuickActionsCard extends StatefulWidget {
+  final void Function(BuildContext context) onCheckUpdate;
+  final void Function(BuildContext context) onExportData;
+  const _QuickActionsCard(
+      {required this.onCheckUpdate, required this.onExportData});
+
+  @override
+  State<_QuickActionsCard> createState() => _QuickActionsCardState();
+}
+
+class _QuickActionsCardState extends State<_QuickActionsCard> {
+  var _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Card(
+      color: dark ? const Color(0xFF3A2E1E) : const Color(0xFFF3E9D8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+            color: const Color(0xFFE86A1C).withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.bolt_outlined,
+                      size: 22, color: Color(0xFFE86A1C)),
+                  const SizedBox(width: 8),
+                  const Text('快捷操作',
+                      style: TextStyle(
+                          fontSize: 17, fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 6),
+                  const Text('Quick Actions',
+                      style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  const Spacer(),
+                  Icon(
+                      _expanded
+                          ? Icons.expand_less
+                          : Icons.expand_more,
+                      size: 22,
+                      color: Colors.grey),
+                ],
+              ),
+            ),
+          ),
+          if (_expanded) ...[
+            ListTile(
+              leading: const Icon(Icons.system_update_alt, size: 22),
+              title: Text(tr('check_update')),
+              subtitle: Text(tr('check_update_sub')),
+              onTap: () => widget.onCheckUpdate(context),
+            ),
+            const _ClearCacheTile(),
+            ListTile(
+              leading: const Icon(Icons.file_download_outlined, size: 22),
+              title: const Text('导出我的数据'),
+              subtitle: const Text('收藏柜、靶场成绩、等级与勋章，分享为 JSON 文本'),
+              onTap: () => widget.onExportData(context),
+            ),
+            if (communityStore.isAdmin || communityStore.isModerator)
+              ListTile(
+                leading: const Icon(Icons.admin_panel_settings_outlined,
+                    size: 22, color: Color(0xFFE86A1C)),
+                title: const Text('后台管理',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: const Text('人员、帖子、板块与公告'),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const AdminHomeScreen()),
+                ),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
