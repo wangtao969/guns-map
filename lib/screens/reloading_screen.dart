@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../data.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../models.dart';
+import '../system_actions.dart';
 import '../widgets/app_top_bar.dart';
 import 'suppliers_screen.dart';
 import 'reload_log_screen.dart';
@@ -12,27 +16,134 @@ import 'reload_tools_screen.dart';
 /// 一、子弹口径图鉴（可搜索、可按弹种分组，卡片标题直接显示关键尺寸）；
 /// 二、子弹复装（只做狙击步枪常用口径，实际复装以贵价狙击弹为主）；
 /// 三、入口区：组件供应商与复装记录 SOP 各进一个子页，不再用长列表挡内容。
-class ReloadingScreen extends StatefulWidget {
+/// 复装手册入口页：不再把口径目录与复装内容长篇平铺在本页，
+/// 只留安全警告与四个入口卡片，各板块点进去才是完整内容。
+/// 一、子弹口径目录：点进子页搜口径、按弹种筛选、看详情；
+/// 二、子弹复装：点进工作台，按口径选弹头/火药/弹壳/底火、查手册装药、
+///    选好的组件可带入复装记录，复装记录也放在这个板块里；
+/// 三、组件供应商与复装工具各进一个子页。
+class ReloadingScreen extends StatelessWidget {
   const ReloadingScreen({super.key});
 
   @override
-  State<ReloadingScreen> createState() => _ReloadingScreenState();
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
+    return Scaffold(
+      appBar: SubPageAppBar(title: '复装手册'),
+      body: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          Card(
+            color: const Color(0xFF4A1500),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('⚠ ${tr('safety_warn')}',
+                      style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '· 务必从起始装药开始，逐步试射并观察压力迹象，绝不超过手册最大装药。\n'
+                    '· 不同批次火药需重新验证，不可直接沿用旧数据。\n'
+                    '· 务必以纸质手册原文为准，本 App 数据仅供学习参考。\n'
+                    '· 装药数据按弹膛标识选用：.223 Remington 与 5.56×45mm NATO 的手册数据不可混用。\n'
+                    '· 本页未收录的口径与组合，均为未找到可靠公开手册出处而刻意省略，切勿自行推算补写。',
+                    style: TextStyle(color: Colors.amber),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.menu_book_outlined),
+              title: Text(tr('caliber_atlas')),
+              subtitle: Text(
+                  '共 ${caliberInfos.length} 个口径，点进去搜口径、按弹种筛选',
+                  style: TextStyle(color: grey, fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const CaliberCatalogScreen()),
+              ),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.science_outlined),
+              title: Text(tr('sniper_title')),
+              subtitle: Text(tr('sniper_note'),
+                  style: TextStyle(color: grey, fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const ReloadWorkbenchScreen()),
+              ),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.storefront_outlined),
+              title: Text(tr('suppliers')),
+              subtitle: Text(suppliersCountText(reloadComponents.length),
+                  style: TextStyle(color: grey, fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SuppliersScreen()),
+              ),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.build_outlined),
+              title: const Text('复装工具'),
+              subtitle: Text('压机、模具、量具等 ${reloadTools.length} 种',
+                  style: TextStyle(color: grey, fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const ReloadToolsScreen()),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(
+                '数据来源说明：本页装药数据均引自 Hornady、Speer、Nosler、Hodgdon、Vihtavuori、Lyman 等公开出版手册与官方数据页，各条标注出处；未引述的字段以“手册未载”标示；未经核实的组合一律未收录。组件与工具价格均为 2026 年 10 月美国零售参考价，随时变动，以下单时商家标价为准；未确认的以“未确认”标示。',
+                style: TextStyle(color: grey, fontSize: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _ReloadingScreenState extends State<ReloadingScreen> {
+/// 子弹口径目录子页：原来平铺在复装手册页里的口径网格整个挪到这里，
+/// 可搜索、可按弹种分组，卡片标题直接显示关键尺寸，点卡片进详情。
+class CaliberCatalogScreen extends StatefulWidget {
+  const CaliberCatalogScreen({super.key});
+
+  @override
+  State<CaliberCatalogScreen> createState() => _CaliberCatalogScreenState();
+}
+
+class _CaliberCatalogScreenState extends State<CaliberCatalogScreen> {
   String _query = '';
   String _group = '全部';
-
-  /// 狙击步枪常用复装口径。
-  static const _sniperCalibers = {
-    '.308 Winchester',
-    '6.5 Creedmoor',
-    '.300 Winchester Magnum',
-    '.338 Lapua Magnum',
-    '.338 Norma Magnum',
-    '.300 PRC',
-    '.50 BMG',
-  };
 
   static const _pistolCalibers = {
     '9×19mm',
@@ -62,10 +173,6 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
-    final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
-    final sniper = reloadCalibers
-        .where((c) => _sniperCalibers.contains(c.caliber))
-        .toList();
     final q = _query.trim().toLowerCase();
     final atlas = caliberInfos.where((c) {
       if (_group != '全部' && _atlasGroup(c) != _group) return false;
@@ -74,40 +181,10 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
       return c.bullets.any((b) => b.toLowerCase().contains(q));
     }).toList();
     return Scaffold(
-      appBar: SubPageAppBar(title: '复装手册'),
+      appBar: SubPageAppBar(title: tr('caliber_atlas')),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
-          Card(
-            color: Color(0xFF4A1500),
-            child: Padding(
-              padding: EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('⚠ ${tr('safety_warn')}',
-                      style: TextStyle(
-                          color: Colors.redAccent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
-                  SizedBox(height: 6),
-                  Text(
-                    '· 务必从起始装药开始，逐步试射并观察压力迹象，绝不超过手册最大装药。\n'
-                    '· 不同批次火药需重新验证，不可直接沿用旧数据。\n'
-                    '· 务必以纸质手册原文为准，本 App 数据仅供学习参考。\n'
-                    '· 装药数据按弹膛标识选用：.223 Remington 与 5.56×45mm NATO 的手册数据不可混用。\n'
-                    '· 本页未收录的口径与组合，均为未找到可靠公开手册出处而刻意省略，切勿自行推算补写。',
-                    style: TextStyle(color: Colors.amber),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // 板块一：子弹口径图鉴。
-          Text(tr('caliber_atlas'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
           Text(tr('atlas_note'),
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 8),
@@ -189,123 +266,308 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
               );
             },
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 子弹复装工作台：一个口径的复装信息集中在一页——
+/// 手册建议组件（弹头/弹壳/火药/底火）、组件库选择、该口径的手册装药、
+/// 手册参考（点开出版社官网查验，App 内不附手册全文）、复装记录入口。
+/// 选好的组件可带入复装记录，记录里的字段不再从零手打。
+class ReloadWorkbenchScreen extends StatefulWidget {
+  const ReloadWorkbenchScreen({super.key});
+
+  @override
+  State<ReloadWorkbenchScreen> createState() => _ReloadWorkbenchScreenState();
+}
+
+class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
+  static const _logPrefsChannel = MethodChannel('gunsmap/prefs');
+  static const _logPrefsKey = 'reload_log_v1';
+  List<ReloadLogEntry> _pastLogs = [];
+  String? _caliber;
+  String _libQuery = '';
+  String _libKind = '弹头';
+  // 已选组件：kind -> 展示串（厂商 + 型号）。
+  final Map<String, String> _picked = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPastLogs();
+  }
+
+  /// 读本机复装记录（只读，用于“我的配方”复用与未放行提醒，不改写）。
+  Future<void> _loadPastLogs() async {
+    try {
+      final raw = await _logPrefsChannel
+          .invokeMethod<String>('getString', {'key': _logPrefsKey})
+          .timeout(const Duration(seconds: 2));
+      if (raw == null || raw.isEmpty || !mounted) return;
+      final list = (jsonDecode(raw) as List)
+          .map((e) => ReloadLogEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+      setState(() => _pastLogs = list);
+    } catch (_) {}
+  }
+
+  // 手册名 -> 出版社官网（只链官网首页，具体章节以纸质手册与官网数据页为准）。
+  static const _manualSites = {
+    'Hornady': 'https://www.hornady.com',
+    'Speer': 'https://www.speer.com',
+    'Hodgdon': 'https://www.hodgdon.com',
+    'Nosler': 'https://www.nosler.com',
+    'Barnes': 'https://www.barnesbullets.com',
+    'Vihtavuori': 'https://www.vihtavuori.com',
+    'Lyman': 'https://www.lymanproducts.com',
+  };
+
+  String? _manualSite(String manual) {
+    for (final e in _manualSites.entries) {
+      if (manual.contains(e.key)) return e.value;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
+    final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
+    final _caliberMatches = _caliber == null
+        ? <ReloadCaliber>[]
+        : reloadCalibers.where((c) => c.caliber == _caliber).toList();
+    final caliberEntry =
+        _caliberMatches.isEmpty ? null : _caliberMatches.first;
+    final loads = _caliber == null
+        ? <ReloadLoad>[]
+        : reloadLoads.where((l) => l.caliber == _caliber).toList();
+    final manuals = <String>{};
+    for (final l in reloadLoads) {
+      if (l.manual.isNotEmpty) manuals.add(l.manual);
+    }
+    final libQ = _libQuery.trim().toLowerCase();
+    final libMatches = reloadComponents.where((c) {
+      if (c.kind != _libKind) return false;
+      if (libQ.isEmpty) return true;
+      return ('${c.vendor} ${c.name} ${c.spec}')
+          .toLowerCase()
+          .contains(libQ);
+    }).toList();
+    return Scaffold(
+      appBar: SubPageAppBar(title: tr('sniper_title')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('先选口径，再选组件、查装药，最后记一条复装记录。',
+              style: TextStyle(color: Colors.grey, fontSize: 12)),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _caliber,
+            decoration: const InputDecoration(
+              labelText: '口径 / Caliber',
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12))),
+            ),
+            items: reloadCalibers
+                .map((c) => DropdownMenuItem(
+                    value: c.caliber, child: Text(c.caliber)))
+                .toList(),
+            onChanged: (v) => setState(() => _caliber = v),
+          ),
+          if (caliberEntry != null) ...[
+            const SizedBox(height: 16),
+            const Text('手册建议组件',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            _section('弹头选择', caliberEntry.bullets, bronze),
+            _section('弹壳选择', caliberEntry.cases, bronze),
+            _section('火药选择', caliberEntry.powders, bronze),
+            _section('底火选择', caliberEntry.primers, bronze),
+            const SizedBox(height: 8),
+            const Text('手册装药（只收录手册原文，查不到的口径刻意省略）',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            if (loads.isEmpty)
+              Text('本口径暂无经核实的公开手册装药数据，请以纸质手册原文为准。',
+                  style: TextStyle(color: grey)),
+            ...loads.map((l) => _loadCard(l)),
+          ],
           const SizedBox(height: 16),
-          // 板块二：子弹复装（狙击口径）。
-          Text(tr('sniper_title'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('组件库选择（261 条，点一下即选定）',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text(tr('sniper_note'),
+          Text('弹头、火药、弹壳、底火都从组件库里选；重量看弹头规格里的克令数与装药表里的装药量，选好后可直接带入复装记录。',
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 8),
-          ...sniper.map((c) {
-            final loads =
-                reloadLoads.where((l) => l.caliber == c.caliber).toList();
-            return Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              child: Theme(
-                data: Theme.of(context)
-                    .copyWith(dividerColor: Colors.transparent),
-                child: ExpansionTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          Wrap(
+            spacing: 6,
+            children: ['弹头', '火药', '弹壳', '底火']
+                .map((k) => FilterChip(
+                      label: Text(k),
+                      selected: _libKind == k,
+                      onSelected: (_) => setState(() => _libKind = k),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            decoration: InputDecoration(
+              hintText: '搜品牌或型号，如 H4350、ELD Match',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
+            onChanged: (v) => setState(() => _libQuery = v),
+          ),
+          const SizedBox(height: 8),
+          ...libMatches.take(20).map((c) => Card(
+                margin: const EdgeInsets.only(bottom: 6),
+                child: ListTile(
+                  title: Text('${c.vendor} ${c.name}'),
+                  subtitle: Text(c.spec,
+                      style: TextStyle(color: grey, fontSize: 12)),
+                  trailing: (_picked[_libKind] ?? '')
+                          .startsWith('${c.vendor} ${c.name}')
+                      ? const Icon(Icons.check_circle,
+                          color: Color(0xFFE86A1C))
+                      : null,
+                  onTap: () {
+                    var picked = '${c.vendor} ${c.name}';
+                    if (_libKind == '弹头') {
+                      final w =
+                          RegExp(r'(\d+)gr').firstMatch(c.spec)?.group(1);
+                      if (w != null) picked = '$picked ${w}gr';
+                    }
+                    setState(() => _picked[_libKind] = picked);
+                  },
                 ),
-                collapsedShape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                childrenPadding: const EdgeInsets.only(bottom: 8),
-                title: Text(c.caliber,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                onExpansionChanged: (_) => tapHaptic(),
+              )),
+          if (libMatches.length > 20)
+            Text('还有 ${libMatches.length - 20} 条，输入品牌或型号缩小范围。',
+                style: TextStyle(color: grey, fontSize: 12)),
+          const SizedBox(height: 16),
+          Card(
+            color: dark
+                ? const Color(0xFF3A2E1E)
+                : const Color(0xFFF3E9D8),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _section('弹头', c.bullets, bronze),
-                  _section('弹壳', c.cases, bronze),
-                  _section('火药', c.powders, bronze),
-                  _section('底火', c.primers, bronze),
-                  if (loads.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                      child: Text(
-                        '本口径暂无经核实的公开手册装药数据，装药表已刻意省略，请以纸质手册原文为准。',
-                        style: TextStyle(color: grey),
+                  const Text('已选组件',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text('弹头：${_picked['弹头'] ?? '未选'}'),
+                  Text('火药：${_picked['火药'] ?? '未选'}'),
+                  Text('弹壳：${_picked['弹壳'] ?? '未选'}'),
+                  Text('底火：${_picked['底火'] ?? '未选'}'),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ReloadLogScreen(
+                            initialBullet: _picked['弹头'],
+                            initialPowder: _picked['火药'],
+                            initialPrimer: _picked['底火'],
+                            initialCase: _picked['弹壳'],
+                            initialCaliber: _caliber,
+                          ),
+                        ),
                       ),
+                      child: const Text('把选好的带入复装记录'),
                     ),
-                  if (loads.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-                      child: Text(tr('loads_title'),
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, color: bronze)),
-                    ),
-                    ...loads.map((l) => _loadCard(l)),
-                    const SizedBox(height: 8),
-                  ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('复装记录也在这个板块里：点进去按 SOP 打勾、填完整并通过放行检测才能保存。',
+                      style: TextStyle(color: grey, fontSize: 12)),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text('我的配方（已放行批次，一键复用）',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text('点一条配方，口径与组件自动填好，再点“把选好的带入复装记录”；复用只带配方，不带旧批号与旧试射结果，新一批必须重走 SOP、重测。',
+              style: TextStyle(color: grey, fontSize: 12)),
+          const SizedBox(height: 8),
+          if (_pastLogs.where((l) => l.released).isEmpty)
+            Text('还没有已放行的批次，放行一条记录后这里会出现它的配方。',
+                style: TextStyle(color: grey)),
+          ...(() {
+            final seen = <String>{};
+            final recipes = <ReloadLogEntry>[];
+            for (final l in _pastLogs.where((l) => l.released)) {
+              final key =
+                  '${l.caliber}|${l.bullet}|${l.powder}|${l.charge}|${l.col}';
+              if (seen.add(key)) recipes.add(l);
+            }
+            return recipes.take(8).map((l) => Card(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  child: ListTile(
+                    title: Text('${l.caliber} · ${l.bullet}'),
+                    subtitle: Text(
+                        '${l.powder} ${l.charge}gr · COL ${l.col}″ · ${l.date}',
+                        style: TextStyle(color: grey, fontSize: 12)),
+                    trailing: const Icon(Icons.replay, size: 20),
+                    onTap: () => setState(() {
+                      _caliber = l.caliber;
+                      _picked['弹头'] = l.bullet;
+                      _picked['火药'] = l.powder;
+                      _picked['弹壳'] = l.caseBrand;
+                      _picked['底火'] = l.primer;
+                    }),
+                  ),
+                ));
+          })(),
+          if (_pastLogs.any((l) => !l.released)) ...[
+            const SizedBox(height: 8),
+            Text(
+                '未放行批次 ${_pastLogs.where((l) => !l.released).length} 条（含异常停用），在复装记录页里查看，处理完才能放行。',
+                style: const TextStyle(color: Colors.amber, fontSize: 12)),
+          ],
+          const SizedBox(height: 16),
+          const Text('手册参考（点开查验）',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text('App 内不附手册全文（版权原因）；点开是出版社官网，具体章节与数据以纸质手册与官网当前数据页为准，在线数据请以官网当前页复核。',
+              style: TextStyle(color: grey, fontSize: 12)),
+          const SizedBox(height: 8),
+          ...manuals.map((m) {
+            final site = _manualSite(m);
+            return Card(
+              margin: const EdgeInsets.only(bottom: 6),
+              child: ListTile(
+                leading: const Icon(Icons.menu_book_outlined),
+                title: Text(m),
+                trailing: site == null
+                    ? null
+                    : const Icon(Icons.open_in_new, size: 18),
+                onTap: site == null
+                    ? null
+                    : () async {
+                        await openSystemUrl(site);
+                      },
               ),
             );
           }),
-          const SizedBox(height: 16),
-          // 板块三：入口区，不再平铺长列表。
-          Text(tr('more'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.storefront_outlined),
-              title: Text(tr('suppliers')),
-              subtitle: Text(suppliersCountText(reloadComponents.length),
-                  style: TextStyle(color: grey, fontSize: 12)),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SuppliersScreen()),
-              ),
-            ),
-          ),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.assignment_outlined),
-              title: Text(tr('sop_title')),
-              subtitle: Text(tr('sop_sub'),
-                  style: TextStyle(color: grey, fontSize: 12)),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ReloadLogScreen()),
-              ),
-            ),
-          ),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.build_outlined),
-              title: const Text('复装工具'),
-              subtitle: Text('压机、模具、量具等 ${reloadTools.length} 种',
-                  style: TextStyle(color: grey, fontSize: 12)),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const ReloadToolsScreen()),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(
-                '数据来源说明：本页装药数据均引自 Hornady、Speer、Nosler、Hodgdon、Vihtavuori、Lyman 等公开出版手册与官方数据页，各条标注出处；未引述的字段以“手册未载”标示；未经核实的组合一律未收录。组件与工具价格均为 2026 年 10 月美国零售参考价，随时变动，以下单时商家标价为准；未确认的以“未确认”标示。',
-                style: TextStyle(color: grey, fontSize: 12),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
   Widget _section(String title, List<String> items, Color bronze) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        padding: const EdgeInsets.only(bottom: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -320,7 +582,7 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
       );
 
   Widget _loadCard(ReloadLoad l) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        padding: const EdgeInsets.only(bottom: 10),
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(

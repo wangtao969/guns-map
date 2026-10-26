@@ -5,9 +5,11 @@ import '../community_store.dart';
 import 'community_theme.dart';
 import 'glass_dialog.dart';
 
-/// 等级铭牌：段位配色底 + LV.x + 段位名，挂在每条帖子作者名旁。
+/// 等级铭牌：金属质感实心底 + 居中等级字 + 段位名，挂在每条帖子作者名旁。
 /// 外框高度严格等于昵称字号（nicknameFontSize），不比昵称字大，
 /// 保证各页视觉协调；铭牌内文字按比例缩小。
+/// 实心做法：段位色做纵向金属渐变（上亮、下暗），文字按段位色亮度
+/// 选深色或白色，始终居中显示，不再是空心描边。
 /// 特效已简化：没有环绕旋转的光弧，只有铭牌外圈向外散发的、对应段位颜色的
 /// 光晕（1.8 秒一呼一吸的呼吸动效）。光晕是半透明层、画在铭牌后面，
 /// 铭牌本身用不透明底盖在最上层，且光晕只比铭牌大一小圈、不用实色扩散，
@@ -87,24 +89,38 @@ class _LevelBadgeState extends State<LevelBadge>
     }
   }
 
+  /// 金属渐变：上亮 45% 白、下暗 35% 黑，中间为段位色本体。
+  Color _metalTop(Color c) => Color.lerp(c, Colors.white, 0.45)!;
+  Color _metalBottom(Color c) => Color.lerp(c, Colors.black, 0.35)!;
+
   @override
   Widget build(BuildContext context) {
     final c = widget.account.tierColor;
     final h = widget.nicknameFontSize;
-    // 铭牌本体：不透明底（卡片色），文字与边框在最上层，光只在后面。
+    // 铭牌本体：金属质感实心渐变底，等级字居中；亮段位（银、金、钛）
+    // 用深色字，暗段位（铁灰、铜、曜石）用白色字，保证对比。
+    final textColor = c.computeLuminance() > 0.3
+        ? const Color(0xFF1A1A1A)
+        : Colors.white;
     final badge = Container(
       height: h,
       padding: EdgeInsets.symmetric(horizontal: h * 0.32),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [_metalTop(c), c, _metalBottom(c)],
+          stops: const [0.0, 0.5, 1.0],
+        ),
         borderRadius: BorderRadius.circular(h / 2),
-        border: Border.all(color: c),
+        border: Border.all(color: _metalBottom(c)),
       ),
       child: Text(
         'LV${widget.account.level} · ${widget.account.tierName}',
+        textAlign: TextAlign.center,
         style: TextStyle(
-            color: c,
+            color: textColor,
             fontSize: h * 0.68,
             fontWeight: FontWeight.bold,
             height: 1),

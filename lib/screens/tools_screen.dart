@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../tools_units.dart';
 import '../widgets/app_top_bar.dart';
 import 'accessories_screen.dart';
-import 'community_collection_screen.dart';
 import 'gun_compare_screen.dart';
 import 'ammo_inventory_screen.dart';
 import 'load_tools_screen.dart';
@@ -12,7 +11,7 @@ import 'reload_cost_screen.dart';
 import 'reloading_screen.dart';
 
 /// 工具 Tab：底部 Tab = 工具，板块 = 讨论，分工定死。
-/// 配件目录、复装手册、收藏柜是已有页面的入口；
+/// 配件目录、复装手册是已有页面的入口；
 /// 装药工具只做单位换算与用户输入的动能/后坐力计算，不查手册、不推算装药；
 /// 两枪参数对比只对照纸面参数，不画弹道曲线（初速与弹道系数未收录）。
 class ToolsScreen extends StatefulWidget {
@@ -100,16 +99,6 @@ class _ToolsScreenState extends State<ToolsScreen> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ReloadingScreen()),
-            ),
-          ),
-          _ToolTile(
-            icon: Icons.inventory_2_outlined,
-            title: '我的收藏柜',
-            subtitle: '登记拥有 / 上手过 / 想收集的枪，生成卡面分享',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => const CommunityCollectionScreen()),
             ),
           ),
           _ToolTile(

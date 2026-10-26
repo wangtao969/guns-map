@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data.dart';
+import '../models.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/app_top_bar.dart';
+import '../voice_actions.dart';
 import '../widgets/glass_dialog.dart';
 import '../i18n.dart';
 
@@ -30,6 +32,10 @@ class ReloadLogEntry {
   final String weather;
   // 放行标记：只有通过完整性与 SOP 检测的记录才会保存，旧记录默认已放行。
   final bool released;
+  // 批次号：保存时自动编（日期-口径-当日序号），同一批弹的唯一标识。
+  final String batchNo;
+  // 压力迹象：试射时勾选的异常项（逗号分隔），非空即异常停用、不能放行。
+  final String pressure;
   ReloadLogEntry({
     required this.date,
     required this.caliber,
@@ -48,6 +54,8 @@ class ReloadLogEntry {
     this.lot = '',
     this.weather = '',
     this.released = true,
+    this.batchNo = '',
+    this.pressure = '',
   });
 
   Map<String, dynamic> toJson() => {
@@ -68,6 +76,8 @@ class ReloadLogEntry {
         'lot': lot,
         'weather': weather,
         'released': released,
+        'batchNo': batchNo,
+        'pressure': pressure,
       };
 
   factory ReloadLogEntry.fromJson(Map<String, dynamic> j) => ReloadLogEntry(
@@ -88,11 +98,26 @@ class ReloadLogEntry {
         lot: j['lot'] as String? ?? '',
         weather: j['weather'] as String? ?? '',
         released: j['released'] as bool? ?? true,
+        batchNo: j['batchNo'] as String? ?? '',
+        pressure: j['pressure'] as String? ?? '',
       );
 }
 
 class ReloadLogScreen extends StatefulWidget {
-  const ReloadLogScreen({super.key});
+  // 从复装工作台带入的已选组件与口径：只做初始填充，用户仍可在记录页改。
+  final String? initialBullet;
+  final String? initialPowder;
+  final String? initialPrimer;
+  final String? initialCase;
+  final String? initialCaliber;
+  const ReloadLogScreen({
+    super.key,
+    this.initialBullet,
+    this.initialPowder,
+    this.initialPrimer,
+    this.initialCase,
+    this.initialCaliber,
+  });
 
   @override
   State<ReloadLogScreen> createState() => _ReloadLogScreenState();
@@ -118,11 +143,34 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
   final _weatherCtrl = TextEditingController();
   static const _prefsChannel = MethodChannel('gunsmap/prefs');
   static const _prefsKey = 'reload_log_v1';
+  // 压力迹象（取自安全红线）：勾选任何一项即异常停用。
+  static const _pressureOptions = [
+    '底火压平',
+    '底火 crater',
+    '抛壳挺亮印/退壳困难',
+    '枪机难开',
+    '底火窝变松漏气',
+  ];
+  final Set<String> _pressure = {};
+  int _scaleChecks = 0;
 
   @override
   void initState() {
     super.initState();
     _done = List<bool>.filled(reloadSopSteps.length, false);
+    if (widget.initialBullet != null) {
+      _bulletCtrl.text = widget.initialBullet!;
+    }
+    if (widget.initialPowder != null) {
+      _powderCtrl.text = widget.initialPowder!;
+    }
+    if (widget.initialPrimer != null) {
+      _primerCtrl.text = widget.initialPrimer!;
+    }
+    if (widget.initialCase != null) {
+      _caseBrandCtrl.text = widget.initialCase!;
+    }
+    if (widget.initialCaliber != null) _caliber = widget.initialCaliber;
     _load();
   }
 
@@ -224,6 +272,157 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
     return miss;
   }
 
+  /// 批次号：日期-口径-当日序号，如 20261026-308Winchester-01。
+  String _batchNo() {
+    final date = _today().replaceAll('-', '');
+    final cal = (_caliber ?? '').replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
+    final seq = _logs
+            .where((l) => l.date == _today() && l.caliber == _caliber)
+            .length +
+        1;
+    return '$date-$cal-$seq'.replaceAll(RegExp(r'-+$'), '');
+  }
+
+  /// 手册对照：只有口径、弹头品牌与重量、火药型号都对得上才算匹配；
+  /// 品牌或重量对不上的一律算无对照，绝不模糊放行。
+  ReloadLoad? _matchingLoad() {
+    if (_caliber == null) return null;
+    final bullet = _bulletCtrl.text.trim().toLowerCase();
+    final powder = _powderCtrl.text.trim().toLowerCase();
+    for (final l in reloadLoads) {
+      if (l.caliber != _caliber) continue;
+      final lb = l.bullet.toLowerCase();
+      final brand = lb.split(' ').first;
+      final weight = RegExp(r'(\d+)gr').firstMatch(lb)?.group(1);
+      if (!bullet.contains(brand)) continue;
+      if (weight != null && !bullet.contains('${weight}gr')) continue;
+      final lp = l.powder.toLowerCase();
+      if (!lp.split(' ').every((w) => powder.contains(w))) continue;
+      return l;
+    }
+    return null;
+  }
+
+  double? _num(String v) {
+    final m = RegExp(r'[0-9]+(?:\.[0-9]+)?').firstMatch(v);
+    return m == null ? null : double.tryParse(m.group(0)!);
+  }
+
+  /// 手册装药量对照结果：null 表示无对照；否则返回是否在区间内与说明。
+  ({ReloadLoad? load, bool inRange, String note}) _manualCheck() {
+    final load = _matchingLoad();
+    if (load == null) {
+      return (
+        load: null,
+        inRange: false,
+        note: '无手册对照：本组合在手册装药表里没有完全对应的条目'
+      );
+    }
+    final charge = _num(_chargeCtrl.text.trim());
+    final col = _num(_colCtrl.text.trim());
+    final start = _num(load.startCharge);
+    final max = _num(load.maxCharge);
+    final manualCol = _num(load.col);
+    if (charge != null && max != null && charge > max) {
+      return (
+        load: load,
+        inRange: false,
+        note: '装药量 $charge gr 超过手册最大装药 $max gr（${load.manual}），不能放行'
+      );
+    }
+    if (col != null && manualCol != null && col < manualCol) {
+      return (
+        load: load,
+        inRange: false,
+        note: '弹长 COL $col″ 短于手册值 $manualCol″（${load.manual}），不能放行'
+      );
+    }
+    if (charge != null && start != null && charge < start) {
+      return (
+        load: load,
+        inRange: false,
+        note: '装药量 $charge gr 低于手册起始装药 $start gr（${load.manual}），不能放行'
+      );
+    }
+    return (
+      load: load,
+      inRange: true,
+      note: '手册对照：${load.manual}，起始 $start gr / 最大 $max gr / COL $manualCol″，装药在区间内'
+    );
+  }
+
+  void _insertEntry({required bool released}) {
+    setState(() {
+      _logs.insert(
+          0,
+          ReloadLogEntry(
+            date: _today(),
+            caliber: _caliber!,
+            bullet: _bulletCtrl.text.trim(),
+            powder: _powderCtrl.text.trim(),
+            charge: _chargeCtrl.text.trim(),
+            col: _colCtrl.text.trim(),
+            rounds: _roundsCtrl.text.trim(),
+            note: _noteCtrl.text.trim(),
+            primer: _primerCtrl.text.trim(),
+            caseBrand: _caseBrandCtrl.text.trim(),
+            caseTimes: _caseTimesCtrl.text.trim(),
+            velocity: _velocityCtrl.text.trim(),
+            group: _groupCtrl.text.trim(),
+            firearm: _firearmCtrl.text.trim(),
+            lot: _lotCtrl.text.trim(),
+            weather: _weatherCtrl.text.trim(),
+            released: released,
+            batchNo: _batchNo(),
+            pressure: _pressure.join('、'),
+          ));
+      _save();
+      _clearForm();
+    });
+  }
+
+  /// 语音备注：只把识别文本追加为备注草稿，绝不填装药量、COL、
+  /// 底火、弹头等关键字段；无识别服务或取消时静默回退手动输入。
+  Future<void> _voiceNote() async {
+    final text = await recognizeSpeech();
+    if (!mounted) return;
+    if (text == null || text.trim().isEmpty) {
+      showAppToast(context, '没有识别到语音，或本机没有语音识别服务');
+      return;
+    }
+    setState(() {
+      final cur = _noteCtrl.text.trim();
+      _noteCtrl.text = cur.isEmpty ? text.trim() : '$cur $text'.trim();
+    });
+    showAppToast(context, '语音已转成文字草稿，请核对后再保存');
+  }
+
+  /// 复用配方：把一条已放行记录的配方与组件载入表单，SOP 与压力
+  /// 迹象清零重走，批号在保存时重新编，不沿用旧批号与旧试射结果。
+  void _reuseRecipe(ReloadLogEntry l) {
+    setState(() {
+      _caliber = l.caliber;
+      _bulletCtrl.text = l.bullet;
+      _powderCtrl.text = l.powder;
+      _chargeCtrl.text = l.charge;
+      _colCtrl.text = l.col;
+      _roundsCtrl.text = l.rounds;
+      _primerCtrl.text = l.primer;
+      _caseBrandCtrl.text = l.caseBrand;
+      _caseTimesCtrl.text = l.caseTimes;
+      _lotCtrl.text = l.lot;
+      _velocityCtrl.text = '';
+      _groupCtrl.text = '';
+      _firearmCtrl.text = l.firearm;
+      _weatherCtrl.text = '';
+      _noteCtrl.text = '';
+      _pressure.clear();
+      _scaleChecks = 0;
+      _done = List<bool>.filled(reloadSopSteps.length, false);
+    });
+    showAppToast(context, '已载入配方，请重新走 SOP、重测并放行');
+  }
+
   void _clearForm() {
     _bulletCtrl.clear();
     _powderCtrl.clear();
@@ -240,6 +439,8 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
     _lotCtrl.clear();
     _weatherCtrl.clear();
     _caliber = null;
+    _pressure.clear();
+    _scaleChecks = 0;
     _done = List<bool>.filled(reloadSopSteps.length, false);
   }
 
@@ -268,32 +469,40 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
       );
       return;
     }
-    setState(() {
-      _logs.insert(
-          0,
-          ReloadLogEntry(
-            date: _today(),
-            caliber: _caliber!,
-            bullet: _bulletCtrl.text.trim(),
-            powder: _powderCtrl.text.trim(),
-            charge: _chargeCtrl.text.trim(),
-            col: _colCtrl.text.trim(),
-            rounds: _roundsCtrl.text.trim(),
-            note: _noteCtrl.text.trim(),
-            primer: _primerCtrl.text.trim(),
-            caseBrand: _caseBrandCtrl.text.trim(),
-            caseTimes: _caseTimesCtrl.text.trim(),
-            velocity: _velocityCtrl.text.trim(),
-            group: _groupCtrl.text.trim(),
-            firearm: _firearmCtrl.text.trim(),
-            lot: _lotCtrl.text.trim(),
-            weather: _weatherCtrl.text.trim(),
-            released: true,
-          ));
-      _save();
-      _clearForm();
-    });
-    if (mounted) showAppToast(context, '已通过 SOP 检测，放行并保存记录');
+    // 压力迹象：直接存为异常停用记录，不放行。
+    if (_pressure.isNotEmpty) {
+      _insertEntry(released: false);
+      if (mounted) {
+        showAppToast(context, '本批有压力迹象，已保存为异常停用记录，未放行');
+      }
+      return;
+    }
+    // 手册对照：无对照或超出区间时不给已放行，只能二选一。
+    final manual = _manualCheck();
+    if (!manual.inRange) {
+      if (!mounted) return;
+      final saveOnly = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => GlassDialog(
+          title: '手册对照未通过',
+          content: Text('${manual.note}。可以仅保存为未放行记录，绝不标已放行。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('返回修改'),
+            ),
+            glassPrimaryButton(ctx, '仅保存为未放行记录', popTrue: true),
+          ],
+        ),
+      );
+      if (saveOnly == true) {
+        _insertEntry(released: false);
+        if (mounted) showAppToast(context, '已保存为未放行记录');
+      }
+      return;
+    }
+    _insertEntry(released: true);
+    if (mounted) showAppToast(context, '已通过 SOP 与手册检测，放行并保存记录');
   }
 
   @override
@@ -313,6 +522,9 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
           const SizedBox(height: 4),
           Text('按步骤打勾，全部完成才能记一条；记录保存在本机，重启不丢。Tick off the SOP steps; all must be complete before a record can be released. Records stay on this device.',
               style: TextStyle(color: grey, fontSize: 12)),
+          const SizedBox(height: 8),
+          const Text('① 选配方 → ② 执行 SOP → ③ 试射 → ④ 复核放行',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -401,6 +613,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                 child: TextField(
                   controller: _chargeCtrl,
                   keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() {}),
                   decoration: const InputDecoration(
                     labelText: '装药量 * / Powder Charge（gr）',
                     border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
@@ -412,6 +625,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                 child: TextField(
                   controller: _colCtrl,
                   keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() {}),
                   decoration: const InputDecoration(
                     labelText: '弹长 COL * / Overall Length（″）',
                     border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
@@ -424,11 +638,32 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
           TextField(
             controller: _roundsCtrl,
             keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(
               labelText: '数量 * / Rounds（发）',
               border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
           ),
+          if ((double.tryParse(_roundsCtrl.text) ?? 0) >= 10)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '数量 ≥10 发：装药过程中每 10 发复核一次秤（SOP 第 6 步），已复核 $_scaleChecks 次',
+                      style: const TextStyle(
+                          color: Colors.amber, fontSize: 12),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () =>
+                        setState(() => _scaleChecks++),
+                    child: const Text('已复核一次秤'),
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 16),
           const Text('组件与批号 Components & Lot *', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
@@ -504,11 +739,36 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
             ),
           ),
           const SizedBox(height: 8),
+          const Text('压力迹象 Pressure Signs（勾选任何一项，本批即异常停用、不能放行）',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            children: _pressureOptions
+                .map((o) => FilterChip(
+                      label: Text(o),
+                      selected: _pressure.contains(o),
+                      onSelected: (v) => setState(() {
+                        if (v) {
+                          _pressure.add(o);
+                        } else {
+                          _pressure.remove(o);
+                        }
+                      }),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 8),
           TextField(
             controller: _noteCtrl,
             maxLines: 2,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: '备注 / Notes（选填 Optional：批次、试射结果等）',
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.mic_outlined),
+                tooltip: '语音转文字草稿',
+                onPressed: _voiceNote,
+              ),
               border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
           ),
@@ -539,6 +799,18 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                     ),
                   ],
                 ),
+                if (_caliber != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text(
+                      _manualCheck().note,
+                      style: TextStyle(
+                          color: _manualCheck().inRange
+                              ? Colors.green
+                              : grey,
+                          fontSize: 12),
+                    ),
+                  ),
                 const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
@@ -582,22 +854,40 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                                 Text('${l.date} · ${l.caliber}',
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold)),
-                                if (l.released) ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Text('已放行',
-                                        style: TextStyle(
-                                            color: Colors.green, fontSize: 11)),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: (l.released
+                                            ? Colors.green
+                                            : l.pressure.isNotEmpty
+                                                ? Colors.red
+                                                : Colors.grey)
+                                        .withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                ],
+                                  child: Text(
+                                      l.released
+                                          ? '已放行'
+                                          : l.pressure.isNotEmpty
+                                              ? '异常停用'
+                                              : '未放行',
+                                      style: TextStyle(
+                                          color: l.released
+                                              ? Colors.green
+                                              : l.pressure.isNotEmpty
+                                                  ? Colors.red
+                                                  : Colors.grey,
+                                          fontSize: 11)),
+                                ),
                               ],
                             ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.replay, size: 20),
+                            tooltip: '复用此配方',
+                            onPressed: () => _reuseRecipe(l),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline, size: 20),
@@ -608,6 +898,12 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                           ),
                         ],
                       ),
+                      if (l.batchNo.isNotEmpty)
+                        Text('批次：${l.batchNo}',
+                            style: TextStyle(color: grey, fontSize: 12)),
+                      if (l.pressure.isNotEmpty)
+                        Text('压力迹象：${l.pressure}',
+                            style: const TextStyle(color: Colors.red)),
                       if (l.bullet.isNotEmpty) Text('弹头：${l.bullet}'),
                       if (l.powder.isNotEmpty) Text('火药：${l.powder}'),
                       if (l.charge.isNotEmpty) Text('装药：${l.charge} gr'),
