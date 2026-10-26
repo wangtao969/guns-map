@@ -8,9 +8,10 @@ import 'glass_dialog.dart';
 /// 等级铭牌：段位配色底 + LV.x + 段位名，挂在每条帖子作者名旁。
 /// 外框高度严格等于昵称字号（nicknameFontSize），不比昵称字大，
 /// 保证各页视觉协调；铭牌内文字按比例缩小。
-/// 发光：初始段位铁灰不发光；其余段位按各自颜色做呼吸灯（1.8 秒一呼一吸）；
-/// 最高段位曜石另加暗紫色的光：紫色光晕呼吸 + 一道紫光沿铭牌外圈旋转（带拖尾），
-/// 是光，不是闪电标志。
+/// 特效已简化：没有环绕旋转的光弧，只有铭牌外圈向外散发的、对应段位颜色的
+/// 光晕（1.8 秒一呼一吸的呼吸动效）。光晕是半透明层、画在铭牌后面，
+/// 铭牌本身用不透明底盖在最上层，且光晕只比铭牌大一小圈、不用实色扩散，
+/// 不会盖住铭牌文字，也不会以实色压住周围内容。
 class LevelBadge extends StatefulWidget {
   final CommunityAccount account;
   final double nicknameFontSize;
@@ -45,8 +46,9 @@ class _LevelBadgeState extends State<LevelBadge>
 
   /// 呼吸灯：t 在 0–1 之间正弦起伏，只驱动外层光晕的透明度与模糊半径。
   /// 光晕画在铭牌后面的独立层上，铭牌本身用不透明底，绝不被光盖住。
-  Color _glowColor(double t) {
-    if (_tier == 0) return Colors.transparent;
+  /// 光色取段位色；曜石段位色本身是深 slate，沿用 v2.0.4 定下的暗紫色
+  /// 当它的光色，否则深 slate 光晕在深色底上几乎看不见。
+  Color get _glowColor {
     if (_tier == 5) return const Color(0xFF7B1FA2);
     return widget.account.tierColor;
   }
@@ -54,7 +56,7 @@ class _LevelBadgeState extends State<LevelBadge>
   double _glowAlpha(double t) {
     switch (_tier) {
       case 0:
-        return 0;
+        return 0.15 + 0.10 * t;
       case 1:
         return 0.30 + 0.25 * t;
       case 2:
@@ -71,17 +73,17 @@ class _LevelBadgeState extends State<LevelBadge>
   double _glowBlur(double t) {
     switch (_tier) {
       case 0:
-        return 0;
+        return 6 + 4 * t;
       case 1:
         return 8 + 6 * t;
       case 2:
         return 10 + 8 * t;
       case 3:
-        return 14 + 10 * t;
+        return 12 + 8 * t;
       case 4:
-        return 18 + 12 * t;
+        return 14 + 8 * t;
       default:
-        return 20 + 10 * t;
+        return 16 + 8 * t;
     }
   }
 
@@ -113,56 +115,26 @@ class _LevelBadgeState extends State<LevelBadge>
       child: AnimatedBuilder(
         animation: _ctrl,
         builder: (_, __) {
-          final t =
-              (math.sin(_ctrl.value * 2 * math.pi) + 1) / 2;
-          // 外散光层：比铭牌大一圈、只在铭牌四周向外发光，画在铭牌后面。
-          final glow = _tier == 0
-              ? const SizedBox.shrink()
-              : Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(h / 2 + 6),
-                    boxShadow: [
-                      BoxShadow(
-                          color: _glowColor(t)
-                              .withValues(alpha: _glowAlpha(t)),
-                          blurRadius: _glowBlur(t),
-                          spreadRadius: 2),
-                      if (_tier == 5)
-                        BoxShadow(
-                            color: const Color(0xFF7B1FA2)
-                                .withValues(alpha: 0.30 + 0.25 * t),
-                            blurRadius: 30 + 12 * t,
-                            spreadRadius: 4),
-                    ],
-                  ),
-                );
-          if (_tier != 5) {
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned.fill(
-                    child: Padding(
-                        padding: const EdgeInsets.all(3), child: glow)),
-                badge,
+          final t = (math.sin(_ctrl.value * 2 * math.pi) + 1) / 2;
+          // 外散光层：只在铭牌后面、比铭牌大一小圈；spread 为 0，
+          // 光只靠模糊向外晕开一小段，且全程半透明，不以实色压住周围。
+          final glow = Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(h / 2 + 2),
+              boxShadow: [
+                BoxShadow(
+                    color: _glowColor.withValues(alpha: _glowAlpha(t)),
+                    blurRadius: _glowBlur(t),
+                    spreadRadius: 0),
               ],
-            );
-          }
-          // 曜石：旋转光弧也画在铭牌后面、比铭牌大一圈，只向外散。
+            ),
+          );
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              Positioned(
-                left: -6,
-                top: -6,
-                right: -6,
-                bottom: -6,
-                child: CustomPaint(
-                  painter: _ObsidianLightPainter(_ctrl.value),
-                ),
-              ),
               Positioned.fill(
                   child: Padding(
-                      padding: const EdgeInsets.all(3), child: glow)),
+                      padding: const EdgeInsets.all(2), child: glow)),
               badge,
             ],
           );
@@ -170,48 +142,6 @@ class _LevelBadgeState extends State<LevelBadge>
       ),
     );
   }
-}
-
-/// 曜石暗紫色的光：一道紫光沿铭牌外圈旋转，身后带 5 段渐隐拖尾，
-/// 外加一层宽模糊的紫色光晕；画的是光弧，不是闪电标志。
-class _ObsidianLightPainter extends CustomPainter {
-  final double progress;
-  const _ObsidianLightPainter(this.progress);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Rect.fromLTWH(1, 1, size.width - 2, size.height - 2);
-    final haloPaint = Paint()
-      ..color = const Color(0xFF7B1FA2).withValues(alpha: 0.18)
-      ..strokeWidth = 7
-      ..style = PaintingStyle.stroke
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-    canvas.drawOval(rect, haloPaint);
-    // 旋转的光弧：头亮尾暗，6 段拖尾。
-    for (var i = 0; i < 6; i++) {
-      final start = progress * 2 * math.pi - i * 0.35;
-      final alpha = 0.55 - i * 0.08;
-      if (alpha <= 0) continue;
-      final arcPaint = Paint()
-        ..color = const Color(0xFF8E24AA).withValues(alpha: alpha)
-        ..strokeWidth = 2.5
-        ..strokeCap = StrokeCap.round
-        ..style = PaintingStyle.stroke;
-      canvas.drawArc(rect, start, 0.45, false, arcPaint);
-    }
-    // 弧头最亮的一点。
-    final headAngle = progress * 2 * math.pi;
-    final headPaint = Paint()
-      ..color = const Color(0xFFE1BEE7).withValues(alpha: 0.9)
-      ..strokeWidth = 3.5
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    canvas.drawArc(rect, headAngle, 0.12, false, headPaint);
-  }
-
-  @override
-  bool shouldRepaint(_ObsidianLightPainter old) =>
-      old.progress != progress;
 }
 
 /// 等级制度弹窗：点铭牌弹出，列出六档段位、等级区间与所需累计经验。

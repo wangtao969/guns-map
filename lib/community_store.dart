@@ -326,6 +326,10 @@ class CollectionItem {
   final String vendor;
   final String caliber;
   final String category;
+  /// 收藏种类：gun 枪支（旧数据默认）/ accessory 配件。
+  /// 配件复用这四个字段：gunName=配件名、vendor=厂商、category=配件类型、
+  /// caliber 留空；配件不记弹数、不算精通。
+  final String kind;
   String status; // owned 拥有 / handled 上手过 / wanted 想收集
   int rounds; // 本机弹数记录：该枪累计打过的发数，只增不减（清零除外）
   final DateTime addedTime;
@@ -336,6 +340,7 @@ class CollectionItem {
     required this.caliber,
     required this.category,
     required this.status,
+    this.kind = 'gun',
     this.rounds = 0,
     DateTime? addedTime,
   }) : addedTime = addedTime ?? DateTime.now();
@@ -345,6 +350,7 @@ class CollectionItem {
         'vendor': vendor,
         'caliber': caliber,
         'category': category,
+        'kind': kind,
         'status': status,
         'rounds': rounds,
         'addedTime': addedTime.toIso8601String(),
@@ -355,6 +361,7 @@ class CollectionItem {
         vendor: j['vendor'] as String? ?? '',
         caliber: j['caliber'] as String? ?? '',
         category: j['category'] as String? ?? '',
+        kind: j['kind'] as String? ?? 'gun',
         status: j['status'] as String? ?? 'wanted',
         rounds: j['rounds'] as int? ?? 0,
         addedTime: DateTime.tryParse(j['addedTime'] as String? ?? '') ??
@@ -1084,7 +1091,9 @@ class CommunityStore extends ChangeNotifier {
   void addCollectionItem(CollectionItem item) {
     final me = current;
     if (me == null) return;
-    me.collection.removeWhere((c) => c.gunName == item.gunName);
+    // 同名不同种不互顶：枪与配件可以同名并存。
+    me.collection
+        .removeWhere((c) => c.gunName == item.gunName && c.kind == item.kind);
     me.collection.insert(0, item);
     me.addXp(3);
     notifyListeners();
@@ -1698,7 +1707,8 @@ Widget communityAvatar({
   );
 }
 
-/// 头像右下角 V 标：红色实心圆 + 白色对勾，外圈白边与头像分隔；不挂时原样返回。
+/// 头像右下角 V 标：橙色实心圆 + 白色 V 字（“已点亮橙 V”样式），
+/// 橙色取自用户发的图样（#FD7304），外圈白边与头像分隔；不挂时原样返回。
 Widget _withVerified(Widget avatar, double radius, bool verified) {
   if (!verified) return avatar;
   final d = (radius * 0.62).clamp(14.0, 26.0);
@@ -1712,12 +1722,20 @@ Widget _withVerified(Widget avatar, double radius, bool verified) {
         child: Container(
           width: d,
           height: d,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: const Color(0xFFE53935),
+            color: const Color(0xFFFD7304),
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 1.5),
           ),
-          child: Icon(Icons.check, size: d * 0.62, color: Colors.white),
+          child: Text(
+            'V',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: d * 0.58,
+                fontWeight: FontWeight.bold,
+                height: 1),
+          ),
         ),
       ),
     ],

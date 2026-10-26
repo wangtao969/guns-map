@@ -97,16 +97,64 @@ class _CommunityNotificationsScreenState
                 ),
                 const Divider(height: 1),
               ],
-              TabBar(
-                controller: _tabCtrl,
-                tabs: const [
-                  Tab(text: '全部'),
-                  Tab(text: '系统公告'),
-                  Tab(text: '互动'),
-                  Tab(text: '私信'),
-                ],
+              // 四栏改成个人主页同款文字 Tab：大字 + 选中下铜橙下划线；
+              // 左右滑动切换（TabBarView）不变，只换按钮样式，不用默认 TabBar。
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: AnimatedBuilder(
+                  animation: _tabCtrl,
+                  builder: (_, __) {
+                    const labels = ['全部', '系统公告', '互动', '私信'];
+                    return Column(
+                      children: [
+                        Row(
+                          children: [
+                            for (var i = 0; i < labels.length; i++)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                    right: i == labels.length - 1 ? 0 : 28),
+                                child: InkWell(
+                                  onTap: () => _tabCtrl.animateTo(i),
+                                  child: Column(
+                                    children: [
+                                      Text(labels[i],
+                                          style: TextStyle(
+                                              fontSize: 17,
+                                              fontWeight:
+                                                  _tabCtrl.index == i
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal,
+                                              color: _tabCtrl.index == i
+                                                  ? null
+                                                  : grey)),
+                                      const SizedBox(height: 6),
+                                      Container(
+                                        width: 26,
+                                        height: 3,
+                                        decoration: BoxDecoration(
+                                          color: _tabCtrl.index == i
+                                              ? const Color(0xFFE86A1C)
+                                              : Colors.transparent,
+                                          borderRadius:
+                                              BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          height: 0.5,
+                          color: grey.withValues(alpha: 0.25),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
-              const Divider(height: 1),
               Expanded(
                 child: TabBarView(
                   controller: _tabCtrl,

@@ -16,7 +16,7 @@ import 'admin_home_screen.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '2.1.4';
+const String appVersion = '2.1.5';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -190,6 +190,9 @@ class SettingsScreen extends StatelessWidget {
             subtitle: Text(tr('check_update_sub')),
             onTap: () => _checkUpdate(context),
           ),
+          // 清理缓存：与本页其他行同款 ListTile（22 号前置图标 + 标题 + 副标题），
+          // 确认用毛玻璃弹窗、结果用 showAppToast，与 App 其余提示统一。
+          const _ClearCacheTile(),
           ListTile(
             leading: const Icon(Icons.feedback_outlined, size: 22),
             title: Text(tr('feedback')),
@@ -504,6 +507,111 @@ class SettingsScreen extends StatelessWidget {
       if (x != y) return x.compareTo(y);
     }
     return 0;
+  }
+}
+
+/// 清理缓存行：只删原生 cacheDir 下的临时文件（主要是更新时下载的安装包），
+/// 绝不碰 SharedPreferences 里的账号、收藏柜、靶场成绩、弹药库存、保养记录、
+/// 复装记录等本机数据；删完重新计算一次大小，副标题即刷新。
+class _ClearCacheTile extends StatefulWidget {
+  const _ClearCacheTile();
+
+  @override
+  State<_ClearCacheTile> createState() => _ClearCacheTileState();
+}
+
+class _ClearCacheTileState extends State<_ClearCacheTile> {
+  int? _size;
+  bool _clearing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshSize();
+  }
+
+  Future<Directory?> _cacheDir() async {
+    final path = await getCacheDirPath();
+    if (path == null) return null;
+    return Directory(path);
+  }
+
+  Future<int> _dirSize(Directory dir) async {
+    var total = 0;
+    try {
+      await for (final e in dir.list(recursive: true, followLinks: false)) {
+        try {
+          if (e is File) total += await e.length();
+        } catch (_) {}
+      }
+    } catch (_) {}
+    return total;
+  }
+
+  Future<void> _refreshSize() async {
+    final dir = await _cacheDir();
+    final size = dir == null ? 0 : await _dirSize(dir);
+    if (!mounted) return;
+    setState(() => _size = size);
+  }
+
+  static String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  Future<void> _onTap() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => GlassDialog(
+        title: '清理缓存',
+        content: const Text(
+            '清理后会删除临时文件，包括更新时已下载的安装包（需要时重新下载即可）。账号、收藏柜、靶场成绩、弹药库存、保养记录与复装记录等本机数据不会被删除。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          glassPrimaryButton(ctx, '清理', popTrue: true),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _clearing = true);
+    final dir = await _cacheDir();
+    var freed = 0;
+    if (dir != null) {
+      freed = await _dirSize(dir);
+      try {
+        await for (final e in dir.list(followLinks: false)) {
+          try {
+            await e.delete(recursive: true);
+          } catch (_) {}
+        }
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    setState(() {
+      _clearing = false;
+      _size = 0;
+    });
+    showAppToast(context,
+        freed > 0 ? '已清理缓存，释放 ${_formatBytes(freed)}' : '缓存已是空的');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.cleaning_services_outlined, size: 22),
+      title: const Text('清理缓存'),
+      subtitle: Text(_clearing
+          ? '正在清理…'
+          : _size == null
+              ? '正在计算…'
+              : '当前缓存 ${_formatBytes(_size!)}，点按清理'),
+      onTap: _clearing ? null : _onTap,
+    );
   }
 }
 

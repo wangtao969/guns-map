@@ -100,6 +100,8 @@ class _CommunityDmScreenState extends State<CommunityDmScreen> {
             body: Center(child: Text(tr('login_required_body'))),
           );
         }
+        final dark = Theme.of(context).brightness == Brightness.dark;
+        final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
         final peerIds = <String>{};
         for (final m in communityStore.dms) {
           if (m.fromId == me.id) peerIds.add(m.toId);
@@ -205,8 +207,13 @@ class _CommunityDmScreenState extends State<CommunityDmScreen> {
                       (sessions.isEmpty ? 1 : 0) +
                       1 +
                       others.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(height: 1),
+                  // 行间不再用默认 Divider（深色硬线显黑）：换成与个人主页
+                  // 同款的 0.5 细线、灰色 0.25 透明度，并缩进到文字起点。
+                  separatorBuilder: (_, __) => Container(
+                        height: 0.5,
+                        margin: const EdgeInsets.only(left: 76),
+                        color: grey.withValues(alpha: 0.25),
+                      ),
                   itemBuilder: (_, index) {
                     if (sessions.isEmpty && index == 0) {
                       return const Padding(
@@ -432,15 +439,12 @@ class _CommunityDmThreadScreenState extends State<CommunityDmThreadScreen> {
                         }).toList(),
                       ),
               ),
+              // 输入区顶部的硬线去掉：输入框本身已是药丸形，不再用一条
+              // 横线把消息区和输入区割开。
               SafeArea(
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    border: Border(
-                        top: BorderSide(
-                            color: grey.withValues(alpha: 0.3))),
-                  ),
                   child: Row(
                     children: [
                       Expanded(

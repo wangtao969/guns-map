@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../community_store.dart';
 import '../data.dart';
+import '../models.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/community_theme.dart';
@@ -18,14 +19,13 @@ class CommunityCollectionScreen extends StatelessWidget {
 
   static const _shareChannel = MethodChannel('gunsmap/share');
 
-  Future<void> _addGun(BuildContext context) async {
-    final gun = await showGunPickerDialog(context);
-    if (gun == null || !context.mounted) return;
-    final status = await showDialog<String>(
+  Future<String?> _pickStatus(
+      BuildContext context, String title, String subtitle) {
+    return showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(gun.name),
-        content: Text('${gun.vendor} · ${gun.caliber}'),
+        title: Text(title),
+        content: Text(subtitle),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop('owned'),
@@ -42,6 +42,13 @@ class CommunityCollectionScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _addGun(BuildContext context) async {
+    final gun = await showGunPickerDialog(context);
+    if (gun == null || !context.mounted) return;
+    final status = await _pickStatus(
+        context, gun.name, '${gun.vendor} · ${gun.caliber}');
     if (status == null || !context.mounted) return;
     communityStore.addCollectionItem(CollectionItem(
       gunName: gun.name,
@@ -51,6 +58,143 @@ class CommunityCollectionScreen extends StatelessWidget {
       status: status,
     ));
     showAppToast(context, '已登记到收藏柜 +3 经验');
+  }
+
+  /// 登记一件配件：先从配件目录里搜着选（瞄具、弹道计算器等 163 条），
+  /// 目录里没有的（如测速仪）可手动登记名称、厂商、类型，不现编目录数据。
+  Future<void> _addAccessory(BuildContext context) async {
+    final picked = await showDialog<Object>(
+      context: context,
+      builder: (dialogContext) {
+        var query = '';
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            final q = query.trim().toLowerCase();
+            final list = q.isEmpty
+                ? accessories
+                : accessories
+                    .where((a) =>
+                        a.name.toLowerCase().contains(q) ||
+                        a.vendor.toLowerCase().contains(q) ||
+                        a.type.toLowerCase().contains(q))
+                    .toList();
+            return AlertDialog(
+              title: const Text('登记配件'),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 420,
+                child: Column(
+                  children: [
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText: '搜索配件、厂商或类型',
+                        prefixIcon: Icon(Icons.search, size: 20),
+                      ),
+                      onChanged: (v) => setState(() => query = v),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: list.length,
+                        itemBuilder: (_, i) {
+                          final a = list[i];
+                          return ListTile(
+                            title: Text(a.name),
+                            subtitle: Text('${a.vendor} · ${a.type}'),
+                            onTap: () =>
+                                Navigator.of(dialogContext).pop(a),
+                          );
+                        },
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () =>
+                          Navigator.of(dialogContext).pop('manual'),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('目录里没有，手动登记一件'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    if (picked == null || !context.mounted) return;
+    String name;
+    String vendor;
+    String type;
+    if (picked == 'manual') {
+      final manual = await _manualAccessoryDialog(context);
+      if (manual == null || !context.mounted) return;
+      name = manual.$1;
+      vendor = manual.$2;
+      type = manual.$3;
+    } else {
+      final a = picked as AccessoryItem;
+      name = a.name;
+      vendor = a.vendor;
+      type = a.type;
+    }
+    final status = await _pickStatus(
+        context, name, [vendor, type].where((s) => s.isNotEmpty).join(' · '));
+    if (status == null || !context.mounted) return;
+    communityStore.addCollectionItem(CollectionItem(
+      gunName: name,
+      vendor: vendor,
+      caliber: '',
+      category: type,
+      kind: 'accessory',
+      status: status,
+    ));
+    showAppToast(context, '已登记到收藏柜 +3 经验');
+  }
+
+  Future<(String, String, String)?> _manualAccessoryDialog(
+      BuildContext context) {
+    final nameCtrl = TextEditingController();
+    final vendorCtrl = TextEditingController();
+    final typeCtrl = TextEditingController();
+    return showDialog<(String, String, String)>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('手动登记配件'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+                controller: nameCtrl,
+                decoration:
+                    const InputDecoration(labelText: '配件名称 *')),
+            TextField(
+                controller: vendorCtrl,
+                decoration: const InputDecoration(labelText: '厂商（可选）')),
+            TextField(
+                controller: typeCtrl,
+                decoration:
+                    const InputDecoration(labelText: '类型（可选，如测速仪）')),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (nameCtrl.text.trim().isEmpty) return;
+              Navigator.of(dialogContext).pop((
+                nameCtrl.text.trim(),
+                vendorCtrl.text.trim(),
+                typeCtrl.text.trim(),
+              ));
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<Uint8List> _drawCard(CommunityAccount me) async {
@@ -91,8 +235,12 @@ class CommunityCollectionScreen extends StatelessWidget {
     final handled =
         me.collection.where((c) => c.status == 'handled').length;
     final wanted = me.collection.where((c) => c.status == 'wanted').length;
+    final gunCount =
+        me.collection.where((c) => c.kind == 'gun').length;
+    final accCount =
+        me.collection.where((c) => c.kind == 'accessory').length;
     final stat = _para(
-        '共 ${me.collection.length} 把 · 拥有 $owned · 上手过 $handled · 想收集 $wanted',
+        '共 $gunCount 把 · $accCount 件配件 · 拥有 $owned · 上手过 $handled · 想收集 $wanted',
         44,
         const Color(0xFFE86A1C),
         bold: true);
@@ -101,14 +249,16 @@ class CommunityCollectionScreen extends StatelessWidget {
     for (final item in me.collection.take(16)) {
       final lv = communityStore.masteryForGun(me, item.gunName);
       final line = _para(
-          '· ${item.gunName}（${item.vendor} · ${item.caliber}）${lv > 0 ? ' · 精通${masteryNames[lv]}' : ''}',
+          item.kind == 'accessory'
+              ? '· ${item.gunName}（${[item.vendor, item.category].where((s) => s.isNotEmpty).join(' · ')}）[配件]'
+              : '· ${item.gunName}（${item.vendor} · ${item.caliber}）${lv > 0 ? ' · 精通${masteryNames[lv]}' : ''}',
           40,
           const Color(0xFF2E2A24));
       canvas.drawParagraph(line, ui.Offset(80, y));
       y += 64;
       if (y > height - 160) break;
     }
-    final foot = _para('Gun\'s Map · 收藏完成度 ${me.collection.length}/${guns.length}',
+    final foot = _para('Gun\'s Map · 收藏完成度 $gunCount/${guns.length}',
         36, const Color(0xFF6E6557));
     canvas.drawParagraph(foot, ui.Offset(80, height - 110));
     final picture = recorder.endRecording();
@@ -125,9 +275,13 @@ class CommunityCollectionScreen extends StatelessWidget {
           'shareImage', {'bytes': bytes});
       if (ok != true && context.mounted) {
         final owned = me.collection.where((c) => c.status == 'owned').length;
+        final gunCount =
+            me.collection.where((c) => c.kind == 'gun').length;
+        final accCount =
+            me.collection.where((c) => c.kind == 'accessory').length;
         await _shareChannel.invokeMethod('shareText', {
           'text':
-              '我的 Gun\'s Map 收藏柜：共 ${me.collection.length} 把（拥有 $owned），LV${me.level} ${me.tierName}。'
+              '我的 Gun\'s Map 收藏柜：共 $gunCount 把枪、$accCount 件配件（拥有 $owned），LV${me.level} ${me.tierName}。'
         });
       }
     } catch (_) {
@@ -230,9 +384,16 @@ class CommunityCollectionScreen extends StatelessWidget {
                       .length;
                   final totalRounds = me.collection
                       .fold<int>(0, (s, c) => s + c.rounds);
+                  // 完成度只算枪：配件不占枪械总数，否则会把进度撑大。
+                  final gunCount = me.collection
+                      .where((c) => c.kind == 'gun')
+                      .length;
+                  final accCount = me.collection
+                      .where((c) => c.kind == 'accessory')
+                      .length;
                   final progress = guns.isEmpty
                       ? 0.0
-                      : me.collection.length / guns.length;
+                      : gunCount / guns.length;
                   return Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -256,7 +417,7 @@ class CommunityCollectionScreen extends StatelessWidget {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                '收藏完成度 ${me.collection.length} / ${guns.length}',
+                                '收藏完成度 $gunCount / ${guns.length}',
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
@@ -289,6 +450,7 @@ class CommunityCollectionScreen extends StatelessWidget {
                             _statChip('拥有 $owned'),
                             _statChip('上手过 $handled'),
                             _statChip('想收集 $wanted'),
+                            _statChip('配件 $accCount 件'),
                             _statChip('已打 $totalRounds 发'),
                           ],
                         ),
@@ -297,7 +459,9 @@ class CommunityCollectionScreen extends StatelessWidget {
                   );
                 }),
                 const SizedBox(height: 14),
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     _actionChip(
                       const Row(
@@ -311,7 +475,18 @@ class CommunityCollectionScreen extends StatelessWidget {
                       ),
                       () => _addGun(context),
                     ),
-                    const Spacer(),
+                    _actionChip(
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, size: 18, color: communityAccent),
+                          SizedBox(width: 4),
+                          Text('登记配件',
+                              style: TextStyle(color: communityAccent)),
+                        ],
+                      ),
+                      () => _addAccessory(context),
+                    ),
                     _actionChip(
                       const Row(
                         mainAxisSize: MainAxisSize.min,
@@ -357,7 +532,7 @@ class CommunityCollectionScreen extends StatelessWidget {
                         if (items.isEmpty)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 16),
-                            child: Text('还没有登记这一类的枪',
+                            child: Text('还没有登记这一类',
                                 style: TextStyle(color: grey)),
                           )
                         else
@@ -412,11 +587,22 @@ class CommunityCollectionScreen extends StatelessWidget {
                                                     fontSize: 15)),
                                             const SizedBox(height: 2),
                                             Text(
-                                                '${item.vendor} · ${item.caliber} · ${item.category}',
+                                                item.kind == 'accessory'
+                                                    ? '配件 · ${[item.vendor, item.category].where((s) => s.isNotEmpty).join(' · ')}'
+                                                    : '${item.vendor} · ${item.caliber} · ${item.category}',
                                                 style: TextStyle(
                                                     color: grey,
                                                     fontSize: 12)),
-                                            if (lv > 0 ||
+                                            // 配件只挂一个“配件”小标签，不记弹数、不算精通。
+                                            if (item.kind == 'accessory') ...[
+                                              const SizedBox(height: 6),
+                                              Wrap(
+                                                spacing: 6,
+                                                children: [
+                                                  _miniChip('配件', grey),
+                                                ],
+                                              ),
+                                            ] else if (lv > 0 ||
                                                 item.rounds > 0) ...[
                                               const SizedBox(height: 6),
                                               Wrap(
@@ -471,15 +657,18 @@ class CommunityCollectionScreen extends StatelessWidget {
                                           const PopupMenuItem(
                                               value: 'wanted',
                                               child: Text('改成想收集')),
-                                          const PopupMenuItem(
-                                              value: 'rounds10',
-                                              child: Text('弹数 +10 发')),
-                                          const PopupMenuItem(
-                                              value: 'rounds50',
-                                              child: Text('弹数 +50 发')),
-                                          const PopupMenuItem(
-                                              value: 'rounds_clear',
-                                              child: Text('弹数清零')),
+                                          // 弹数菜单只给枪：配件没有弹数。
+                                          if (item.kind == 'gun') ...[
+                                            const PopupMenuItem(
+                                                value: 'rounds10',
+                                                child: Text('弹数 +10 发')),
+                                            const PopupMenuItem(
+                                                value: 'rounds50',
+                                                child: Text('弹数 +50 发')),
+                                            const PopupMenuItem(
+                                                value: 'rounds_clear',
+                                                child: Text('弹数清零')),
+                                          ],
                                           const PopupMenuItem(
                                               value: 'delete',
                                               child: Text('删除')),
@@ -498,6 +687,11 @@ class CommunityCollectionScreen extends StatelessWidget {
                 ],
                 Text(
                   '精通等级：想收集 = 了解，上手过 = 熟悉，拥有 = 上手，拥有且发过该枪动态或记过该枪成绩 = 精通；5 级权威需词条维护权限，接后端后开放。',
+                  style: TextStyle(color: grey, fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '配件登记：点“登记配件”可从配件目录选一件，或手动登记目录里没有的配件（如测速仪）；配件不记弹数与精通。',
                   style: TextStyle(color: grey, fontSize: 12),
                 ),
               ],
