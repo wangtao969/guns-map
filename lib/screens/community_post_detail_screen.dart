@@ -416,7 +416,7 @@ class _CommunityPostDetailScreenState
                           controller: _replyCtrl,
                           decoration: const InputDecoration(
                             hintText: '写下你的回复……（@ID 可提醒对方）',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                             isDense: true,
                           ),
                         ),

@@ -69,7 +69,7 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
                 controller: _titleCtrl,
                 decoration: const InputDecoration(
                   labelText: '公告标题',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 ),
               ),
               const SizedBox(height: 8),
@@ -78,7 +78,7 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
                 maxLines: 3,
                 decoration: const InputDecoration(
                   labelText: '公告内容',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 ),
               ),
               const SizedBox(height: 8),

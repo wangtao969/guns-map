@@ -329,6 +329,7 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
               _loadRow('弹壳', l.brass),
               if (l.velocity != null) _loadRow('初速', l.velocity!),
               if (l.pressure != null) _loadRow('膛压', l.pressure!),
+              if (l.manual.isNotEmpty) _loadRow('手册', l.manual),
               const SizedBox(height: 4),
               Text('${tr('source_prefix')}${l.source}',
                   style: const TextStyle(color: Colors.grey, fontSize: 12)),

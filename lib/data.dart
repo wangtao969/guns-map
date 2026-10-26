@@ -15936,6 +15936,7 @@ const List<ReloadLoad> reloadLoads = [
     col: '1.060″',
     primer: 'Winchester WSP',
     brass: '详见手册原文',
+    manual: 'Hornady Handbook of Cartridge Reloading 第 9 版',
     source: 'Hornady Handbook of Cartridge Reloading 9th Edition，9mm Luger 章节（经 7th 版同页引述交叉核对：Unique 最大 5.0gr、WSP 底火、COL 1.060″一致）',
   ),
   ReloadLoad(
@@ -15947,6 +15948,7 @@ const List<ReloadLoad> reloadLoads = [
     col: '1.060″',
     primer: 'Winchester WSP（该口径章节测试条件，见 7th 版引述）',
     brass: '详见手册原文',
+    manual: 'Hornady Handbook of Cartridge Reloading 第 9 版',
     source: 'Hornady Handbook of Cartridge Reloading 9th Edition，9mm Luger 章节',
   ),
   ReloadLoad(
@@ -15958,6 +15960,7 @@ const List<ReloadLoad> reloadLoads = [
     col: '2.250″',
     primer: '详见手册原文',
     brass: '详见手册原文',
+    manual: 'Hornady Handbook 第 7 版时期（2008 年引述）',
     source: 'Hornady Handbook（2008 年公开引述的当时现行版本，7th Edition 时期），.223 Remington 章节；H335 最大 23.2gr 另有同期引述佐证',
   ),
   ReloadLoad(
@@ -15971,6 +15974,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: '手册未载',
     velocity: '953 → 1069 fps',
     pressure: null,
+    manual: 'Hodgdon Reloading Data Center（在线数据）',
     source: 'Hodgdon Reloading Data Center（经公开引述核对）',
   ),
   ReloadLoad(
@@ -15984,6 +15988,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: '手册未载',
     velocity: '1020 → 1095 fps',
     pressure: null,
+    manual: 'Speer Reloading Manual（在线数据页）',
     source: 'Speer Reloading Manual 数据页（reloadingdata.speer.com，9mm Luger 124 Gold Dot）',
   ),
   ReloadLoad(
@@ -15997,6 +16002,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Lapua',
     velocity: '1017 → 1096 fps',
     pressure: null,
+    manual: 'Vihtavuori Reloading Guide 2021 版',
     source: 'Vihtavuori Reloading Guide（2021 版），9mm Luger 章，100mm 测试枪管',
   ),
   ReloadLoad(
@@ -16010,6 +16016,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: '手册未载',
     velocity: '937 → 1060 fps',
     pressure: '21,000 → 31,000 CUP',
+    manual: 'Lyman Reloading Handbook 第 49 版',
     source: 'Lyman Reloading Handbook 49th Ed，9mm Luger 章',
   ),
   ReloadLoad(
@@ -16023,6 +16030,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: '手册未载',
     velocity: '2800 → 3200 fps',
     pressure: null,
+    manual: 'Hornady Handbook of Cartridge Reloading 第 9 版',
     source: 'Hornady Handbook 9th Ed，.223 Remington 章，26″ 测试枪管',
   ),
   ReloadLoad(
@@ -16036,6 +16044,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Federal',
     velocity: '2994 → 3259 fps',
     pressure: null,
+    manual: 'Speer Reloading Manual（在线数据页）',
     source: 'Speer Reloading Manual 数据页（reloadingdata.speer.com，.223 Remington Gold Dot 55）',
   ),
   ReloadLoad(
@@ -16049,6 +16058,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Federal',
     velocity: '2955 → 3160 fps',
     pressure: null,
+    manual: 'Speer Reloading Manual（在线数据页）',
     source: 'Speer Reloading Manual 数据页（reloadingdata.speer.com，.223 Remington Gold Dot 55）',
   ),
   ReloadLoad(
@@ -16062,6 +16072,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Federal',
     velocity: '3069 → 3328 fps',
     pressure: null,
+    manual: 'Speer Reloading Manual（在线数据页）',
     source: 'Speer Reloading Manual 数据页（reloadingdata.speer.com，.223 Remington Gold Dot 55）',
   ),
   ReloadLoad(
@@ -16075,6 +16086,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Federal',
     velocity: '2402 → 2665 fps',
     pressure: null,
+    manual: 'Speer Reloading Manual（在线数据页）',
     source: 'Speer Reloading Manual 数据页（reloadingdata.speer.com，.308 Winchester Gold Dot 168）',
   ),
   ReloadLoad(
@@ -16088,6 +16100,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Federal',
     velocity: '2396 → 2660 fps',
     pressure: null,
+    manual: 'Speer Reloading Manual（在线数据页）',
     source: 'Speer Reloading Manual 数据页（reloadingdata.speer.com，.308 Winchester Gold Dot 168）',
   ),
   ReloadLoad(
@@ -16101,6 +16114,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Nosler',
     velocity: '2662 → 2820 fps',
     pressure: null,
+    manual: 'Nosler Reloading Manual（版本未确认）',
     source: 'Nosler Reloading Manual（经 Nosler 论坛官方人员引述），Lilja 24″ 测试枪管',
   ),
   ReloadLoad(
@@ -16114,6 +16128,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Nosler',
     velocity: '2660 → 2820 fps',
     pressure: null,
+    manual: 'Nosler Reloading Manual（版本未确认）',
     source: 'Nosler Reloading Manual（经 Nosler 论坛官方人员引述），Lilja 24″ 测试枪管',
   ),
   ReloadLoad(
@@ -16127,6 +16142,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Federal',
     velocity: '806 → 920 fps',
     pressure: null,
+    manual: 'Speer Reloading Manual（在线数据页）',
     source: 'Speer Reloading Manual 数据页（.45 Automatic，230gr TMJ RN）',
   ),
   ReloadLoad(
@@ -16140,6 +16156,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Federal',
     velocity: '833 → 903 fps',
     pressure: null,
+    manual: 'Speer Reloading Manual（在线数据页）',
     source: 'Speer Reloading Manual 数据页（.45 Automatic，230gr TMJ RN；注：Win 231 与 Hodgdon HP-38 为同一火药的不同品牌包装，Hodgdon 官方口径）',
   ),
   ReloadLoad(
@@ -16153,6 +16170,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Federal',
     velocity: '849 → 914 fps',
     pressure: null,
+    manual: 'Speer Reloading Manual（在线数据页）',
     source: 'Speer Reloading Manual 数据页（.45 Automatic，230gr TMJ RN）',
   ),
   ReloadLoad(
@@ -16166,6 +16184,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Federal Gold Medal 2-3/4″ 塑料靶弹壳（弹托：Federal 12S3）',
     velocity: null,
     pressure: null,
+    manual: '公开资料汇总（非单一手册）',
     source: '公开复装资料汇总的经典 1 1/8 oz 轻靶配方（Federal 系）；Alliant 官方配方表同配方族（Fed 209A + Red Dot + 12S3 系）可交叉核对，惟本条初速/膛压未在公开引述中核对到，故标手册未载',
   ),
   ReloadLoad(
@@ -16179,6 +16198,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Federal',
     velocity: null,
     pressure: null,
+    manual: 'Speer 官网在线数据',
     source: 'Speer 官网在线数据页《.308 Winchester》',
   ),
   ReloadLoad(
@@ -16192,6 +16212,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Hornady',
     velocity: null,
     pressure: null,
+    manual: 'Speer 官网在线数据',
     source: 'Speer 官网在线数据页《6.5 Creedmoor》',
   ),
   ReloadLoad(
@@ -16205,6 +16226,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Hornady',
     velocity: null,
     pressure: null,
+    manual: 'Speer 官网在线数据',
     source: 'Speer 官网在线数据页《6.5 Creedmoor》',
   ),
   ReloadLoad(
@@ -16218,6 +16240,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Hornady',
     velocity: null,
     pressure: null,
+    manual: 'Speer 官网在线数据',
     source: 'Speer 官网在线数据页《6.5 Creedmoor》',
   ),
   ReloadLoad(
@@ -16231,6 +16254,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'R-P',
     velocity: null,
     pressure: null,
+    manual: 'Barnes 手册（版本未确认）',
     source: 'Barnes 官方手册数据页《.300 Winchester Magnum》',
   ),
   ReloadLoad(
@@ -16244,6 +16268,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'R-P',
     velocity: null,
     pressure: null,
+    manual: 'Barnes 手册（版本未确认）',
     source: 'Barnes 官方手册数据页《.300 Winchester Magnum》',
   ),
   ReloadLoad(
@@ -16257,6 +16282,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Lapua',
     velocity: null,
     pressure: null,
+    manual: 'Speer 官网在线数据',
     source: 'Speer 官网在线数据页《.338 Lapua Magnum》',
   ),
   ReloadLoad(
@@ -16270,6 +16296,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Lapua',
     velocity: null,
     pressure: null,
+    manual: 'Speer 官网在线数据',
     source: 'Speer 官网在线数据页《.338 Lapua Magnum》',
   ),
   ReloadLoad(
@@ -16283,6 +16310,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: 'Lapua',
     velocity: null,
     pressure: null,
+    manual: 'Speer 官网在线数据',
     source: 'Speer 官网在线数据页《.338 Lapua Magnum》',
   ),
   ReloadLoad(
@@ -16296,6 +16324,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: '手册未载',
     velocity: null,
     pressure: null,
+    manual: 'Hornady 手册（版本未确认）',
     source: 'Hornady 手册《.300 PRC》数据页',
   ),
   ReloadLoad(
@@ -16309,6 +16338,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: '手册未载',
     velocity: null,
     pressure: null,
+    manual: 'Hornady 手册（版本未确认）',
     source: 'Hornady 手册《.300 PRC》数据页',
   ),
   ReloadLoad(
@@ -16322,6 +16352,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: '手册未载',
     velocity: null,
     pressure: null,
+    manual: 'Hornady 手册（版本未确认）',
     source: 'Hornady 手册《.300 PRC》数据页',
   ),
   ReloadLoad(
@@ -16335,6 +16366,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: '手册未载',
     velocity: null,
     pressure: null,
+    manual: 'Hodgdon Reloading Data Center（在线数据）',
     source: 'Hodgdon Reloading Data Center',
   ),
   ReloadLoad(
@@ -16348,6 +16380,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: '手册未载',
     velocity: null,
     pressure: null,
+    manual: 'Hodgdon Reloading Data Center（在线数据）',
     source: 'Hodgdon Reloading Data Center',
   ),
   ReloadLoad(
@@ -16361,6 +16394,7 @@ const List<ReloadLoad> reloadLoads = [
     brass: '手册未载',
     velocity: null,
     pressure: null,
+    manual: 'Hodgdon Reloading Data Center（在线数据）',
     source: 'Hodgdon Reloading Data Center',
   ),
 ];

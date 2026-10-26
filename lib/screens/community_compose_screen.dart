@@ -136,7 +136,7 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
             onChanged: (_) => _saveDraft(),
             decoration: const InputDecoration(
               hintText: '标题（可选）',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
           ),
           const SizedBox(height: 12),
@@ -163,7 +163,7 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
             maxLines: 12,
             decoration: const InputDecoration(
               hintText: '写点什么……\n话题用 #话题# 的形式，@ID 可以提醒对方',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
           ),
           const SizedBox(height: 8),

@@ -61,6 +61,24 @@ class FirearmsApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: _paper,
         cardColor: Colors.white,
+        // 全局输入框样式：圆角 12、浅底、聚焦铜色边框；
+        // 未显式写 border 的输入框走这里，显式写了方形边框的下面批量改圆角。
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  BorderSide(color: Colors.grey.withValues(alpha: 0.35))),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                  color: Color(0xFFE86A1C), width: 1.5)),
+        ),
         appBarTheme: const AppBarTheme(
           backgroundColor: _paper,
           foregroundColor: _ink,
@@ -91,6 +109,22 @@ class FirearmsApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: _night,
         cardColor: _nightCard,
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: _nightCard,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  BorderSide(color: Colors.grey.withValues(alpha: 0.35))),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                  color: Color(0xFFE86A1C), width: 1.5)),
+        ),
         appBarTheme: const AppBarTheme(
           backgroundColor: _night,
           foregroundColor: _nightInk,

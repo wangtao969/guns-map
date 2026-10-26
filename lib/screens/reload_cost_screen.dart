@@ -124,7 +124,7 @@ class _NumberField extends StatelessWidget {
       onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
-        border: const OutlineInputBorder(),
+        border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
       ),
     );
   }

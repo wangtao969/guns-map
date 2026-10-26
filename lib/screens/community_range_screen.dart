@@ -41,7 +41,7 @@ class CommunityRangeScreen extends StatelessWidget {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: '距离（米）',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 ),
               ),
               const SizedBox(height: 12),
@@ -50,7 +50,7 @@ class CommunityRangeScreen extends StatelessWidget {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: '发数',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 ),
               ),
               const SizedBox(height: 12),
@@ -60,7 +60,7 @@ class CommunityRangeScreen extends StatelessWidget {
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
                   labelText: '分组（厘米，弹着散布）',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 ),
               ),
               const SizedBox(height: 12),
@@ -69,7 +69,7 @@ class CommunityRangeScreen extends StatelessWidget {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: '环数 / 得分（可选）',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 ),
               ),
               const SizedBox(height: 12),
@@ -77,7 +77,7 @@ class CommunityRangeScreen extends StatelessWidget {
                 initialValue: position,
                 decoration: const InputDecoration(
                   labelText: '射击姿势',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 ),
                 items: positions
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
@@ -90,7 +90,7 @@ class CommunityRangeScreen extends StatelessWidget {
                 initialValue: target,
                 decoration: const InputDecoration(
                   labelText: '靶纸类型',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 ),
                 items: targets
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
@@ -103,7 +103,7 @@ class CommunityRangeScreen extends StatelessWidget {
                 controller: ammoCtrl,
                 decoration: const InputDecoration(
                   labelText: '弹药（品牌 / 型号，可选）',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 ),
               ),
               const SizedBox(height: 12),
@@ -114,7 +114,7 @@ class CommunityRangeScreen extends StatelessWidget {
                       controller: weatherCtrl,
                       decoration: const InputDecoration(
                         labelText: '天气（可选）',
-                        border: OutlineInputBorder(),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                       ),
                     ),
                   ),
@@ -124,7 +124,7 @@ class CommunityRangeScreen extends StatelessWidget {
                       controller: windCtrl,
                       decoration: const InputDecoration(
                         labelText: '风速风向（可选）',
-                        border: OutlineInputBorder(),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                       ),
                     ),
                   ),
@@ -135,7 +135,7 @@ class CommunityRangeScreen extends StatelessWidget {
                 controller: noteCtrl,
                 decoration: const InputDecoration(
                   labelText: '备注（可选）',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                 ),
               ),
             ],

@@ -250,7 +250,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
             initialValue: _caliber,
             decoration: const InputDecoration(
               labelText: '口径',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
             items: reloadCalibers
                 .map((c) => DropdownMenuItem(
@@ -263,7 +263,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
             controller: _bulletCtrl,
             decoration: const InputDecoration(
               labelText: '弹头（品牌/重量/型号）',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
           ),
           const SizedBox(height: 8),
@@ -271,7 +271,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
             controller: _powderCtrl,
             decoration: const InputDecoration(
               labelText: '火药（品牌/型号）',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
           ),
           const SizedBox(height: 8),
@@ -282,7 +282,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                   controller: _chargeCtrl,
                   decoration: const InputDecoration(
                     labelText: '装药量（gr）',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
               ),
@@ -292,7 +292,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                   controller: _colCtrl,
                   decoration: const InputDecoration(
                     labelText: '弹长 COL（″）',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
               ),
@@ -303,7 +303,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
             controller: _roundsCtrl,
             decoration: const InputDecoration(
               labelText: '数量（发）',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
           ),
           const SizedBox(height: 8),
@@ -314,7 +314,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                   controller: _primerCtrl,
                   decoration: const InputDecoration(
                     labelText: '底火（品牌/型号）',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
               ),
@@ -324,7 +324,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                   controller: _lotCtrl,
                   decoration: const InputDecoration(
                     labelText: '火药/底火批号',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
               ),
@@ -338,7 +338,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                   controller: _caseBrandCtrl,
                   decoration: const InputDecoration(
                     labelText: '弹壳品牌',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
               ),
@@ -348,7 +348,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                   controller: _caseTimesCtrl,
                   decoration: const InputDecoration(
                     labelText: '弹壳使用次数',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
               ),
@@ -362,7 +362,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                   controller: _velocityCtrl,
                   decoration: const InputDecoration(
                     labelText: '初速（fps）',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
               ),
@@ -372,7 +372,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                   controller: _groupCtrl,
                   decoration: const InputDecoration(
                     labelText: '散布（100 码，″）',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
               ),
@@ -386,7 +386,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                   controller: _firearmCtrl,
                   decoration: const InputDecoration(
                     labelText: '试射枪械',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
               ),
@@ -396,7 +396,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                   controller: _weatherCtrl,
                   decoration: const InputDecoration(
                     labelText: '天气/温度',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
               ),
@@ -408,7 +408,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
             maxLines: 2,
             decoration: const InputDecoration(
               labelText: '备注（批次、试射结果等）',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
           ),
           const SizedBox(height: 8),

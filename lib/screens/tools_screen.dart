@@ -3,7 +3,9 @@ import '../widgets/app_top_bar.dart';
 import 'accessories_screen.dart';
 import 'community_collection_screen.dart';
 import 'gun_compare_screen.dart';
+import 'ammo_inventory_screen.dart';
 import 'load_tools_screen.dart';
+import 'maintenance_screen.dart';
 import 'range_tools_screen.dart';
 import 'reload_cost_screen.dart';
 import 'reloading_screen.dart';
@@ -53,6 +55,25 @@ class ToolsScreen extends StatelessWidget {
               context,
               MaterialPageRoute(
                   builder: (_) => const CommunityCollectionScreen()),
+            ),
+          ),
+          _ToolTile(
+            icon: Icons.inventory_outlined,
+            title: '弹药库存',
+            subtitle: '只记手头现存发数，不用登录，数据只存本机',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const AmmoInventoryScreen()),
+            ),
+          ),
+          _ToolTile(
+            icon: Icons.cleaning_services_outlined,
+            title: '保养记录',
+            subtitle: '清洁与换件记录，记枪名、日期与当时已打发数',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MaintenanceScreen()),
             ),
           ),
           _ToolTile(

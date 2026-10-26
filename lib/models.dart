@@ -182,6 +182,9 @@ class ReloadLoad {
   final String? velocity;
   final String? pressure;
   final String source;
+  // 手册名与版本：单独字段，复装页直接显示；
+  // 查不到版本的不现编，写“版本未确认”或“在线数据”。
+  final String manual;
 
   const ReloadLoad({
     required this.caliber,
@@ -195,5 +198,6 @@ class ReloadLoad {
     this.velocity,
     this.pressure,
     required this.source,
+    this.manual = '',
   });
 }

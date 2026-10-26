@@ -33,7 +33,7 @@ Future<Gun?> showGunPickerDialog(BuildContext context) async {
                   decoration: const InputDecoration(
                     hintText: '搜枪名、厂商、口径',
                     prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
                 const SizedBox(height: 8),
