@@ -2,12 +2,22 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/liquid_glass.dart';
+import '../widgets/liquid_glass_nav.dart';
 
 /// 液态玻璃试验页：先看效果再定是否全 App 推。
 /// 背景故意做得花（渐变 + 色块 + 文字），这样玻璃里的
 /// 放大与高光才看得出来；背景越素，液态感越不明显。
-class LiquidGlassDemoScreen extends StatelessWidget {
+/// 页底悬浮条是 v2 真折射版（片元着色器采样实时背景做边缘折射 +
+/// 色散 + 高光）；页内几块卡片是 v1 矩阵放大版，两版放一起对比。
+class LiquidGlassDemoScreen extends StatefulWidget {
   const LiquidGlassDemoScreen({super.key});
+
+  @override
+  State<LiquidGlassDemoScreen> createState() => _LiquidGlassDemoScreenState();
+}
+
+class _LiquidGlassDemoScreenState extends State<LiquidGlassDemoScreen> {
+  int _tab = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +71,7 @@ class LiquidGlassDemoScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 16 + kToolbarHeight, 16, 110),
             children: [
               const Text(
-                '试验版：下面几块都是真的液态玻璃，不是图片。手指在第一张大卡上划动，高光会跟着走；点按会回弹一下。背景花是为了让你看清玻璃里的放大。',
+                '试验版：页底悬浮条是 v2 真折射版，上下滑列表时看条子边缘——背景会在边缘被弯折、红蓝微微错开，像酷安底栏那样；点图标可切换选中态。页内几块卡片是 v1 矩阵放大版，放一起对比。',
                 style: TextStyle(color: Colors.white, fontSize: 13),
               ),
               const SizedBox(height: 16),
@@ -182,10 +192,26 @@ class LiquidGlassDemoScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               const Text(
-                '说明：手机系统级的逐像素折射 Flutter 原生做不到，这一版是用矩阵放大 + 轻模糊 + 镜面高光逼近的。如果这个感觉对了，下一步再把它推到顶栏、底栏与卡片上；如果觉得还不够像，就不推。',
+                '说明：v1 卡片是矩阵放大 + 轻模糊 + 镜面高光逼近的，边缘没有真折射，所以看起来还是像毛玻璃。v2 底栏改走片元着色器：直接采样底栏后方的实时画面，按圆角轮廓的法线做边缘折射 + 红蓝错位 + 边缘高光，做法和酷安底栏同路（原生是 AGSL，Flutter 这边是 Impeller 着色器）。如果 v2 底栏的感觉对了，下一步再把它推到 App 的悬浮底栏与卡片上；如果还不够像，就不推。',
                 style: TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ],
+          ),
+          // v2 真折射悬浮底栏：滑列表时它后方的背景实时参与折射。
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 18 + MediaQuery.of(context).padding.bottom,
+            child: LiquidGlassNavBar(
+              items: const [
+                Icons.grid_view_rounded,
+                Icons.forum_outlined,
+                Icons.handyman_outlined,
+                Icons.person_outlined,
+              ],
+              selectedIndex: _tab,
+              onTap: (i) => setState(() => _tab = i),
+            ),
           ),
         ],
       ),
