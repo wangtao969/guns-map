@@ -34,7 +34,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
     final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
     final ink = dark ? const Color(0xFFEDE8DF) : const Color(0xFF2E2A24);
-    final cardBg = dark ? const Color(0xFF1E1C19) : Colors.white;
+    final cardBg = dark ? const Color(0xFF0D0D0D) : Colors.white;
     final q = _query.trim().toLowerCase();
     final results = q.isEmpty
         ? <Gun>[]
@@ -101,7 +101,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           child: Icon(Icons.newspaper_outlined,
                               size: 20,
                               color: dark
-                                  ? const Color(0xFF121110)
+                                  ? const Color(0xFF000000)
                                   : Colors.white),
                         ),
                         const SizedBox(width: 12),
@@ -160,7 +160,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           child: Icon(Icons.calendar_today_outlined,
                               size: 20,
                               color: dark
-                                  ? const Color(0xFF121110)
+                                  ? const Color(0xFF000000)
                                   : Colors.white),
                         ),
                         const SizedBox(width: 12),

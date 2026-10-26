@@ -76,7 +76,7 @@ class NewsScreen extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                                 color: Theme.of(context).brightness ==
                                         Brightness.dark
-                                    ? const Color(0xFF121110)
+                                    ? const Color(0xFF000000)
                                     : Colors.white,
                               ),
                             ),

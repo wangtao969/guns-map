@@ -573,7 +573,7 @@ class _CommunityRangeScreenState extends State<CommunityRangeScreen> {
                                           icon: const Icon(
                                               Icons.calculate_outlined,
                                               size: 20),
-                                          tooltip: '用这次成绩算调瞄',
+                                          tooltip: '用这次成绩算散布',
                                           onPressed: () => Navigator.push(
                                             context,
                                             MaterialPageRoute(

@@ -159,12 +159,14 @@ class _CommunityNotificationsScreenState
                 child: TabBarView(
                   controller: _tabCtrl,
                   children: [
-                    _NotificationList(items: mine, grey: grey),
-                    _NotificationList(
-                        items: byKind['system']!, grey: grey),
-                    _NotificationList(
-                        items: byKind['interaction']!, grey: grey),
-                    _NotificationList(items: byKind['dm']!, grey: grey),
+                    RepaintBoundary(child: _NotificationList(items: mine, grey: grey)),
+                    RepaintBoundary(
+                        child: _NotificationList(
+                            items: byKind['system']!, grey: grey)),
+                    RepaintBoundary(
+                        child: _NotificationList(
+                            items: byKind['interaction']!, grey: grey)),
+                    RepaintBoundary(child: _NotificationList(items: byKind['dm']!, grey: grey)),
                   ],
                 ),
               ),

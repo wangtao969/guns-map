@@ -867,7 +867,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                     Icons.edit_outlined,
                                     size: 28,
                                     color: dark
-                                        ? const Color(0xFF121110)
+                                        ? const Color(0xFF000000)
                                         : Colors.white,
                                   ),
                                 ),

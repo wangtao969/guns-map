@@ -24,7 +24,7 @@ class _KnifeListScreenState extends State<KnifeListScreen> {
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
     final ink = dark ? const Color(0xFFEDE8DF) : const Color(0xFF2E2A24);
     final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
-    final cardBg = dark ? const Color(0xFF1E1C19) : Colors.white;
+    final cardBg = dark ? const Color(0xFF0D0D0D) : Colors.white;
     final q = _query.trim().toLowerCase();
     final filtered = knives.where((k) {
       if (_type != '全部' && k.type != _type) return false;

@@ -22,7 +22,7 @@ void main() async {
   runApp(const FirearmsApp());
 }
 
-/// 白天米白、夜晚黑底白字，跟随系统自动切换。
+/// 白天米白、夜晚纯黑（OLED：大面积像素不发光，更省电），跟随系统自动切换。
 class FirearmsApp extends StatelessWidget {
   const FirearmsApp({super.key});
 
@@ -30,8 +30,8 @@ class FirearmsApp extends StatelessWidget {
   static const _bronzeLight = Color(0xFFC9A86A);
   static const _paper = Color(0xFFF7F2E9);
   static const _ink = Color(0xFF2E2A24);
-  static const _night = Color(0xFF121110);
-  static const _nightCard = Color(0xFF1E1C19);
+  static const _night = Color(0xFF000000);
+  static const _nightCard = Color(0xFF0D0D0D);
   static const _nightInk = Color(0xFFEDE8DF);
 
   @override
@@ -106,8 +106,11 @@ class FirearmsApp extends StatelessWidget {
         colorScheme: const ColorScheme.dark(
           primary: _bronzeLight,
           secondary: Color(0xFF8C7A5A),
+          surface: Colors.black,
         ),
         scaffoldBackgroundColor: _night,
+        canvasColor: Colors.black,
+        dialogTheme: const DialogThemeData(backgroundColor: _nightCard),
         cardColor: _nightCard,
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
@@ -253,8 +256,8 @@ class _FloatingNavBar extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: dark
                           ? [
-                              const Color(0xFF2E2A26).withValues(alpha: 0.62),
-                              const Color(0xFF1E1C19).withValues(alpha: 0.42),
+                              const Color(0xFF000000).withValues(alpha: 0.62),
+                              const Color(0xFF0D0D0D).withValues(alpha: 0.42),
                             ]
                           : [
                               Colors.white.withValues(alpha: 0.58),
@@ -327,7 +330,7 @@ class _NavItem extends StatelessWidget {
             selected ? activeIcon : icon,
             size: 26,
             color: selected
-                ? (dark ? const Color(0xFF121110) : Colors.white)
+                ? (dark ? const Color(0xFF000000) : Colors.white)
                 : grey,
           ),
         ),

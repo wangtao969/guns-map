@@ -17,7 +17,7 @@ import 'admin_home_screen.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '2.1.9';
+const String appVersion = '2.1.10';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -68,7 +68,7 @@ class SettingsScreen extends StatelessWidget {
                   child: Text('v$appVersion',
                       style: TextStyle(
                           color: dark
-                              ? const Color(0xFF121110)
+                              ? const Color(0xFF000000)
                               : Colors.white,
                           fontSize: 12,
                           fontWeight: FontWeight.bold)),
@@ -708,7 +708,7 @@ class _QuickActionsCardState extends State<_QuickActionsCard> {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Card(
-      color: dark ? const Color(0xFF3A2E1E) : const Color(0xFFF3E9D8),
+      color: dark ? const Color(0xFF0D0D0D) : const Color(0xFFF3E9D8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(

@@ -12,7 +12,7 @@ class _GlassBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final tint = dark
-        ? const Color(0xFF121110).withValues(alpha: 0.72)
+        ? const Color(0xFF000000).withValues(alpha: 0.72)
         : const Color(0xFFF7F2E9).withValues(alpha: 0.72);
     return ClipRect(
       child: BackdropFilter(
@@ -37,7 +37,7 @@ class OrdnanceAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final ink = dark ? const Color(0xFFEDE8DF) : const Color(0xFF2E2A24);
-    final circleBg = dark ? const Color(0xFF1E1C19) : Colors.white;
+    final circleBg = dark ? const Color(0xFF0D0D0D) : Colors.white;
     return AppBar(
       centerTitle: false,
       backgroundColor: Colors.transparent,

@@ -274,7 +274,7 @@ class _MenuTile extends StatelessWidget {
       height: 54,
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: dark ? const Color(0xFF24211D) : Colors.white,
+        color: dark ? const Color(0xFF0D0D0D) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
             color: dark

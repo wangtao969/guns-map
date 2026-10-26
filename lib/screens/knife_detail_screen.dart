@@ -29,7 +29,9 @@ class KnifeDetailScreen extends StatelessWidget {
             height: 180,
             padding: const EdgeInsets.symmetric(horizontal: 32),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.black
+                  : const Color(0xFF1E1E1E),
               borderRadius: BorderRadius.circular(16),
             ),
             child: KnifeSilhouette(type: knife.type, color: bronze),

@@ -58,7 +58,9 @@ class _GunDetailScreenState extends State<GunDetailScreen>
           Container(
             height: 220,
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.black
+                  : const Color(0xFF1E1E1E),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Stack(
@@ -199,7 +201,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
               ),
             ),
             icon: const Icon(Icons.book_outlined, size: 18),
-            label: const Text('射击数据本'),
+            label: const Text('DOPE数据本'),
           ),
           const SizedBox(height: 12),
           Text(tr('intro'),

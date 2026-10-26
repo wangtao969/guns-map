@@ -444,7 +444,8 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                   controller: _tabs,
                   children: [
                     // 帖子
-                    myPosts.isEmpty
+                    RepaintBoundary(
+                      child: myPosts.isEmpty
                         ? Center(
                             child: Text('还没有发过帖子',
                                 style: TextStyle(color: grey)))
@@ -480,9 +481,10 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                               ),
                               );
                             },
-                          ),
+                          )),
                     // 收藏
-                    !canSeeFavorites
+                    RepaintBoundary(
+                      child: !canSeeFavorites
                         ? Center(
                             child: Text('对方设置了收藏不对外可见',
                                 style: TextStyle(color: grey)))
@@ -524,11 +526,12 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                                   ),
                                   );
                                 },
-                              ),
+                              )),
                     // 勋章墙
-                    _medalWall(account, grey),
+                    RepaintBoundary(child: _medalWall(account, grey)),
                     // 历史：我的评论记录
-                    myComments.isEmpty
+                    RepaintBoundary(
+                      child: myComments.isEmpty
                         ? Center(
                             child: Text('还没有评论记录',
                                 style: TextStyle(color: grey)))
@@ -544,7 +547,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                                 onTap: () => _openPost(entry.post),
                               );
                             },
-                          ),
+                          )),
                   ],
                 ),
               ),

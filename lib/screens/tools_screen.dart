@@ -7,6 +7,9 @@ import 'load_tools_screen.dart';
 import 'maintenance_screen.dart';
 import 'range_tools_screen.dart';
 import 'reload_cost_screen.dart';
+import 'gun_picker_dialog.dart';
+import 'dope_screen.dart';
+import 'liquid_glass_demo_screen.dart';
 import 'reloading_screen.dart';
 
 /// 工具 Tab：底部 Tab = 工具，板块 = 讨论，分工定死。
@@ -131,10 +134,33 @@ class _ToolsScreenState extends State<ToolsScreen> {
           _ToolTile(
             icon: Icons.gps_fixed,
             title: '靶场换算',
-            subtitle: '散布换算 MOA/密位、瞄具调节格数，只算你输入的数',
+            subtitle: '散布换算 MOA/密位与速查表，只算你输入的数；归零调瞄去 DOPE数据本',
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const RangeToolsScreen()),
+            ),
+          ),
+          _ToolTile(
+            icon: Icons.book_outlined,
+            title: 'DOPE数据本',
+            subtitle: '归零助手 + 每把枪的归零卡、分组趋势与常用弹药，先选枪再看',
+            onTap: () async {
+              final gun = await showGunPickerDialog(context);
+              if (gun == null || !context.mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => DopeScreen(gun: gun)),
+              );
+            },
+          ),
+          _ToolTile(
+            icon: Icons.bubble_chart_outlined,
+            title: '液态玻璃预览',
+            subtitle: '试验：苹果风格液态玻璃，先看效果再定是否全 App 推',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const LiquidGlassDemoScreen()),
             ),
           ),
           _ToolTile(

@@ -3,15 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../tools_units.dart';
 import '../widgets/app_top_bar.dart';
+import 'dope_screen.dart';
+import 'gun_picker_dialog.dart';
 
 /// 靶场换算：只算你输入的数，不画弹道、不给装药建议。
 /// 公式（公开常用值）：
 /// - 1 MOA 在 100 米 ≈ 2.909 厘米；在 100 码 = 1.047 英寸；
 /// - 1 密位在 100 米 = 10 厘米；
 /// - 常见瞄具每格：1/4 MOA、1/2 MOA、1 MOA、0.1 密位。
-/// 主线是归零调瞄：填距离与弹着中心偏移，直接出“往哪边拧几格”；
-/// 方向按光学瞄具通用规则（弹着往哪偏就往哪边拧），机械瞄具
-/// 可能相反，一律以瞄具说明书为准；格数四舍五入到整格。
+/// 归零助手已并入 DOPE数据本：本页只留散布换算与速查表，
+/// 归零调瞄请去工具页“DOPE数据本”里算、同一页直接记卡。
 class RangeToolsScreen extends StatefulWidget {
   /// 带入值一律用公制原单位（米、厘米），页内按单位制换算显示。
   final double? initialDistM;
@@ -33,11 +34,6 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
   final _groupCtrl = TextEditingController();
   final _distCtrl = TextEditingController(text: '100');
   final _moaCtrl = TextEditingController();
-  final _hDevCtrl = TextEditingController();
-  final _vDevCtrl = TextEditingController();
-  String _clickUnit = '1/4 MOA';
-  String _hDir = '偏左';
-  String _vDir = '偏高';
 
   void _onUnitsChanged() {
     if (mounted) setState(() {});
@@ -72,14 +68,6 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
           set(_groupCtrl, 'group');
           set(_distCtrl, 'dist');
           set(_moaCtrl, 'moa');
-          set(_hDevCtrl, 'hDev');
-          set(_vDevCtrl, 'vDev');
-          final u = m['clickUnit'] as String?;
-          if (u != null) _clickUnit = u;
-          final h = m['hDir'] as String?;
-          if (h != null) _hDir = h;
-          final v = m['vDir'] as String?;
-          if (v != null) _vDir = v;
         });
       }
     } catch (_) {}
@@ -107,11 +95,6 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
           'group': _groupCtrl.text,
           'dist': _distCtrl.text,
           'moa': _moaCtrl.text,
-          'hDev': _hDevCtrl.text,
-          'vDev': _vDevCtrl.text,
-          'clickUnit': _clickUnit,
-          'hDir': _hDir,
-          'vDir': _vDir,
         }),
       });
     } catch (_) {}
@@ -123,8 +106,6 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
     _groupCtrl.dispose();
     _distCtrl.dispose();
     _moaCtrl.dispose();
-    _hDevCtrl.dispose();
-    _vDevCtrl.dispose();
     super.dispose();
   }
 
@@ -148,65 +129,11 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
         (metric ? 1 : 0.9144);
     final distInput = double.tryParse(_distCtrl.text) ?? 0;
     final moa = double.tryParse(_moaCtrl.text) ?? 0;
-    final hDev = (double.tryParse(_hDevCtrl.text) ?? 0) *
-        (metric ? 1 : 2.54);
-    final vDev = (double.tryParse(_vDevCtrl.text) ?? 0) *
-        (metric ? 1 : 2.54);
 
     // 1 MOA 在 dist 米处 ≈ dist * 0.02909 厘米；1 密位 = dist * 0.1 厘米。
     final moaValue = distM > 0 ? groupCm / (distM * 0.02909) : 0.0;
     final mradValue = distM > 0 ? groupCm / (distM * 0.1) : 0.0;
     final moaGroupCm = distM > 0 ? moa * distM * 0.02909 : 0.0;
-
-    double perClickMoa;
-    double perClickMrad;
-    if (_clickUnit == '1/4 MOA') {
-      perClickMoa = 0.25;
-      perClickMrad = 0;
-    } else if (_clickUnit == '1/2 MOA') {
-      perClickMoa = 0.5;
-      perClickMrad = 0;
-    } else if (_clickUnit == '1 MOA') {
-      perClickMoa = 1.0;
-      perClickMrad = 0;
-    } else {
-      perClickMoa = 0;
-      perClickMrad = 0.1;
-    }
-    final perClickCm = distM > 0
-        ? (perClickMoa > 0
-            ? perClickMoa * distM * 0.02909
-            : perClickMrad * distM * 0.1)
-        : 0.0;
-    double clicks(double devCm) {
-      if (distM <= 0 || perClickCm <= 0) return 0;
-      return devCm / perClickCm;
-    }
-
-    final hExact = clicks(hDev);
-    final vExact = clicks(vDev);
-    final hRounded = hExact.round();
-    final vRounded = vExact.round();
-    // 方向：光学瞄具通用规则是弹着往哪偏就往哪边拧。
-    final hTurn = _hDir == '偏左' ? '向右' : '向左';
-    final vTurn = _vDir == '偏高' ? '向下' : '向上';
-
-    Widget dirChips(String value, List<String> options,
-        ValueChanged<String> onPick) {
-      return Wrap(
-        spacing: 6,
-        children: options
-            .map((o) => ChoiceChip(
-                  label: Text(o),
-                  selected: value == o,
-                  onSelected: (_) {
-                    onPick(o);
-                    _save();
-                  },
-                ))
-            .toList(),
-      );
-    }
 
     return ValueListenableBuilder<String>(
       valueListenable: unitSystemNotifier,
@@ -215,96 +142,36 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('只算你输入的数，不画弹道、不给装药建议；调节方向以瞄具说明书为准。',
+          const Text('只算你输入的数，不画弹道、不给装药建议。',
               style: TextStyle(color: Colors.grey, fontSize: 12)),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.book_outlined),
+              title: const Text('归零助手已并入 DOPE数据本'),
+              subtitle: const Text('选枪后在同一页算格数、直接记归零卡'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                final gun = await showGunPickerDialog(context);
+                if (gun == null || !context.mounted) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => DopeScreen(gun: gun)),
+                );
+              },
+            ),
+          ),
           if (widget.initialLabel != null) ...[
             const SizedBox(height: 12),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Text('已从 ${widget.initialLabel} 带入距离与散布，偏移请按靶纸实测填。',
+                child: Text('已从 ${widget.initialLabel} 带入距离与散布。',
                     style: const TextStyle(fontSize: 13)),
               ),
             ),
           ],
           const SizedBox(height: 16),
-          const Text('归零助手',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          _NumberField(
-              controller: _distCtrl,
-              label: metric ? '距离（米）' : '距离（码）',
-              onChanged: (_) { setState(() {}); _save(); }),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            children: ['50', '100', '200', '300']
-                .map((d) => ActionChip(
-                      label: Text('$d ${metric ? '米' : '码'}'),
-                      onPressed: () {
-                        setState(() => _distCtrl.text = d);
-                        _save();
-                      },
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 12),
-          const Text('弹着中心水平偏移',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
-          dirChips(_hDir, const ['偏左', '偏右'],
-              (v) => setState(() => _hDir = v)),
-          const SizedBox(height: 8),
-          _NumberField(
-              controller: _hDevCtrl,
-              label: metric ? '偏离靶心多少厘米' : '偏离靶心多少英寸',
-              onChanged: (_) { setState(() {}); _save(); }),
-          const SizedBox(height: 12),
-          const Text('弹着中心垂直偏移',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
-          dirChips(_vDir, const ['偏高', '偏低'],
-              (v) => setState(() => _vDir = v)),
-          const SizedBox(height: 8),
-          _NumberField(
-              controller: _vDevCtrl,
-              label: metric ? '偏离靶心多少厘米' : '偏离靶心多少英寸',
-              onChanged: (_) { setState(() {}); _save(); }),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Text('每格调节量：'),
-              const SizedBox(width: 8),
-              DropdownButton<String>(
-                value: _clickUnit,
-                items: const [
-                  DropdownMenuItem(value: '1/4 MOA', child: Text('1/4 MOA')),
-                  DropdownMenuItem(value: '1/2 MOA', child: Text('1/2 MOA')),
-                  DropdownMenuItem(value: '1 MOA', child: Text('1 MOA')),
-                  DropdownMenuItem(value: '0.1 密位', child: Text('0.1 密位')),
-                ],
-                onChanged: (v) {
-                  if (v != null) { setState(() => _clickUnit = v); _save(); }
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (distM > 0 && (hDev > 0 || vDev > 0)) ...[
-            _ResultLine(
-                '${hDev > 0 ? '$hTurn拧 $hRounded 格' : ''}${hDev > 0 && vDev > 0 ? '，' : ''}${vDev > 0 ? '$vTurn拧 $vRounded 格' : ''}（$_clickUnit/格，已四舍五入）'),
-            if (hDev > 0 && (hExact - hRounded).abs() > 0.05)
-              Text('水平拧完还差约 ${_fmt((hExact - hRounded).abs() * perClickCm)} 厘米，以实测为准。',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            if (vDev > 0 && (vExact - vRounded).abs() > 0.05)
-              Text('垂直拧完还差约 ${_fmt((vExact - vRounded).abs() * perClickCm)} 厘米，以实测为准。',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            const Text('方向按光学瞄具通用规则：弹着往哪偏就往哪边拧；机械瞄具可能相反，以瞄具说明书为准。',
-                style: TextStyle(color: Colors.grey, fontSize: 12)),
-          ] else
-            const Text('填入距离与中心偏移后出结果',
-                style: TextStyle(color: Colors.grey, fontSize: 12)),
-          const SizedBox(height: 20),
           const Text('散布换算',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),

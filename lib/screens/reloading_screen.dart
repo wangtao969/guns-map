@@ -679,7 +679,7 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
           const SizedBox(height: 16),
           Card(
             color: dark
-                ? const Color(0xFF3A2E1E)
+                ? const Color(0xFF0D0D0D)
                 : const Color(0xFFF3E9D8),
             child: Padding(
               padding: const EdgeInsets.all(12),

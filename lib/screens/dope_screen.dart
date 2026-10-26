@@ -3,10 +3,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../community_store.dart';
+import '../data.dart';
 import '../models.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/glass_dialog.dart';
+import '../widgets/zero_assistant_card.dart';
+import 'ammo_inventory_screen.dart';
 import 'maintenance_screen.dart';
 
 /// 单枪射击数据本（DOPE）：归零卡 + 该枪靶场成绩趋势 + 常用弹药 +
@@ -122,81 +125,248 @@ class _DopeScreenState extends State<DopeScreen> {
     } catch (_) {}
   }
 
-  Future<void> _addZero() async {
-    final distCtrl = TextEditingController(text: '100');
-    final ammoCtrl = TextEditingController();
-    final clicksCtrl = TextEditingController();
-    final noteCtrl = TextEditingController();
+  /// 归零卡填写：距离与弹药点选、调节方向+格数步进、日期可改；
+  /// 卡片点按进同一框改，旧自由文本调节串解析不了的原样保留。
+  Future<void> _editZero({
+    _ZeroRecord? existing,
+    int? initialDistance,
+    String? initialHDir,
+    int? initialHClicks,
+    String? initialVDir,
+    int? initialVClicks,
+  }) async {
+    // 弹药点选：该枪成绩用过的弹 + 同口径库存名 + 口径常用弹，去重取 8。
+    final ammoChips = <String>[];
+    void addChip(String v) {
+      final t = v.trim();
+      if (t.isNotEmpty && !ammoChips.contains(t)) ammoChips.add(t);
+    }
+
+    final account = communityStore.current;
+    for (final sc in account?.rangeScores ?? []) {
+      if (sc.gunName == widget.gun.name) addChip(sc.ammo);
+    }
+    try {
+      final items = await loadAmmoItems();
+      for (final it in items) {
+        if (it.caliber == widget.gun.caliber) addChip(it.name);
+      }
+    } catch (_) {}
+    for (final c in caliberInfos) {
+      if (c.caliber == widget.gun.caliber) {
+        for (final b in c.bullets) addChip(b);
+      }
+    }
+    final chips = ammoChips.take(8).toList();
+
+    // 旧调节串回填方向与格数；解析不了的旧串留着不丢。
+    var hDir = '不动';
+    var hClicks = 0;
+    var vDir = '不动';
+    var vClicks = 0;
+    var legacyClicks = '';
+    final oldClicks = existing?.clicks ?? '';
+    if (oldClicks.isNotEmpty) {
+      final hm = RegExp(r'水平向(左|右)\s*(\d+)\s*格').firstMatch(oldClicks);
+      final vm = RegExp(r'垂直向(上|下)\s*(\d+)\s*格').firstMatch(oldClicks);
+      if (hm != null) {
+        hDir = '向${hm.group(1)}';
+        hClicks = int.tryParse(hm.group(2)!) ?? 0;
+      }
+      if (vm != null) {
+        vDir = '向${vm.group(1)}';
+        vClicks = int.tryParse(vm.group(2)!) ?? 0;
+      }
+      if (hm == null && vm == null) legacyClicks = oldClicks;
+    }
+    // 助手带入：新卡直接用算出的距离与格数，不用再手填一遍。
+    if (existing == null) {
+      if (initialHDir != null) hDir = initialHDir;
+      if (initialHClicks != null) hClicks = initialHClicks;
+      if (initialVDir != null) vDir = initialVDir;
+      if (initialVClicks != null) vClicks = initialVClicks;
+    }
+    final now = DateTime.now();
+    final today =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final distCtrl = TextEditingController(
+        text: '${existing?.distance ?? initialDistance ?? 100}');
+    final ammoCtrl = TextEditingController(text: existing?.ammo ?? '');
+    final noteCtrl = TextEditingController(text: existing?.note ?? '');
+    var date = existing?.date ?? today;
+
+    Widget dirRow(
+      String label,
+      List<String> options,
+      String dir,
+      int clicks,
+      void Function(String) onDir,
+      void Function(int) onClicks,
+    ) {
+      return Row(
+        children: [
+          SizedBox(width: 40, child: Text(label)),
+          for (final o in options)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: ChoiceChip(
+                label: Text(o, style: const TextStyle(fontSize: 12)),
+                selected: dir == o,
+                onSelected: (_) => onDir(o),
+              ),
+            ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.remove, size: 18),
+            onPressed: clicks > 0 ? () => onClicks(clicks - 1) : null,
+          ),
+          Text('$clicks 格', style: const TextStyle(fontSize: 13)),
+          IconButton(
+            icon: const Icon(Icons.add, size: 18),
+            onPressed: () => onClicks(clicks + 1),
+          ),
+        ],
+      );
+    }
+
     final saved = await showDialog<bool>(
       context: context,
-      builder: (ctx) => GlassDialog(
-        title: '记一张归零卡',
-        subtitle: widget.gun.name,
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: distCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: '归零距离（米）',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => GlassDialog(
+          title: existing == null ? '记一张归零卡' : '改归零卡',
+          subtitle: widget.gun.name,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: distCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: '归零距离（米）',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ammoCtrl,
-              decoration: const InputDecoration(
-                labelText: '用弹（可选）',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12))),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                children: [
+                  for (final d in [50, 100, 200, 300])
+                    ActionChip(
+                      label: Text('$d 米'),
+                      onPressed: () =>
+                          setDialogState(() => distCtrl.text = '$d'),
+                    ),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: clicksCtrl,
-              decoration: const InputDecoration(
-                labelText: '瞄具调节（可选，如：右 4 格、上 2 格）',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12))),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ammoCtrl,
+                decoration: const InputDecoration(
+                  labelText: '用弹（可选，点下面 chips 快填）',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: noteCtrl,
-              decoration: const InputDecoration(
-                labelText: '备注（可选）',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12))),
+              if (chips.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final c in chips)
+                      ActionChip(
+                        label: Text(c),
+                        onPressed: () =>
+                            setDialogState(() => ammoCtrl.text = c),
+                      ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 12),
+              const Text('瞄具调节（拧了几格，不动就不用填格数）',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              dirRow('水平', ['不动', '向左', '向右'], hDir, hClicks,
+                  (v) => setDialogState(() => hDir = v),
+                  (v) => setDialogState(() => hClicks = v)),
+              dirRow('垂直', ['不动', '向上', '向下'], vDir, vClicks,
+                  (v) => setDialogState(() => vDir = v),
+                  (v) => setDialogState(() => vClicks = v)),
+              if (legacyClicks.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text('原调节记录：$legacyClicks（重新选会覆盖）',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Text('日期：$date'),
+                  TextButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: DateTime.tryParse(date) ?? now,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => date =
+                            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}');
+                      }
+                    },
+                    child: const Text('改日期'),
+                  ),
+                ],
               ),
-            ),
+              const SizedBox(height: 4),
+              TextField(
+                controller: noteCtrl,
+                decoration: const InputDecoration(
+                  labelText: '备注（可选）',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            glassCancelButton(ctx, '取消'),
+            glassPrimaryButton(ctx, '保存', popTrue: true),
           ],
         ),
-        actions: [
-          glassCancelButton(ctx, '取消'),
-          glassPrimaryButton(ctx, '保存', popTrue: true),
-        ],
       ),
     );
     if (saved == true && mounted) {
-      final now = DateTime.now();
-      final date =
-          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final parts = <String>[];
+      if (hDir != '不动' && hClicks > 0) parts.add('水平$hDir $hClicks 格');
+      if (vDir != '不动' && vClicks > 0) parts.add('垂直$vDir $vClicks 格');
+      var clicks = parts.join(' · ');
+      if (clicks.isEmpty && legacyClicks.isNotEmpty) clicks = legacyClicks;
+      final rec = _ZeroRecord(
+        gunName: widget.gun.name,
+        distance: int.tryParse(distCtrl.text) ?? 100,
+        ammo: ammoCtrl.text.trim(),
+        clicks: clicks,
+        note: noteCtrl.text.trim(),
+        date: date,
+      );
       setState(() {
-        _zeros.insert(
-            0,
-            _ZeroRecord(
-              gunName: widget.gun.name,
-              distance: int.tryParse(distCtrl.text) ?? 100,
-              ammo: ammoCtrl.text.trim(),
-              clicks: clicksCtrl.text.trim(),
-              note: noteCtrl.text.trim(),
-              date: date,
-            ));
+        if (existing == null) {
+          _zeros.insert(0, rec);
+        } else {
+          final i = _zeros.indexOf(existing);
+          if (i >= 0) {
+            _zeros[i] = rec;
+          } else {
+            _zeros.insert(0, rec);
+          }
+        }
       });
       await _saveZeros();
-      showAppToast(context, '归零卡已记下');
+      showAppToast(context, existing == null ? '归零卡已记下' : '归零卡已修改');
     }
   }
 
@@ -225,7 +395,7 @@ class _DopeScreenState extends State<DopeScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      appBar: SubPageAppBar(title: '${gun.name} · 射击数据本'),
+      appBar: SubPageAppBar(title: '${gun.name} · DOPE数据本'),
       body: SafeArea(
         top: true,
         bottom: false,
@@ -235,6 +405,16 @@ class _DopeScreenState extends State<DopeScreen> {
             Text(gun.vendor.isNotEmpty ? '${gun.vendor} · ${gun.caliber}' : gun.caliber,
                 style: TextStyle(color: grey, fontSize: 13)),
             const SizedBox(height: 16),
+            ZeroAssistantCard(
+              onRecord: (r) => _editZero(
+                initialDistance: r.distanceM,
+                initialHDir: r.hDir,
+                initialHClicks: r.hClicks,
+                initialVDir: r.vDir,
+                initialVClicks: r.vClicks,
+              ),
+            ),
+            const SizedBox(height: 16),
             // 归零卡
             Row(
               children: [
@@ -243,7 +423,7 @@ class _DopeScreenState extends State<DopeScreen> {
                         TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: _addZero,
+                  onPressed: () => _editZero(),
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('记一张'),
                 ),
@@ -252,7 +432,10 @@ class _DopeScreenState extends State<DopeScreen> {
             const SizedBox(height: 4),
             if (_zeros.isEmpty)
               Text('还没记过归零卡：归零距离、用弹、瞄具调节记下来，下次换场子不用重摸。',
-                  style: TextStyle(color: grey, fontSize: 13)),
+                  style: TextStyle(color: grey, fontSize: 13))
+            else
+              Text('点卡片可修改，垃圾桶是删除。',
+                  style: TextStyle(color: grey, fontSize: 12)),
             for (final z in _zeros)
               Card(
                 margin: const EdgeInsets.only(bottom: 6),
@@ -265,6 +448,7 @@ class _DopeScreenState extends State<DopeScreen> {
                         if (z.note.isNotEmpty) z.note,
                       ].join(' · '),
                       style: TextStyle(color: grey, fontSize: 12)),
+                  onTap: () => _editZero(existing: z),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline, size: 20),
                     onPressed: () async {
