@@ -6,12 +6,22 @@ import '../widgets/app_top_bar.dart';
 
 /// 靶场换算：只算你输入的数，不画弹道、不给装药建议。
 /// 公式（公开常用值）：
-/// - 1 MOA 在 100 码 = 1.047 英寸；在 100 米 ≈ 2.909 厘米；
+/// - 1 MOA 在 100 米 ≈ 2.909 厘米；在 100 码 = 1.047 英寸；
 /// - 1 密位在 100 米 = 10 厘米；
 /// - 常见瞄具每格：1/4 MOA、1/2 MOA、1 MOA、0.1 密位。
-/// 调节方向以瞄具说明书为准，本页只算格数。
+/// 主线是归零调瞄：填距离与弹着中心偏移，直接出“往哪边拧几格”；
+/// 方向按光学瞄具通用规则（弹着往哪偏就往哪边拧），机械瞄具
+/// 可能相反，一律以瞄具说明书为准；格数四舍五入到整格。
 class RangeToolsScreen extends StatefulWidget {
-  const RangeToolsScreen({super.key});
+  /// 带入值一律用公制原单位（米、厘米），页内按单位制换算显示。
+  final double? initialDistM;
+  final double? initialGroupCm;
+  final String? initialLabel;
+  const RangeToolsScreen(
+      {super.key,
+      this.initialDistM,
+      this.initialGroupCm,
+      this.initialLabel});
 
   @override
   State<RangeToolsScreen> createState() => _RangeToolsScreenState();
@@ -26,6 +36,8 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
   final _hDevCtrl = TextEditingController();
   final _vDevCtrl = TextEditingController();
   String _clickUnit = '1/4 MOA';
+  String _hDir = '偏左';
+  String _vDir = '偏高';
 
   void _onUnitsChanged() {
     if (mounted) setState(() {});
@@ -34,9 +46,15 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
   @override
   void initState() {
     super.initState();
-    loadUnitSystem();
     unitSystemNotifier.addListener(_onUnitsChanged);
-    _load();
+    _init();
+  }
+
+  Future<void> _init() async {
+    await loadUnitSystem();
+    if (!mounted) return;
+    setState(() {});
+    await _load();
   }
 
   Future<void> _load() async {
@@ -44,22 +62,41 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
       final raw = await _prefsChannel
           .invokeMethod<String>('getString', {'key': _prefsKey})
           .timeout(const Duration(seconds: 2));
-      if (raw == null || raw.isEmpty || !mounted) return;
-      final m = jsonDecode(raw) as Map<String, dynamic>;
-      setState(() {
-        void set(TextEditingController c, String k) {
-          final v = m[k] as String?;
-          if (v != null) c.text = v;
-        }
-        set(_groupCtrl, 'group');
-        set(_distCtrl, 'dist');
-        set(_moaCtrl, 'moa');
-        set(_hDevCtrl, 'hDev');
-        set(_vDevCtrl, 'vDev');
-        final u = m['clickUnit'] as String?;
-        if (u != null) _clickUnit = u;
-      });
+      if (raw != null && raw.isNotEmpty && mounted) {
+        final m = jsonDecode(raw) as Map<String, dynamic>;
+        setState(() {
+          void set(TextEditingController c, String k) {
+            final v = m[k] as String?;
+            if (v != null) c.text = v;
+          }
+          set(_groupCtrl, 'group');
+          set(_distCtrl, 'dist');
+          set(_moaCtrl, 'moa');
+          set(_hDevCtrl, 'hDev');
+          set(_vDevCtrl, 'vDev');
+          final u = m['clickUnit'] as String?;
+          if (u != null) _clickUnit = u;
+          final h = m['hDir'] as String?;
+          if (h != null) _hDir = h;
+          final v = m['vDir'] as String?;
+          if (v != null) _vDir = v;
+        });
+      }
     } catch (_) {}
+    if (!mounted) return;
+    final metric = isMetricUnits;
+    final d = widget.initialDistM;
+    final g = widget.initialGroupCm;
+    if (d == null && g == null) return;
+    setState(() {
+      if (d != null) {
+        _distCtrl.text = metric ? _fmt(d) : _fmt(d / 0.9144);
+      }
+      if (g != null) {
+        _groupCtrl.text = metric ? _fmt(g) : _fmt(g / 2.54);
+      }
+    });
+    _save();
   }
 
   void _save() {
@@ -73,6 +110,8 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
           'hDev': _hDevCtrl.text,
           'vDev': _vDevCtrl.text,
           'clickUnit': _clickUnit,
+          'hDir': _hDir,
+          'vDir': _vDir,
         }),
       });
     } catch (_) {}
@@ -134,16 +173,40 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
       perClickMoa = 0;
       perClickMrad = 0.1;
     }
-    final hClicks = distM > 0
+    final perClickCm = distM > 0
         ? (perClickMoa > 0
-            ? (hDev / (distM * 0.02909)) / perClickMoa
-            : (hDev / (distM * 0.1)) / perClickMrad)
+            ? perClickMoa * distM * 0.02909
+            : perClickMrad * distM * 0.1)
         : 0.0;
-    final vClicks = distM > 0
-        ? (perClickMoa > 0
-            ? (vDev / (distM * 0.02909)) / perClickMoa
-            : (vDev / (distM * 0.1)) / perClickMrad)
-        : 0.0;
+    double clicks(double devCm) {
+      if (distM <= 0 || perClickCm <= 0) return 0;
+      return devCm / perClickCm;
+    }
+
+    final hExact = clicks(hDev);
+    final vExact = clicks(vDev);
+    final hRounded = hExact.round();
+    final vRounded = vExact.round();
+    // 方向：光学瞄具通用规则是弹着往哪偏就往哪边拧。
+    final hTurn = _hDir == '偏左' ? '向右' : '向左';
+    final vTurn = _vDir == '偏高' ? '向下' : '向上';
+
+    Widget dirChips(String value, List<String> options,
+        ValueChanged<String> onPick) {
+      return Wrap(
+        spacing: 6,
+        children: options
+            .map((o) => ChoiceChip(
+                  label: Text(o),
+                  selected: value == o,
+                  onSelected: (_) {
+                    onPick(o);
+                    _save();
+                  },
+                ))
+            .toList(),
+      );
+    }
 
     return ValueListenableBuilder<String>(
       valueListenable: unitSystemNotifier,
@@ -154,40 +217,60 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
         children: [
           const Text('只算你输入的数，不画弹道、不给装药建议；调节方向以瞄具说明书为准。',
               style: TextStyle(color: Colors.grey, fontSize: 12)),
+          if (widget.initialLabel != null) ...[
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text('已从 ${widget.initialLabel} 带入距离与散布，偏移请按靶纸实测填。',
+                    style: const TextStyle(fontSize: 13)),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
-          const Text('散布换算',
+          const Text('归零助手',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          _NumberField(
-              controller: _groupCtrl,
-              label: metric ? '散布（厘米，取最远两发中心距）' : '散布（英寸，取最远两发中心距）',
-              onChanged: (_) { setState(() {}); _save(); }),
           const SizedBox(height: 8),
           _NumberField(
               controller: _distCtrl,
               label: metric ? '距离（米）' : '距离（码）',
               onChanged: (_) { setState(() {}); _save(); }),
-          if (groupCm > 0 && distM > 0) ...[
-            _ResultLine(
-                '散布 = ${_fmt(moaValue)} MOA（${_fmt(mradValue)} 密位）'),
-            Text('1 MOA 在该距离 ≈ ${_fmt(distM * 0.02909)} 厘米；1 密位 ≈ ${_fmt(distM * 0.1)} 厘米。',
-                style: TextStyle(color: Colors.grey, fontSize: 12)),
-          ],
-          const SizedBox(height: 20),
-          const Text('MOA 换算成散布',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            children: ['50', '100', '200', '300']
+                .map((d) => ActionChip(
+                      label: Text('$d ${metric ? '米' : '码'}'),
+                      onPressed: () {
+                        setState(() => _distCtrl.text = d);
+                        _save();
+                      },
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 12),
+          const Text('弹着中心水平偏移',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          dirChips(_hDir, const ['偏左', '偏右'],
+              (v) => setState(() => _hDir = v)),
           const SizedBox(height: 8),
           _NumberField(
-              controller: _moaCtrl,
-              label: 'MOA 值',
+              controller: _hDevCtrl,
+              label: metric ? '偏离靶心多少厘米' : '偏离靶心多少英寸',
               onChanged: (_) { setState(() {}); _save(); }),
-          if (moa > 0 && distM > 0)
-            _ResultLine(
-                '${_fmt(moa)} MOA 在 ${_fmt(distInput)} ${metric ? '米' : '码'}处 ≈ ${_fmt(moaGroupCm)} 厘米'),
-          const SizedBox(height: 20),
-          const Text('瞄具调节格数',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          const Text('弹着中心垂直偏移',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          dirChips(_vDir, const ['偏高', '偏低'],
+              (v) => setState(() => _vDir = v)),
           const SizedBox(height: 8),
+          _NumberField(
+              controller: _vDevCtrl,
+              label: metric ? '偏离靶心多少厘米' : '偏离靶心多少英寸',
+              onChanged: (_) { setState(() {}); _save(); }),
+          const SizedBox(height: 12),
           Row(
             children: [
               const Text('每格调节量：'),
@@ -207,21 +290,58 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          _NumberField(
-              controller: _hDevCtrl,
-              label: metric ? '水平偏差（厘米，绝对值）' : '水平偏差（英寸，绝对值）',
-              onChanged: (_) { setState(() {}); _save(); }),
-          const SizedBox(height: 8),
-          _NumberField(
-              controller: _vDevCtrl,
-              label: metric ? '垂直偏差（厘米，绝对值）' : '垂直偏差（英寸，绝对值）',
-              onChanged: (_) { setState(() {}); _save(); }),
-          if ((hDev > 0 || vDev > 0) && distM > 0)
+          if (distM > 0 && (hDev > 0 || vDev > 0)) ...[
             _ResultLine(
-                '水平约 ${_fmt(hClicks, 1)} 格，垂直约 ${_fmt(vClicks, 1)} 格（$_clickUnit/格，四舍五入到整格后以实测为准）'),
+                '${hDev > 0 ? '$hTurn拧 $hRounded 格' : ''}${hDev > 0 && vDev > 0 ? '，' : ''}${vDev > 0 ? '$vTurn拧 $vRounded 格' : ''}（$_clickUnit/格，已四舍五入）'),
+            if (hDev > 0 && (hExact - hRounded).abs() > 0.05)
+              Text('水平拧完还差约 ${_fmt((hExact - hRounded).abs() * perClickCm)} 厘米，以实测为准。',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            if (vDev > 0 && (vExact - vRounded).abs() > 0.05)
+              Text('垂直拧完还差约 ${_fmt((vExact - vRounded).abs() * perClickCm)} 厘米，以实测为准。',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            const Text('方向按光学瞄具通用规则：弹着往哪偏就往哪边拧；机械瞄具可能相反，以瞄具说明书为准。',
+                style: TextStyle(color: Colors.grey, fontSize: 12)),
+          ] else
+            const Text('填入距离与中心偏移后出结果',
+                style: TextStyle(color: Colors.grey, fontSize: 12)),
+          const SizedBox(height: 20),
+          const Text('散布换算',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('距离与散布单位跟随工具页单位制（当前：${metric ? '公制' : '英制'}）；靶场记录里的散布和距离可以直接拿来算。',
+          _NumberField(
+              controller: _groupCtrl,
+              label: metric ? '散布（厘米，取最远两发中心距）' : '散布（英寸，取最远两发中心距）',
+              onChanged: (_) { setState(() {}); _save(); }),
+          if (groupCm > 0 && distM > 0) ...[
+            _ResultLine(
+                '散布 = ${_fmt(moaValue)} MOA（${_fmt(mradValue)} 密位）'),
+            Text('1 MOA 在该距离 ≈ ${_fmt(distM * 0.02909)} 厘米；1 密位 ≈ ${_fmt(distM * 0.1)} 厘米。',
+                style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
+          const SizedBox(height: 8),
+          _NumberField(
+              controller: _moaCtrl,
+              label: 'MOA 值（换算成该距离的厘米）',
+              onChanged: (_) { setState(() {}); _save(); }),
+          if (moa > 0 && distM > 0)
+            _ResultLine(
+                '${_fmt(moa)} MOA 在 ${_fmt(distInput)} ${metric ? '米' : '码'}处 ≈ ${_fmt(moaGroupCm)} 厘米'),
+          const SizedBox(height: 20),
+          const Text('速查：每格在各距离是多少厘米',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('以下按米计，不用算，一眼看。',
               style: TextStyle(color: Colors.grey, fontSize: 12)),
+          const SizedBox(height: 8),
+          for (final d in [50.0, 100.0, 200.0, 300.0])
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text(
+                  '${_fmt(d, 0)} 米：1 MOA ≈ ${_fmt(d * 0.02909)} 厘米，0.1 密位 = ${_fmt(d * 0.01)} 厘米'),
+            ),
+          const SizedBox(height: 8),
+          Text('距离与散布单位跟随工具页单位制（当前：${metric ? '公制' : '英制'}）。',
+              style: const TextStyle(color: Colors.grey, fontSize: 12)),
         ],
       ),
       ),

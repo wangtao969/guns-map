@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import '../data.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
 import 'gun_picker_dialog.dart';
 
 /// 两枪参数对比：只对照图鉴已收录的纸面参数，不做弹道推算。
 /// 初速与弹道系数未收录，所以不画弹道曲线——画了就是现编。
+/// 入口在枪械详情页：当前这把已是第一把，只需再选第二把；
+/// 工具页不再放这个入口，对比是对图鉴数据的查看，不是算具。
+/// 不同项高亮显示，可只看不同项；不算胜负，字符串写法不统一
+/// （如重量单位混写）时硬算谁更轻可能算错。
 class GunCompareScreen extends StatefulWidget {
-  const GunCompareScreen({super.key});
+  final Gun? initialGun;
+  const GunCompareScreen({super.key, this.initialGun});
 
   @override
   State<GunCompareScreen> createState() => _GunCompareScreenState();
@@ -15,6 +21,13 @@ class GunCompareScreen extends StatefulWidget {
 class _GunCompareScreenState extends State<GunCompareScreen> {
   Gun? _a;
   Gun? _b;
+  bool _diffOnly = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _a = widget.initialGun;
+  }
 
   Future<void> _pick(bool first) async {
     final gun = await showGunPickerDialog(context);
@@ -28,14 +41,47 @@ class _GunCompareScreenState extends State<GunCompareScreen> {
     });
   }
 
+  String _caliberSize(String caliber) {
+    for (final c in caliberInfos) {
+      if (c.caliber == caliber) {
+        return '弹头 ${c.bulletDiameter} · 弹壳 ${c.caseLength}';
+      }
+    }
+    return '未收录';
+  }
+
+  String _join(List<String> items) =>
+      items.isEmpty ? '—' : items.join('、');
+
   @override
   Widget build(BuildContext context) {
+    final rows = <_RowData>[];
+    if (_a != null && _b != null) {
+      void add(String label, String a, String b) =>
+          rows.add(_RowData(label, a, b));
+      add('厂商', _a!.vendor, _b!.vendor);
+      add('品类', _a!.category, _b!.category);
+      add('口径', _a!.caliber, _b!.caliber);
+      add('口径尺寸', _caliberSize(_a!.caliber), _caliberSize(_b!.caliber));
+      add('动作方式', _a!.action, _b!.action);
+      add('枪管长', _a!.barrel, _b!.barrel);
+      add('全长', _a!.length, _b!.length);
+      add('重量', _a!.weight, _b!.weight);
+      add('弹容量', _a!.capacity, _b!.capacity);
+      add('适用弹药', _join(_a!.ammo), _join(_b!.ammo));
+      add('适配配件', _join(_a!.accessories), _join(_b!.accessories));
+      add('英文型号', _a!.nameEn ?? '未确认', _b!.nameEn ?? '未确认');
+      add('产地', _a!.origin, _b!.origin);
+      add('年代', _a!.year, _b!.year);
+      add('参考价', _a!.price ?? '未确认', _b!.price ?? '未确认');
+    }
+    final diffRows = rows.where((r) => r.diff).toList();
+    final shown = _diffOnly ? diffRows : rows;
     return Scaffold(
-      appBar: SubPageAppBar(title: '两枪参数对比'),
+      appBar: const SubPageAppBar(title: '两枪参数对比'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-
           const Text('只对照纸面参数；初速与弹道系数未收录，不画弹道曲线。',
               style: TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 16),
@@ -48,10 +94,16 @@ class _GunCompareScreenState extends State<GunCompareScreen> {
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Text('VS',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+              IconButton(
+                icon: const Icon(Icons.swap_horiz, size: 20),
+                tooltip: '交换两把',
+                onPressed: _a != null && _b != null
+                    ? () => setState(() {
+                          final t = _a;
+                          _a = _b;
+                          _b = t;
+                        })
+                    : null,
               ),
               Expanded(
                 child: OutlinedButton(
@@ -64,29 +116,45 @@ class _GunCompareScreenState extends State<GunCompareScreen> {
           ),
           const SizedBox(height: 16),
           if (_a != null && _b != null) ...[
-            _Row('厂商', _a!.vendor, _b!.vendor),
-            _Row('品类', _a!.category, _b!.category),
-            _Row('口径', _a!.caliber, _b!.caliber),
-            _Row('动作方式', _a!.action, _b!.action),
-            _Row('枪管长', _a!.barrel, _b!.barrel),
-            _Row('全长', _a!.length, _b!.length),
-            _Row('重量', _a!.weight, _b!.weight),
-            _Row('弹容量', _a!.capacity, _b!.capacity),
-            _Row('产地', _a!.origin, _b!.origin),
-            _Row('年代', _a!.year, _b!.year),
-            _Row('参考价', _a!.price ?? '未确认', _b!.price ?? '未确认'),
+            Text(
+                '${rows.length} 项里 ${diffRows.length} 项不同${diffRows.isNotEmpty ? '：${diffRows.map((r) => r.label).join('、')}' : ''}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilterChip(
+                label: const Text('只看不同项'),
+                selected: _diffOnly,
+                onSelected: (v) => setState(() => _diffOnly = v),
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (shown.isEmpty)
+              const Text('两把枪这些参数完全相同。',
+                  style: TextStyle(color: Colors.grey))
+            else
+              ...shown.map((r) => _Row(r)),
             const SizedBox(height: 12),
-            if (_a!.description.isNotEmpty) ...[
-              Text(_a!.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text(_a!.description),
-              const SizedBox(height: 12),
-            ],
-            if (_b!.description.isNotEmpty) ...[
-              Text(_b!.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text(_b!.description),
-            ],
+            if (_a!.description.isNotEmpty)
+              ExpansionTile(
+                title: Text(_a!.name),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Text(_a!.description),
+                  ),
+                ],
+              ),
+            if (_b!.description.isNotEmpty)
+              ExpansionTile(
+                title: Text(_b!.name),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Text(_b!.description),
+                  ),
+                ],
+              ),
           ] else
             const Center(
               child: Padding(
@@ -100,14 +168,25 @@ class _GunCompareScreenState extends State<GunCompareScreen> {
   }
 }
 
-class _Row extends StatelessWidget {
+class _RowData {
   final String label;
   final String a;
   final String b;
-  const _Row(this.label, this.a, this.b);
+  bool get diff => a != b;
+  _RowData(this.label, this.a, this.b);
+}
+
+class _Row extends StatelessWidget {
+  final _RowData row;
+  const _Row(this.row);
 
   @override
   Widget build(BuildContext context) {
+    final diff = row.diff;
+    final valueStyle = TextStyle(
+        fontSize: 14,
+        fontWeight: diff ? FontWeight.bold : FontWeight.normal,
+        color: diff ? const Color(0xFFE86A1C) : null);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -115,12 +194,12 @@ class _Row extends StatelessWidget {
         children: [
           SizedBox(
             width: 72,
-            child: Text(label,
+            child: Text(row.label,
                 style: const TextStyle(color: Colors.grey, fontSize: 13)),
           ),
-          Expanded(child: Text(a, style: const TextStyle(fontSize: 14))),
+          Expanded(child: Text(row.a, style: valueStyle)),
           const SizedBox(width: 8),
-          Expanded(child: Text(b, style: const TextStyle(fontSize: 14))),
+          Expanded(child: Text(row.b, style: valueStyle)),
         ],
       ),
     );

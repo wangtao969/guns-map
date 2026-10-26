@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../tools_units.dart';
 import '../widgets/app_top_bar.dart';
 import 'accessories_screen.dart';
-import 'gun_compare_screen.dart';
 import 'ammo_inventory_screen.dart';
 import 'load_tools_screen.dart';
 import 'maintenance_screen.dart';
@@ -145,15 +144,6 @@ class _ToolsScreenState extends State<ToolsScreen> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ReloadCostScreen()),
-            ),
-          ),
-          _ToolTile(
-            icon: Icons.compare_arrows_outlined,
-            title: '两枪参数对比',
-            subtitle: '对照两把枪的纸面参数，不画弹道曲线',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const GunCompareScreen()),
             ),
           ),
         ],

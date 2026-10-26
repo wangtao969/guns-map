@@ -7,6 +7,8 @@ import '../widgets/app_toast.dart';
 import '../widgets/app_top_bar.dart';
 import '../voice_actions.dart';
 import '../app_log.dart';
+import 'load_tools_screen.dart';
+import 'reload_cost_screen.dart';
 import '../widgets/glass_dialog.dart';
 import '../i18n.dart';
 
@@ -126,6 +128,9 @@ class ReloadLogScreen extends StatefulWidget {
 
 class _ReloadLogScreenState extends State<ReloadLogScreen> {
   late List<bool> _done;
+  // SOP 区默认收起，只留一行摘要 + 进度条，点开才是紧凑清单；
+  // 放行检测发现 SOP 没打满时自动展开，免得用户自己上去找。
+  bool _sopExpanded = false;
   final _logs = <ReloadLogEntry>[];
   String? _caliber;
   final _bulletCtrl = TextEditingController();
@@ -180,16 +185,31 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
       final raw = await _prefsChannel
           .invokeMethod<String>('getString', {'key': _prefsKey}).timeout(
               const Duration(seconds: 2));
-      if (raw == null || raw.isEmpty || !mounted) return;
-      final list = (jsonDecode(raw) as List)
-          .map((e) => ReloadLogEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
-      setState(() {
-        _logs
-          ..clear()
-          ..addAll(list);
-      });
+      if (raw != null && raw.isNotEmpty && mounted) {
+        final list = (jsonDecode(raw) as List)
+            .map((e) => ReloadLogEntry.fromJson(e as Map<String, dynamic>))
+            .toList();
+        setState(() {
+          _logs
+            ..clear()
+            ..addAll(list);
+        });
+      }
     } catch (_) {}
+    // 记住上次口径：工作台带入的不覆盖；口径框可改，预填错了随手就能改。
+    if (widget.initialCaliber == null && mounted) {
+      try {
+        final last = await _prefsChannel
+            .invokeMethod<String>(
+                'getString', {'key': 'reload_last_caliber_v1'})
+            .timeout(const Duration(seconds: 2));
+        if (last != null &&
+            mounted &&
+            reloadCalibers.any((c) => c.caliber == last)) {
+          setState(() => _caliber = last);
+        }
+      } catch (_) {}
+    }
   }
 
   void _save() {
@@ -353,6 +373,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
   }
 
   void _insertEntry({required bool released}) {
+    final savedCaliber = _caliber;
     setState(() {
       _logs.insert(
           0,
@@ -380,6 +401,42 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
       _save();
       _clearForm();
     });
+    if (savedCaliber != null) {
+      _prefsChannel.invokeMethod('setString', {
+        'key': 'reload_last_caliber_v1',
+        'value': savedCaliber,
+      });
+    }
+  }
+
+  /// 沿用上次同口径配方：只带配方（弹头、火药、装药、弹长、底火、
+  /// 弹壳品牌与次数），不带试射结果、批号、压力与 SOP，仍须重走放行。
+  void _reuseLastCaliberRecipe() {
+    if (_caliber == null) {
+      showAppToast(context, '先选口径');
+      return;
+    }
+    ReloadLogEntry? last;
+    for (final l in _logs) {
+      if (l.caliber == _caliber && l.released) {
+        last = l;
+        break;
+      }
+    }
+    if (last == null) {
+      showAppToast(context, '该口径还没有已放行记录');
+      return;
+    }
+    setState(() {
+      _bulletCtrl.text = last!.bullet;
+      _powderCtrl.text = last.powder;
+      _chargeCtrl.text = last.charge;
+      _colCtrl.text = last.col;
+      _primerCtrl.text = last.primer;
+      _caseBrandCtrl.text = last.caseBrand;
+      _caseTimesCtrl.text = last.caseTimes;
+    });
+    showAppToast(context, '已带入上次配方，试射结果请重填');
   }
 
   /// 语音备注：只把识别文本追加为备注草稿，绝不填装药量、COL、
@@ -398,6 +455,37 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
       _noteCtrl.text = cur.isEmpty ? text.trim() : '$cur $text'.trim();
     });
     showAppToast(context, '语音已转成文字草稿，请核对后再保存');
+  }
+
+  double? _grOf(String s) {
+    final m = RegExp(r'(\d+(?:\.\d+)?)\s*gr').firstMatch(s);
+    return m == null ? null : double.tryParse(m.group(1)!);
+  }
+
+  double? _firstNum(String s) {
+    final m = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(s);
+    return m == null ? null : double.tryParse(m.group(1)!);
+  }
+
+  /// 安全规则不再占一整块内容区：改成按钮，点开弹毛玻璃窗看 13 条。
+  Future<void> _showSafetyRules() async {
+    await showDialog(
+      context: context,
+      builder: (ctx) => GlassDialog(
+        title: '安全红线',
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: reloadSafetyRules
+              .map((r) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text('· $r'),
+                  ))
+              .toList(),
+        ),
+        actions: [glassPrimaryButton(ctx, '知道了')],
+      ),
+    );
   }
 
   /// 复用配方：把一条已放行记录的配方与组件载入表单，SOP 与压力
@@ -451,6 +539,9 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
     final miss = _missing();
     if (miss.isNotEmpty) {
       if (!mounted) return;
+      if (miss.any((m) => m.startsWith('SOP'))) {
+        setState(() => _sopExpanded = true);
+      }
       await showDialog(
         context: context,
         builder: (ctx) => GlassDialog(
@@ -529,59 +620,89 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
           const Text('① 选配方 → ② 执行 SOP → ③ 试射 → ④ 复核放行',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: LinearProgressIndicator(
-                  value: doneCount / reloadSopSteps.length,
-                  backgroundColor: grey.withValues(alpha: 0.25),
-                  color: bronze,
-                ),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+              child: Column(
+                children: [
+                  InkWell(
+                    onTap: () =>
+                        setState(() => _sopExpanded = !_sopExpanded),
+                    child: Row(
+                      children: [
+                        Icon(
+                            allDone
+                                ? Icons.check_circle
+                                : Icons.checklist_outlined,
+                            size: 20,
+                            color: allDone ? Colors.green : bronze),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text('执行 SOP',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                        Text(
+                            allDone
+                                ? '✓ 已完成'
+                                : '$doneCount/${reloadSopSteps.length}',
+                            style: TextStyle(
+                                color: allDone ? Colors.green : grey,
+                                fontWeight: allDone
+                                    ? FontWeight.bold
+                                    : FontWeight.normal)),
+                        Icon(
+                            _sopExpanded
+                                ? Icons.expand_less
+                                : Icons.expand_more,
+                            color: grey),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: doneCount / reloadSopSteps.length,
+                    backgroundColor: grey.withValues(alpha: 0.25),
+                    color: bronze,
+                  ),
+                  if (_sopExpanded) ...[
+                    const SizedBox(height: 4),
+                    ...reloadSopSteps.asMap().entries.map((e) =>
+                        CheckboxListTile(
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                          contentPadding: EdgeInsets.zero,
+                          value: _done[e.key],
+                          onChanged: (v) =>
+                              setState(() => _done[e.key] = v ?? false),
+                          title: Text(e.value,
+                              style: const TextStyle(fontSize: 13)),
+                          controlAffinity:
+                              ListTileControlAffinity.leading,
+                        )),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => setState(() => _done =
+                            List<bool>.filled(
+                                reloadSopSteps.length, false)),
+                        child: const Text('重置 SOP 打勾'),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(width: 8),
-              Text('$doneCount/${reloadSopSteps.length}'),
-            ],
-          ),
-          const SizedBox(height: 4),
-          if (allDone)
-            const Text('✓ SOP 全部完成，可以记录本次复装',
-                style: TextStyle(
-                    color: Colors.green, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          ...reloadSopSteps.asMap().entries.map((e) => Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: CheckboxListTile(
-                  value: _done[e.key],
-                  onChanged: (v) =>
-                      setState(() => _done[e.key] = v ?? false),
-                  title: Text(e.value),
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-              )),
-          TextButton(
-            onPressed: () =>
-                setState(() => _done = List<bool>.filled(reloadSopSteps.length, false)),
-            child: const Text('重置 SOP 打勾'),
+            ),
           ),
           const SizedBox(height: 16),
-          Text(tr('safety_rules'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Card(
-            color: const Color(0xFF4A1500),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: reloadSafetyRules
-                    .map((r) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Text('· $r',
-                              style:
-                                  const TextStyle(color: Colors.amber)),
-                        ))
-                    .toList(),
-              ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: _showSafetyRules,
+              icon: const Icon(Icons.warning_amber_outlined,
+                  color: Colors.redAccent, size: 18),
+              label: Text(
+                  '${tr('safety_rules')}（${reloadSafetyRules.length} 条，点开查看）'),
             ),
           ),
           const SizedBox(height: 24),
@@ -593,17 +714,32 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
           const SizedBox(height: 12),
           const Text('配方 Load Recipe *', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            initialValue: _caliber,
-            decoration: const InputDecoration(
-              labelText: '口径 * / Caliber',
-              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+          Row(
+            children: [
+              const Text('口径 * / Caliber'),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButton<String>(
+                  value: _caliber,
+                  isExpanded: true,
+                  hint: const Text('选口径'),
+                  items: reloadCalibers
+                      .map((c) => DropdownMenuItem(
+                          value: c.caliber, child: Text(c.caliber)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _caliber = v),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: _reuseLastCaliberRecipe,
+              icon: const Icon(Icons.history, size: 18),
+              label: const Text('沿用上次同口径配方'),
             ),
-            items: reloadCalibers
-                .map((c) => DropdownMenuItem(
-                    value: c.caliber, child: Text(c.caliber)))
-                .toList(),
-            onChanged: (v) => setState(() => _caliber = v),
           ),
           const SizedBox(height: 8),
           _SuggestField(controller: _bulletCtrl, label: '弹头 * / Bullet（品牌/重量/型号）', kind: '弹头'),
@@ -740,6 +876,17 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
               labelText: '天气/温度 * / Weather & Temperature',
               border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            children: ['晴', '阴', '雨', '雪', '室内']
+                .map((w) => ActionChip(
+                      label: Text(w),
+                      onPressed: () =>
+                          setState(() => _weatherCtrl.text = w),
+                    ))
+                .toList(),
           ),
           const SizedBox(height: 8),
           const Text('压力迹象 Pressure Signs（勾选任何一项，本批即异常停用、不能放行）',
@@ -891,6 +1038,42 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                             icon: const Icon(Icons.replay, size: 20),
                             tooltip: '复用此配方',
                             onPressed: () => _reuseRecipe(l),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.calculate_outlined,
+                                size: 20),
+                            tooltip: '算动能/后坐力',
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => LoadToolsScreen(
+                                  initialBulletGr: _grOf(l.bullet),
+                                  initialVelocityFps: _firstNum(l.velocity),
+                                  initialPowderGr:
+                                      double.tryParse(l.charge),
+                                  initialLabel:
+                                      '复装记录 ${l.batchNo.isNotEmpty ? l.batchNo : l.date} · ${l.caliber}',
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.attach_money_outlined,
+                                size: 20),
+                            tooltip: '算这批成本',
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ReloadCostScreen(
+                                  initialPowderGr:
+                                      double.tryParse(l.charge),
+                                  initialRounds:
+                                      int.tryParse(l.rounds),
+                                  initialLabel:
+                                      '复装记录 ${l.batchNo.isNotEmpty ? l.batchNo : l.date} · ${l.caliber}',
+                                ),
+                              ),
+                            ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline, size: 20),

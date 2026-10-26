@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../widgets/app_toast.dart';
 import '../community_store.dart';
 import '../widgets/app_top_bar.dart';
+import 'admin_user_detail_screen.dart';
 
 String _roleLabel(String role) {
   switch (role) {
@@ -14,21 +14,33 @@ String _roleLabel(String role) {
   }
 }
 
-String _statusLabel(String status) {
-  switch (status) {
-    case 'muted':
-      return '禁言中';
-    case 'banned':
-      return '已封禁';
-    default:
-      return '正常';
+String _statusLabel(CommunityAccount a) {
+  if (a.status == 'banned') return '已封禁';
+  if (a.status == 'muted') {
+    if (a.muteExpired) return '禁言已到期';
+    if (a.mutedUntil == null) return '禁言中（永久）';
+    return '禁言至 ${a.mutedUntil.toString().substring(0, 10)}';
   }
+  return '正常';
 }
 
-/// 人员管理（仅管理员）：任命 / 撤销角色，禁言 / 封禁 / 恢复。
+/// 人员管理（仅管理员）：点用户进详情页改角色、禁言（含时长）、封禁。
 /// 不能改自己，不能改初始管理员（ID wangtao969）。
-class AdminPersonnelScreen extends StatelessWidget {
+class AdminPersonnelScreen extends StatefulWidget {
   const AdminPersonnelScreen({super.key});
+
+  @override
+  State<AdminPersonnelScreen> createState() => _AdminPersonnelScreenState();
+}
+
+class _AdminPersonnelScreenState extends State<AdminPersonnelScreen> {
+  final _queryCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _queryCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +51,25 @@ class AdminPersonnelScreen extends StatelessWidget {
       body: AnimatedBuilder(
         animation: communityStore,
         builder: (_, __) {
-          final accounts = communityStore.accounts.toList();
+          final q = _queryCtrl.text.trim().toLowerCase();
+          final accounts = communityStore.accounts.where((a) {
+            if (q.isEmpty) return true;
+            return a.nickname.toLowerCase().contains(q) ||
+                a.id.toLowerCase().contains(q);
+          }).toList();
           return ListView(
             padding: const EdgeInsets.all(12),
             children: [
+              TextField(
+                controller: _queryCtrl,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                  labelText: '搜昵称 / ID',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
+              ),
+              const SizedBox(height: 12),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
@@ -75,10 +102,15 @@ class AdminPersonnelScreen extends StatelessWidget {
                     title: Text(a.nickname,
                         style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text(
-                        'ID ${a.id} · ${_roleLabel(a.role)} · ${_statusLabel(a.status)} · ${a.totalXp} XP',
+                        'ID ${a.id} · ${_roleLabel(a.role)} · ${_statusLabel(a)} · ${a.totalXp} XP',
                         style: TextStyle(color: grey, fontSize: 12)),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _manage(context, a),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              AdminUserDetailScreen(account: a)),
+                    ),
                   ),
                 ),
             ],
@@ -88,58 +120,4 @@ class AdminPersonnelScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _manage(BuildContext context, CommunityAccount a) async {
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text('${a.nickname}（ID ${a.id}）'),
-              subtitle: Text('${_roleLabel(a.role)} · ${_statusLabel(a.status)}'),
-            ),
-            const Divider(height: 1),
-            _item('设为普通用户', 'role_user'),
-            _item('设为版主', 'role_moderator'),
-            _item('设为管理员', 'role_admin'),
-            _item(a.status == 'muted' ? '解除禁言' : '禁言', 'mute_toggle'),
-            _item(a.status == 'banned' ? '解除封禁' : '封禁', 'ban_toggle'),
-          ],
-        ),
-      ),
-    );
-    if (action == null || !context.mounted) return;
-    String? err;
-    switch (action) {
-      case 'role_user':
-        err = communityStore.setUserRole(a, 'user');
-        break;
-      case 'role_moderator':
-        err = communityStore.setUserRole(a, 'moderator');
-        break;
-      case 'role_admin':
-        err = communityStore.setUserRole(a, 'admin');
-        break;
-      case 'mute_toggle':
-        err = communityStore
-            .setUserStatus(a, a.status == 'muted' ? 'active' : 'muted');
-        break;
-      case 'ban_toggle':
-        err = communityStore
-            .setUserStatus(a, a.status == 'banned' ? 'active' : 'banned');
-        break;
-    }
-    if (!context.mounted) return;
-    showAppToast(context, err ?? '已更新');
-  }
-
-  Widget _item(String label, String value) {
-    return Builder(
-      builder: (context) => ListTile(
-        title: Text(label),
-        onTap: () => Navigator.pop(context, value),
-      ),
-    );
-  }
 }

@@ -7,8 +7,11 @@ import '../haptics.dart';
 import '../i18n.dart';
 import '../models.dart';
 import '../system_actions.dart';
+import '../community_store.dart';
 import '../widgets/app_top_bar.dart';
+import '../widgets/glass_dialog.dart';
 import 'suppliers_screen.dart';
+import 'load_tools_screen.dart';
 import 'reload_log_screen.dart';
 import 'reload_tools_screen.dart';
 
@@ -17,13 +20,78 @@ import 'reload_tools_screen.dart';
 /// 二、子弹复装（只做狙击步枪常用口径，实际复装以贵价狙击弹为主）；
 /// 三、入口区：组件供应商与复装记录 SOP 各进一个子页，不再用长列表挡内容。
 /// 复装手册入口页：不再把口径目录与复装内容长篇平铺在本页，
-/// 只留安全警告与四个入口卡片，各板块点进去才是完整内容。
+/// 只留四个入口卡片，各板块点进去才是完整内容。
+/// 安全红线不再占一整块内容区：进页自动弹一次毛玻璃弹窗，
+/// 点“知道了”后记下来不再自动弹，顶部只留一行入口随时再点开。
 /// 一、子弹口径目录：点进子页搜口径、按弹种筛选、看详情；
 /// 二、子弹复装：点进工作台，按口径选弹头/火药/弹壳/底火、查手册装药、
 ///    选好的组件可带入复装记录，复装记录也放在这个板块里；
 /// 三、组件供应商与复装工具各进一个子页。
-class ReloadingScreen extends StatelessWidget {
+class ReloadingScreen extends StatefulWidget {
   const ReloadingScreen({super.key});
+
+  @override
+  State<ReloadingScreen> createState() => _ReloadingScreenState();
+}
+
+class _ReloadingScreenState extends State<ReloadingScreen> {
+  static const _prefsChannel = MethodChannel('gunsmap/prefs');
+  static const _ackKey = 'safety_ack_v1';
+  static const _warnLines = [
+    '务必从起始装药开始，逐步试射并观察压力迹象，绝不超过手册最大装药。',
+    '不同批次火药需重新验证，不可直接沿用旧数据。',
+    '务必以纸质手册原文为准，本 App 数据仅供学习参考。',
+    '装药数据按弹膛标识选用：.223 Remington 与 5.56×45mm NATO 的手册数据不可混用。',
+    '本页未收录的口径与组合，均为未找到可靠公开手册出处而刻意省略，切勿自行推算补写。',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowSafety());
+  }
+
+  Future<void> _maybeShowSafety() async {
+    try {
+      final ack = await _prefsChannel
+          .invokeMethod<String>('getString', {'key': _ackKey})
+          .timeout(const Duration(seconds: 2));
+      if (ack == '1') return;
+    } catch (_) {}
+    if (!mounted) return;
+    await _showSafetyWarning(saveAck: true);
+  }
+
+  Future<void> _showSafetyWarning({required bool saveAck}) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => GlassDialog(
+        title: '⚠ 安全红线',
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: _warnLines
+              .map((l) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text('· $l'),
+                  ))
+              .toList(),
+        ),
+        actions: [
+          glassPrimaryButton(ctx, '知道了', onPressed: () async {
+            if (saveAck) {
+              try {
+                await _prefsChannel.invokeMethod(
+                    'setString', {'key': _ackKey, 'value': '1'});
+              } catch (_) {}
+            }
+            if (ctx.mounted) Navigator.of(ctx).pop();
+          }),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,32 +102,16 @@ class ReloadingScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
-          Card(
-            color: const Color(0xFF4A1500),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('⚠ ${tr('safety_warn')}',
-                      style: const TextStyle(
-                          color: Colors.redAccent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
-                  const SizedBox(height: 6),
-                  const Text(
-                    '· 务必从起始装药开始，逐步试射并观察压力迹象，绝不超过手册最大装药。\n'
-                    '· 不同批次火药需重新验证，不可直接沿用旧数据。\n'
-                    '· 务必以纸质手册原文为准，本 App 数据仅供学习参考。\n'
-                    '· 装药数据按弹膛标识选用：.223 Remington 与 5.56×45mm NATO 的手册数据不可混用。\n'
-                    '· 本页未收录的口径与组合，均为未找到可靠公开手册出处而刻意省略，切勿自行推算补写。',
-                    style: TextStyle(color: Colors.amber),
-                  ),
-                ],
-              ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => _showSafetyWarning(saveAck: false),
+              icon: const Icon(Icons.warning_amber_outlined,
+                  color: Colors.redAccent, size: 18),
+              label: const Text('安全红线（点开查看）',
+                  style: TextStyle(color: Colors.redAccent)),
             ),
           ),
-          const SizedBox(height: 16),
           Card(
             child: ListTile(
               leading: const Icon(Icons.menu_book_outlined),
@@ -686,12 +738,37 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
                   '${l.caliber}|${l.bullet}|${l.powder}|${l.charge}|${l.col}';
               if (seen.add(key)) recipes.add(l);
             }
-            return recipes.take(8).map((l) => Card(
+            return recipes.take(8).map((l) {
+              // 闭环：该配方的全部批次号 → 关联了这些批次的成绩里取最好分组。
+              final recipeKey =
+                  '${l.caliber}|${l.bullet}|${l.powder}|${l.charge}|${l.col}';
+              final batchNos = _pastLogs
+                  .where((e) =>
+                      e.released &&
+                      '${e.caliber}|${e.bullet}|${e.powder}|${e.charge}|${e.col}' ==
+                          recipeKey)
+                  .map((e) => e.batchNo)
+                  .where((b) => b.isNotEmpty)
+                  .toSet();
+              final linked = (communityStore.current?.rangeScores ?? [])
+                  .where((sc) =>
+                      batchNos.contains(sc.batchNo) && sc.groupSize > 0)
+                  .toList();
+              RangeScore? best;
+              for (final sc in linked) {
+                if (best == null || sc.groupSize < best.groupSize) best = sc;
+              }
+              final bestLine = best == null
+                  ? ''
+                  : '\n实测最好分组：${best.groupSize.toStringAsFixed(1)} 厘米'
+                      '（${best.distance > 0 ? (best.groupSize / (best.distance * 0.02909)).toStringAsFixed(2) : '—'} MOA，'
+                      '${best.distance} 米）';
+              return Card(
                   margin: const EdgeInsets.only(bottom: 6),
                   child: ListTile(
                     title: Text('${l.caliber} · ${l.bullet}'),
                     subtitle: Text(
-                        '${l.powder} ${l.charge}gr · COL ${l.col}″ · ${l.date}',
+                        '${l.powder} ${l.charge}gr · COL ${l.col}″ · ${l.date}$bestLine',
                         style: TextStyle(color: grey, fontSize: 12)),
                     trailing: const Icon(Icons.replay, size: 20),
                     onTap: () => setState(() {
@@ -702,7 +779,8 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
                       _picked['底火'] = l.primer;
                     }),
                   ),
-                ));
+                );
+            });
           })(),
           if (_pastLogs.any((l) => !l.released)) ...[
             const SizedBox(height: 8),
@@ -780,10 +858,43 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
               const SizedBox(height: 4),
               Text('${tr('source_prefix')}${l.source}',
                   style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => LoadToolsScreen(
+                        initialBulletGr: _grOf(l.bullet),
+                        initialVelocityFps: _firstNum(l.velocity),
+                        initialPowderGr: _grOf(l.startCharge),
+                        initialLabel:
+                            '${l.caliber} · ${l.bullet} · ${l.powder}（起始装药）',
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.calculate_outlined, size: 18),
+                  label: const Text('算这发的动能/后坐力'),
+                ),
+              ),
             ],
           ),
         ),
       );
+
+  /// 从“124gr”“4.0gr”这类串里取克令数；初速取区间里的起始值，
+  /// 与起始装药配对，不拿最大值去算。
+  double? _grOf(String s) {
+    final m = RegExp(r'(\d+(?:\.\d+)?)\s*gr').firstMatch(s);
+    return m == null ? null : double.tryParse(m.group(1)!);
+  }
+
+  double? _firstNum(String? s) {
+    if (s == null) return null;
+    final m = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(s);
+    return m == null ? null : double.tryParse(m.group(1)!);
+  }
 
   Widget _loadRow(String k, String v) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 1),

@@ -5,6 +5,8 @@ import '../i18n.dart';
 import '../models.dart';
 import '../widgets/category_silhouette.dart';
 import '../widgets/app_top_bar.dart';
+import 'gun_compare_screen.dart';
+import 'dope_screen.dart';
 
 class GunDetailScreen extends StatefulWidget {
   final Gun gun;
@@ -177,6 +179,28 @@ class _GunDetailScreenState extends State<GunDetailScreen>
           _spec('弹容', gun.capacity),
           _spec('产地', gun.origin),
           _spec('年份', gun.year),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => GunCompareScreen(initialGun: gun),
+              ),
+            ),
+            icon: const Icon(Icons.compare_arrows, size: 18),
+            label: const Text('和另一把对比'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DopeScreen(gun: gun),
+              ),
+            ),
+            icon: const Icon(Icons.book_outlined, size: 18),
+            label: const Text('射击数据本'),
+          ),
           const SizedBox(height: 12),
           Text(tr('intro'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),

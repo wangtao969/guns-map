@@ -45,6 +45,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 g.caliber.toLowerCase().contains(q))
             .toList();
     // 刀具搜索与枪械搜索并列：搜刀名、英文名、国家、分类都能命中。
+    // 今日一枪：按天取固定一把，当天不变、次日换枪。
+    final todayGun = guns[
+        DateTime.now().difference(DateTime(2020, 1, 1)).inDays % guns.length];
+    final myGuns = communityStore.current?.collection
+            .where((c) => c.kind == 'gun')
+            .toList() ??
+        [];
     final knifeResults = q.isEmpty
         ? <Knife>[]
         : knives
@@ -120,6 +127,134 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         Icon(Icons.chevron_right, color: grey),
                       ],
                     ),
+                  ),
+                ),
+              ),
+            // 今日一枪 + 我的军火库前置：搜索时隐藏，平时放在资讯卡下方。
+            if (_query.isEmpty)
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    tapHaptic();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => GunDetailScreen(gun: todayGun)),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: bronze,
+                          ),
+                          child: Icon(Icons.calendar_today_outlined,
+                              size: 20,
+                              color: dark
+                                  ? const Color(0xFF121110)
+                                  : Colors.white),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('今日一枪',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14)),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${todayGun.name} · ${todayGun.caliber}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: grey, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right, color: grey),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            if (_query.isEmpty && myGuns.isNotEmpty)
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text('我的军火库',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 14)),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () {
+                              tapHaptic();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const CommunityCollectionScreen()),
+                              );
+                            },
+                            child: Text('查看全部',
+                                style: TextStyle(color: grey, fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      for (final c in myGuns.take(3))
+                        InkWell(
+                          onTap: () {
+                            final match = guns.where(
+                                (g) => g.name == c.gunName);
+                            if (match.isEmpty) return;
+                            tapHaptic();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      GunDetailScreen(gun: match.first)),
+                            );
+                          },
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                      '${c.gunName} · ${c.caliber}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 13)),
+                                ),
+                                Text('已打 ${c.rounds} 发',
+                                    style: TextStyle(
+                                        color: grey, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),

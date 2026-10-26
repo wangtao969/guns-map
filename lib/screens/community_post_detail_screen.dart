@@ -152,8 +152,29 @@ class _CommunityPostDetailScreenState
         }
         break;
       case 'report':
-        communityStore.reportPost(p);
-        if (mounted) {
+        const reasons = ['违法违规', '辱骂攻击', '广告引流', '与枪无关', '其他'];
+        final reason = await showDialog<String>(
+          context: context,
+          builder: (d) => AlertDialog(
+            title: const Text('举报这条帖子？'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: reasons
+                  .map((r) => ListTile(
+                        title: Text(r),
+                        onTap: () => Navigator.pop(d, r),
+                      ))
+                  .toList(),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(d),
+                  child: Text(tr('cancel'))),
+            ],
+          ),
+        );
+        if (reason != null && mounted) {
+          communityStore.reportPost(p, reason);
           showAppToast(context, '已举报，帖子已标记为待审核');
         }
         break;

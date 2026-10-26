@@ -15,8 +15,10 @@ class AdminReviewScreen extends StatelessWidget {
       body: AnimatedBuilder(
         animation: communityStore,
         builder: (_, __) {
-          final reported =
-              communityStore.posts.where((p) => p.reported).toList();
+          final reported = communityStore.posts
+              .where((p) => p.reported)
+              .toList()
+            ..sort((a, b) => b.reportCount.compareTo(a.reportCount));
           return ListView(
             padding: const EdgeInsets.all(12),
             children: [
@@ -42,6 +44,11 @@ class AdminReviewScreen extends StatelessWidget {
                         Text(
                             '${p.board} · ${p.authorNickname} · ${p.time.year}-${p.time.month}-${p.time.day}',
                             style: TextStyle(color: grey, fontSize: 12)),
+                        if (p.reportReasons.isNotEmpty)
+                          Text(
+                              '举报 ${p.reportCount} 次：${p.reportReasons.join('、')}',
+                              style: const TextStyle(
+                                  color: Colors.red, fontSize: 12)),
                         const SizedBox(height: 6),
                         Text(p.content,
                             maxLines: 2, overflow: TextOverflow.ellipsis),

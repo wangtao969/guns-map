@@ -80,7 +80,7 @@ List<String> parseMentions(String content) {
 /// 把文本里的敏感词替换为等长星号（长词优先，避免短词先切坏长词）。
 String maskSensitiveWords(String text) {
   var out = text;
-  final words = sensitiveWords.toList()
+  final words = communityStore.effectiveSensitiveWords
     ..sort((a, b) => b.length.compareTo(a.length));
   for (final w in words) {
     if (out.contains(w)) {
@@ -113,6 +113,15 @@ class CommunityAccount {
   }
   /// 账号状态：active 正常 / muted 禁言（不能发帖评论）/ banned 封禁（不能发帖评论）。
   String status;
+  /// 禁言到期时间：null 表示永久禁言；到期后按正常账号处理，无需手动解除。
+  DateTime? mutedUntil;
+  /// 注册时间：旧账号没有，显示为未记录；新注册账号写入当前时间。
+  DateTime? createdAt;
+  bool get muteExpired =>
+      status == 'muted' &&
+      mutedUntil != null &&
+      DateTime.now().isAfter(mutedUntil!);
+  bool get mutedEffective => status == 'muted' && !muteExpired;
   /// 头像边框：'' 无 / copper 铜圈 / gold 金圈 / rainbow 彩虹圈。
   String avatarFrame;
   /// 隐私开关：帖子旁是否显示 ID、收藏是否对外可见。
@@ -147,6 +156,8 @@ class CommunityAccount {
     this.bio = '',
     this.role = 'user',
     this.status = 'active',
+    this.mutedUntil,
+    this.createdAt,
     this.avatarFrame = '',
     this.showIdPublic = true,
     this.favoritesPublic = true,
@@ -268,6 +279,8 @@ class CommunityAccount {
         'bio': bio,
         'role': role,
         'status': status,
+        'mutedUntil': mutedUntil?.toIso8601String(),
+        'createdAt': createdAt?.toIso8601String(),
         'avatarFrame': avatarFrame,
         'showIdPublic': showIdPublic,
         'favoritesPublic': favoritesPublic,
@@ -297,6 +310,12 @@ class CommunityAccount {
       bio: j['bio'] as String? ?? '',
       role: j['role'] as String? ?? 'user',
       status: j['status'] as String? ?? 'active',
+      mutedUntil: j['mutedUntil'] == null
+          ? null
+          : DateTime.tryParse(j['mutedUntil'] as String),
+      createdAt: j['createdAt'] == null
+          ? null
+          : DateTime.tryParse(j['createdAt'] as String),
       avatarFrame: j['avatarFrame'] as String? ?? '',
       showIdPublic: j['showIdPublic'] as bool? ?? true,
       favoritesPublic: j['favoritesPublic'] as bool? ?? true,
@@ -387,6 +406,9 @@ class RangeScore {
   final String weather;
   final String wind;
 
+  /// 关联的复装批次号（空=未关联）：配方卡靠它找实测成绩。
+  final String batchNo;
+
   RangeScore({
     required this.gunName,
     required this.distance,
@@ -401,6 +423,7 @@ class RangeScore {
     this.score = '',
     this.weather = '',
     this.wind = '',
+    this.batchNo = '',
   }) : date = date ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
@@ -417,6 +440,7 @@ class RangeScore {
         'score': score,
         'weather': weather,
         'wind': wind,
+        'batchNo': batchNo,
       };
 
   static RangeScore fromJson(Map<String, dynamic> j) => RangeScore(
@@ -434,6 +458,7 @@ class RangeScore {
         score: j['score'] as String? ?? '',
         weather: j['weather'] as String? ?? '',
         wind: j['wind'] as String? ?? '',
+        batchNo: j['batchNo'] as String? ?? '',
       );
 }
 
@@ -507,6 +532,8 @@ class CommunityPost {
   bool pinned;
   bool essence;
   bool reported;
+  int reportCount;
+  final List<String> reportReasons;
 
   CommunityPost({
     required this.id,
@@ -526,10 +553,13 @@ class CommunityPost {
     this.pinned = false,
     this.essence = false,
     this.reported = false,
+    this.reportCount = 0,
+    List<String>? reportReasons,
   })  : images = images ?? [],
         likedBy = likedBy ?? <String>{},
         favoritedBy = favoritedBy ?? <String>{},
-        comments = comments ?? [];
+        comments = comments ?? [],
+        reportReasons = reportReasons ?? [];
 
   List<String> get tags => parseTags(content);
 
@@ -555,6 +585,8 @@ class CommunityPost {
         'pinned': pinned,
         'essence': essence,
         'reported': reported,
+        'reportCount': reportCount,
+        'reportReasons': reportReasons,
       };
 
   static CommunityPost fromJson(Map<String, dynamic> j) => CommunityPost(
@@ -581,6 +613,9 @@ class CommunityPost {
         pinned: j['pinned'] as bool? ?? false,
         essence: j['essence'] as bool? ?? false,
         reported: j['reported'] as bool? ?? false,
+        reportCount: (j['reportCount'] as num?)?.toInt() ??
+            (j['reported'] == true ? 1 : 0),
+        reportReasons: (j['reportReasons'] as List? ?? []).cast<String>(),
       );
 }
 
@@ -941,6 +976,31 @@ final challengeCatalog = <ChallengeDef>[
       test: (s, a) => a.collection.length >= 10),
 ];
 
+/// 操作日志条目：操作人、动作、对象、时间（ISO 字符串）。
+class AdminLogEntry {
+  final String time;
+  final String actor;
+  final String action;
+  final String target;
+  AdminLogEntry(
+      {required this.time,
+      required this.actor,
+      required this.action,
+      required this.target});
+  Map<String, dynamic> toJson() => {
+        'time': time,
+        'actor': actor,
+        'action': action,
+        'target': target,
+      };
+  factory AdminLogEntry.fromJson(Map<String, dynamic> j) => AdminLogEntry(
+        time: j['time'] as String? ?? '',
+        actor: j['actor'] as String? ?? '',
+        action: j['action'] as String? ?? '',
+        target: j['target'] as String? ?? '',
+      );
+}
+
 /// 社区全局状态（单例）。界面用 AnimatedBuilder 监听它。
 class CommunityStore extends ChangeNotifier {
   static const _prefsChannel = MethodChannel('gunsmap/prefs');
@@ -960,6 +1020,13 @@ class CommunityStore extends ChangeNotifier {
 
   /// 被管理员关闭的板块：关闭后不再出现在板块入口与发帖板块选择里。
   final Set<String> disabledBoards = {};
+
+  /// 管理员追加的敏感词与从内置词库里移除的词（后台敏感词管理页维护）。
+  final List<String> addedSensitiveWords = [];
+  final List<String> removedSensitiveWords = [];
+
+  /// 操作日志：管理操作留痕（操作人、动作、对象、时间），最新在前，最多 200 条。
+  final List<AdminLogEntry> adminLog = [];
 
   /// 每日经验封顶 120 固定不变。赛季系统已在 v2.1.0 拿掉：
   /// 不再有赛季起点、赛季长度、赛季声望与赛季倒计时。
@@ -1009,6 +1076,15 @@ class CommunityStore extends ChangeNotifier {
         disabledBoards.clear();
         disabledBoards.addAll(
             (j['disabledBoards'] as List? ?? []).map((e) => e.toString()));
+        addedSensitiveWords.clear();
+        addedSensitiveWords.addAll(
+            (j['addedSensitiveWords'] as List? ?? []).cast<String>());
+        removedSensitiveWords.clear();
+        removedSensitiveWords.addAll(
+            (j['removedSensitiveWords'] as List? ?? []).cast<String>());
+        adminLog.clear();
+        adminLog.addAll((j['adminLog'] as List? ?? []).map(
+            (e) => AdminLogEntry.fromJson(e as Map<String, dynamic>)));
         final currentId = j['currentId'] as String?;
         current = currentId == null ? null : findAccount(currentId);
       }
@@ -1030,6 +1106,9 @@ class CommunityStore extends ChangeNotifier {
         'notifyInteraction': notifyInteraction,
         'notifyDm': notifyDm,
         'disabledBoards': disabledBoards.toList(),
+        'addedSensitiveWords': addedSensitiveWords,
+        'removedSensitiveWords': removedSensitiveWords,
+        'adminLog': adminLog.map((e) => e.toJson()).toList(),
       };
 
   void _save() {
@@ -1241,6 +1320,7 @@ class CommunityStore extends ChangeNotifier {
     final account = CommunityAccount(
       nickname: maskSensitiveWords(nickname),
       id: id,
+      createdAt: DateTime.now(),
       password: password,
       avatarBytes: avatarBytes,
       invitedBy: invitedBy,
@@ -1286,7 +1366,7 @@ class CommunityStore extends ChangeNotifier {
     if (!author.isFounder && author.status == 'banned') {
       return '账号已被封禁';
     }
-    if (!author.isFounder && author.status == 'muted') {
+    if (!author.isFounder && author.mutedEffective) {
       return '账号已被禁言';
     }
     if (disabledBoards.contains(board)) return '该板块已关闭';
@@ -1368,7 +1448,7 @@ class CommunityStore extends ChangeNotifier {
     final me = current;
     if (me == null) return '请先登录';
     if (!me.isFounder && me.status == 'banned') return '账号已被封禁';
-    if (!me.isFounder && me.status == 'muted') return '账号已被禁言';
+    if (!me.isFounder && me.mutedEffective) return '账号已被禁言';
     final masked = maskSensitiveWords(content);
     post.comments.add(CommunityComment(
       id: _nextId(),
@@ -1419,24 +1499,78 @@ class CommunityStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void reportPost(CommunityPost post) {
+  void reportPost(CommunityPost post, String reason) {
     post.reported = true;
+    post.reportCount += 1;
+    if (reason.isNotEmpty && !post.reportReasons.contains(reason)) {
+      post.reportReasons.add(reason);
+    }
     notifyListeners();
   }
 
   void setPinned(CommunityPost post, bool pinned) {
     post.pinned = pinned;
+    _logAdmin(pinned ? '置顶帖子' : '取消置顶', post.title);
     notifyListeners();
   }
 
   void setEssence(CommunityPost post, bool essence) {
     post.essence = essence;
+    _logAdmin(essence ? '加精帖子' : '取消精华', post.title);
     notifyListeners();
   }
 
   void deletePost(CommunityPost post) {
     posts.remove(post);
+    _logAdmin('删除帖子', post.title);
     notifyListeners();
+  }
+
+  void _logAdmin(String action, String target) {
+    final me = current;
+    adminLog.insert(
+      0,
+      AdminLogEntry(
+        time: DateTime.now().toIso8601String(),
+        actor: me == null ? '系统' : '${me.nickname}（ID ${me.id}）',
+        action: action,
+        target: target,
+      ),
+    );
+    if (adminLog.length > 200) {
+      adminLog.removeRange(200, adminLog.length);
+    }
+  }
+
+  /// 敏感词管理（仅管理员）：新增词立即生效；删除内置词后该词不再替换。
+  List<String> get effectiveSensitiveWords => [...sensitiveWords, ...addedSensitiveWords]
+      .where((w) => !removedSensitiveWords.contains(w))
+      .toList();
+
+  String? addSensitiveWord(String word) {
+    if (!isAdmin) return '只有管理员可以管理敏感词';
+    final w = word.trim();
+    if (w.isEmpty) return '词不能为空';
+    if (effectiveSensitiveWords.contains(w)) return '该词已在词库里';
+    addedSensitiveWords.add(w);
+    _logAdmin('新增敏感词', w);
+    notifyListeners();
+    return null;
+  }
+
+  String? removeSensitiveWord(String word) {
+    if (!isAdmin) return '只有管理员可以管理敏感词';
+    if (addedSensitiveWords.remove(word)) {
+      _logAdmin('删除敏感词', word);
+    } else if (sensitiveWords.contains(word) &&
+        !removedSensitiveWords.contains(word)) {
+      removedSensitiveWords.add(word);
+      _logAdmin('删除敏感词', word);
+    } else {
+      return '词库里没有这个词';
+    }
+    notifyListeners();
+    return null;
   }
 
   /// 人员管理（仅管理员）：改角色 / 改状态；不能改自己，不能改初始管理员。
@@ -1449,11 +1583,15 @@ class CommunityStore extends ChangeNotifier {
       return '不能修改初始管理员';
     }
     target.role = role;
+    _logAdmin(
+        '设为${role == 'admin' ? '管理员' : role == 'moderator' ? '版主' : '普通用户'}',
+        '${target.nickname}（ID ${target.id}）');
     notifyListeners();
     return null;
   }
 
-  String? setUserStatus(CommunityAccount target, String status) {
+  String? setUserStatus(CommunityAccount target, String status,
+      {DateTime? mutedUntil}) {
     if (!isAdmin) return '只有管理员可以管理权限';
     if (target.id == current?.id) return '不能修改自己的权限';
     if (!isFounder &&
@@ -1461,6 +1599,18 @@ class CommunityStore extends ChangeNotifier {
       return '不能修改初始管理员';
     }
     target.status = status;
+    target.mutedUntil = status == 'muted' ? mutedUntil : null;
+    if (status == 'muted') {
+      _logAdmin(
+          mutedUntil == null
+              ? '禁言（永久）'
+              : '禁言至 ${mutedUntil.toString().substring(0, 10)}',
+          '${target.nickname}（ID ${target.id}）');
+    } else if (status == 'banned') {
+      _logAdmin('封禁', '${target.nickname}（ID ${target.id}）');
+    } else {
+      _logAdmin('恢复正常', '${target.nickname}（ID ${target.id}）');
+    }
     notifyListeners();
     return null;
   }
@@ -1468,6 +1618,9 @@ class CommunityStore extends ChangeNotifier {
   /// 取消举报（管理员/版主）。
   void clearReport(CommunityPost post) {
     post.reported = false;
+    post.reportCount = 0;
+    post.reportReasons.clear();
+    _logAdmin('取消举报', post.title);
     notifyListeners();
   }
 
@@ -1478,6 +1631,7 @@ class CommunityStore extends ChangeNotifier {
     } else {
       disabledBoards.remove(board);
     }
+    _logAdmin(disabled ? '关闭板块' : '开启板块', board);
     notifyListeners();
   }
 
@@ -1494,12 +1648,14 @@ class CommunityStore extends ChangeNotifier {
         time: DateTime.now(),
       ),
     );
+    _logAdmin('发布公告', title);
     notifyListeners();
   }
 
   /// 删除公告（仅管理员）。
   void deleteAnnouncement(CommunityNotification n) {
     notifications.remove(n);
+    _logAdmin('删除公告', n.title);
     notifyListeners();
   }
 

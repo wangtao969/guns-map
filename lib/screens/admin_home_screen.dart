@@ -3,8 +3,11 @@ import '../community_store.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/app_top_bar.dart';
 import 'admin_config_screen.dart';
+import 'admin_log_screen.dart';
 import 'admin_personnel_screen.dart';
+import 'admin_posts_screen.dart';
 import 'admin_review_screen.dart';
+import 'admin_words_screen.dart';
 
 /// 后台首页：仅管理员 / 版主可见（入口在设置页，登录态决定）。
 /// 本地版：数据只保存在本机；正式版接服务器后由服务器验权与同步。
@@ -27,6 +30,13 @@ class AdminHomeScreen extends StatelessWidget {
           final reported = posts.where((p) => p.reported).length;
           final announcements = communityStore.notifications
               .where((n) => n.kind == 'system')
+              .length;
+          final now = DateTime.now();
+          bool isToday(DateTime t) =>
+              t.year == now.year && t.month == now.month && t.day == now.day;
+          final postsToday = posts.where((p) => isToday(p.time)).length;
+          final usersToday = communityStore.accounts
+              .where((a) => a.createdAt != null && isToday(a.createdAt!))
               .length;
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -54,6 +64,8 @@ class AdminHomeScreen extends StatelessWidget {
                   _stat('评论', '$comments'),
                   _stat('被举报帖子', '$reported'),
                   _stat('系统公告', '$announcements'),
+                  _stat('今日新增帖子', '$postsToday'),
+                  _stat('今日新增用户', '$usersToday'),
                 ],
               ),
               const SizedBox(height: 16),
@@ -74,6 +86,32 @@ class AdminHomeScreen extends StatelessWidget {
                       builder: (_) => const AdminReviewScreen()),
                 );
               }),
+              _entry(context, Icons.article_outlined, '全部帖子', '搜索全部帖子：置顶、加精、删除',
+                  () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const AdminPostsScreen()),
+                );
+              }),
+              if (isAdmin)
+                _entry(context, Icons.history_outlined, '操作日志', '删帖、禁言、封禁、任命等管理操作留痕',
+                    () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AdminLogScreen()),
+                  );
+                }),
+              if (isAdmin)
+                _entry(context, Icons.text_fields_outlined, '敏感词管理', '新增、删除敏感词，命中替换为等长星号',
+                    () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AdminWordsScreen()),
+                  );
+                }),
               if (communityStore.current?.isFounder == true)
                 Card(
                   margin: const EdgeInsets.only(bottom: 10),
