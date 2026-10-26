@@ -40,6 +40,30 @@ class Gun {
   });
 }
 
+/// 一把刀具：独立于 Gun 模型，枪械的口径/枪机等字段不适用于刀具。
+/// 刃长、钢材、年代查不到可靠来源时一律写“未确认”，绝不现编。
+class Knife {
+  final String name;
+  final String nameEn;
+  final String country;
+  final String type;
+  final String bladeLength;
+  final String steel;
+  final String year;
+  final String description;
+
+  const Knife({
+    required this.name,
+    required this.nameEn,
+    required this.country,
+    required this.type,
+    required this.bladeLength,
+    required this.steel,
+    required this.year,
+    required this.description,
+  });
+}
+
 /// 一支已停售名枪：用于“停售名枪鉴赏”栏目，讲历史与关联事件。
 class DiscontinuedLegend {
   final String name;

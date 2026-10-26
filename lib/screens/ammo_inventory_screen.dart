@@ -191,21 +191,22 @@ class _AmmoInventoryScreenState extends State<AmmoInventoryScreen> {
                           Text(item.note,
                               style: const TextStyle(color: Colors.grey)),
                         const SizedBox(height: 8),
-                        Row(
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text('现存 ${item.quantity} 发',
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFFE86A1C))),
-                            const Spacer(),
+                            const SizedBox(width: 12),
                             OutlinedButton(
                                 onPressed: () => _bump(item, -10),
                                 child: const Text('-10')),
-                            const SizedBox(width: 6),
                             OutlinedButton(
                                 onPressed: () => _bump(item, 10),
                                 child: const Text('+10')),
-                            const SizedBox(width: 6),
                             OutlinedButton(
                                 onPressed: () => _bump(item, 50),
                                 child: const Text('+50')),

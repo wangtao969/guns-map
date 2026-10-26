@@ -412,6 +412,7 @@ class _ThreadRow extends StatelessWidget {
                   nickname: p.authorNickname,
                   radius: 18,
                   frame: p.authorFrame,
+                  verified: isVerifiedAuthorId(p.authorId),
                 ),
               ),
               const SizedBox(width: 12),

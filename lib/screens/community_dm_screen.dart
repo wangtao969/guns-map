@@ -61,6 +61,7 @@ class _CommunityDmScreenState extends State<CommunityDmScreen> {
                                   nickname: a.nickname,
                                   radius: 20,
                                   frame: a.avatarFrame,
+                                  verified: isSpecialAccount(a),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
@@ -165,6 +166,7 @@ class _CommunityDmScreenState extends State<CommunityDmScreen> {
                         nickname: me.nickname,
                         radius: 20,
                         frame: me.avatarFrame,
+                        verified: isSpecialAccount(me),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -238,6 +240,7 @@ class _CommunityDmScreenState extends State<CommunityDmScreen> {
                                 color: peer.avatarColor,
                                 nickname: peer.nickname,
                                 radius: 24,
+                                verified: isSpecialAccount(peer),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -377,6 +380,7 @@ class _CommunityDmThreadScreenState extends State<CommunityDmThreadScreen> {
                         color: peer.avatarColor,
                         nickname: peer.nickname,
                         radius: 18,
+                        verified: isSpecialAccount(peer),
                       ),
                     ),
                     const SizedBox(width: 10),

@@ -199,6 +199,7 @@ class _CommunityPostDetailScreenState
                             nickname: p.authorNickname,
                             radius: 20,
                             frame: p.authorFrame,
+                            verified: isVerifiedAuthorId(p.authorId),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -330,6 +331,7 @@ class _CommunityPostDetailScreenState
                                     nickname: c.authorNickname,
                                     radius: 14,
                                     frame: c.authorFrame,
+                                    verified: isVerifiedAuthorId(c.authorId),
                                   ),
                                   const SizedBox(width: 8),
                                   Flexible(

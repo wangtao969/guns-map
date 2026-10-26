@@ -71,6 +71,7 @@ class CommunityLeaderboardScreen extends StatelessWidget {
                                       nickname: accounts[i].nickname,
                                       radius: 18,
                                       frame: accounts[i].avatarFrame,
+                                      verified: isSpecialAccount(accounts[i]),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(

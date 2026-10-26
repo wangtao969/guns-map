@@ -43,52 +43,45 @@ class _LevelBadgeState extends State<LevelBadge>
     return 5;
   }
 
-  /// 呼吸灯：t 在 0–1 之间正弦起伏，阴影的透明度与模糊半径跟着一呼一吸。
-  List<BoxShadow> _glow(Color c, double t) {
+  /// 呼吸灯：t 在 0–1 之间正弦起伏，只驱动外层光晕的透明度与模糊半径。
+  /// 光晕画在铭牌后面的独立层上，铭牌本身用不透明底，绝不被光盖住。
+  Color _glowColor(double t) {
+    if (_tier == 0) return Colors.transparent;
+    if (_tier == 5) return const Color(0xFF7B1FA2);
+    return widget.account.tierColor;
+  }
+
+  double _glowAlpha(double t) {
     switch (_tier) {
       case 0:
-        return const [];
+        return 0;
       case 1:
-        return [
-          BoxShadow(
-              color: c.withValues(alpha: 0.30 + 0.25 * t),
-              blurRadius: 8 + 6 * t,
-              spreadRadius: 0)
-        ];
+        return 0.30 + 0.25 * t;
       case 2:
-        return [
-          BoxShadow(
-              color: c.withValues(alpha: 0.35 + 0.30 * t),
-              blurRadius: 10 + 8 * t,
-              spreadRadius: 0)
-        ];
+        return 0.35 + 0.30 * t;
       case 3:
-        return [
-          BoxShadow(
-              color: c.withValues(alpha: 0.45 + 0.30 * t),
-              blurRadius: 14 + 10 * t,
-              spreadRadius: 0)
-        ];
+        return 0.45 + 0.30 * t;
       case 4:
-        return [
-          BoxShadow(
-              color: c.withValues(alpha: 0.55 + 0.30 * t),
-              blurRadius: 18 + 12 * t,
-              spreadRadius: 1)
-        ];
+        return 0.55 + 0.30 * t;
       default:
-        // 曜石的光是暗紫色，不用段位本身的深灰色。
-        const purple = Color(0xFF7B1FA2);
-        return [
-          BoxShadow(
-              color: purple.withValues(alpha: 0.60 + 0.30 * t),
-              blurRadius: 20 + 10 * t,
-              spreadRadius: 1),
-          BoxShadow(
-              color: purple.withValues(alpha: 0.30 + 0.25 * t),
-              blurRadius: 30 + 12 * t,
-              spreadRadius: 2),
-        ];
+        return 0.60 + 0.30 * t;
+    }
+  }
+
+  double _glowBlur(double t) {
+    switch (_tier) {
+      case 0:
+        return 0;
+      case 1:
+        return 8 + 6 * t;
+      case 2:
+        return 10 + 8 * t;
+      case 3:
+        return 14 + 10 * t;
+      case 4:
+        return 18 + 12 * t;
+      default:
+        return 20 + 10 * t;
     }
   }
 
@@ -96,6 +89,25 @@ class _LevelBadgeState extends State<LevelBadge>
   Widget build(BuildContext context) {
     final c = widget.account.tierColor;
     final h = widget.nicknameFontSize;
+    // 铭牌本体：不透明底（卡片色），文字与边框在最上层，光只在后面。
+    final badge = Container(
+      height: h,
+      padding: EdgeInsets.symmetric(horizontal: h * 0.32),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(h / 2),
+        border: Border.all(color: c),
+      ),
+      child: Text(
+        'LV${widget.account.level} · ${widget.account.tierName}',
+        style: TextStyle(
+            color: c,
+            fontSize: h * 0.68,
+            fontWeight: FontWeight.bold,
+            height: 1),
+      ),
+    );
     return GestureDetector(
       onTap: () => showLevelSystemDialog(context, widget.account),
       child: AnimatedBuilder(
@@ -103,38 +115,55 @@ class _LevelBadgeState extends State<LevelBadge>
         builder: (_, __) {
           final t =
               (math.sin(_ctrl.value * 2 * math.pi) + 1) / 2;
-          final badge = Container(
-            height: h,
-            padding: EdgeInsets.symmetric(horizontal: h * 0.32),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: c.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(h / 2),
-              border: Border.all(color: c),
-              boxShadow: _glow(c, t),
-            ),
-            child: Text(
-              'LV${widget.account.level} · ${widget.account.tierName}',
-              style: TextStyle(
-                  color: c,
-                  fontSize: h * 0.68,
-                  fontWeight: FontWeight.bold,
-                  height: 1),
-            ),
-          );
-          if (_tier != 5) return badge;
+          // 外散光层：比铭牌大一圈、只在铭牌四周向外发光，画在铭牌后面。
+          final glow = _tier == 0
+              ? const SizedBox.shrink()
+              : Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(h / 2 + 6),
+                    boxShadow: [
+                      BoxShadow(
+                          color: _glowColor(t)
+                              .withValues(alpha: _glowAlpha(t)),
+                          blurRadius: _glowBlur(t),
+                          spreadRadius: 2),
+                      if (_tier == 5)
+                        BoxShadow(
+                            color: const Color(0xFF7B1FA2)
+                                .withValues(alpha: 0.30 + 0.25 * t),
+                            blurRadius: 30 + 12 * t,
+                            spreadRadius: 4),
+                    ],
+                  ),
+                );
+          if (_tier != 5) {
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                    child: Padding(
+                        padding: const EdgeInsets.all(3), child: glow)),
+                badge,
+              ],
+            );
+          }
+          // 曜石：旋转光弧也画在铭牌后面、比铭牌大一圈，只向外散。
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(5),
-                child: badge,
-              ),
-              Positioned.fill(
+              Positioned(
+                left: -6,
+                top: -6,
+                right: -6,
+                bottom: -6,
                 child: CustomPaint(
                   painter: _ObsidianLightPainter(_ctrl.value),
                 ),
               ),
+              Positioned.fill(
+                  child: Padding(
+                      padding: const EdgeInsets.all(3), child: glow)),
+              badge,
             ],
           );
         },

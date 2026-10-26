@@ -1633,12 +1633,27 @@ class CommunityStore extends ChangeNotifier {
 /// 头像显示：有上传头像用图片，没有则用颜色圆 + 昵称首字。
 /// 社区头像：有照片用照片；无照片统一用灰底人形描边默认头像（微信式），
 /// 不再用颜色 + 首字头像。frame 为头像边框（'' / copper / gold / rainbow）。
+/// 特殊权限用户（创始 / 管理员 / 版主）的头像右下角挂红色 V 标（X 式认证标，改红色）。
+bool isSpecialAccount(CommunityAccount a) =>
+    a.isFounder || a.role == 'admin' || a.role == 'moderator';
+
+/// 按作者 ID 判断是否为特殊权限用户：查本机账号表，找不到时创始 ID 与旧管理员 ID 仍算特殊。
+bool isVerifiedAuthorId(String authorId) {
+  if (authorId == CommunityStore.founderId ||
+      authorId == CommunityStore.legacyAdminId) return true;
+  for (final a in communityStore.accounts) {
+    if (a.id == authorId) return isSpecialAccount(a);
+  }
+  return false;
+}
+
 Widget communityAvatar({
   required Uint8List? bytes,
   required Color color,
   required String nickname,
   required double radius,
   String frame = '',
+  bool verified = false,
 }) {
   final Widget core;
   if (bytes != null) {
@@ -1654,7 +1669,7 @@ Widget communityAvatar({
           size: radius * 1.15, color: Colors.white),
     );
   }
-  if (frame.isEmpty) return core;
+  if (frame.isEmpty) return _withVerified(core, radius, verified);
   final colors = switch (frame) {
     'copper' => [const Color(0xFFD9B57A), const Color(0xFF8C6A2F)],
     'gold' => [const Color(0xFFF0C75E), const Color(0xFFB8860B)],
@@ -1668,14 +1683,44 @@ Widget communityAvatar({
       ],
     _ => null,
   };
-  if (colors == null) return core;
-  return Container(
-    padding: const EdgeInsets.all(2.5),
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: LinearGradient(colors: colors),
+  if (colors == null) return _withVerified(core, radius, verified);
+  return _withVerified(
+    Container(
+      padding: const EdgeInsets.all(2.5),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(colors: colors),
+      ),
+      child: core,
     ),
-    child: core,
+    radius,
+    verified,
+  );
+}
+
+/// 头像右下角 V 标：红色实心圆 + 白色对勾，外圈白边与头像分隔；不挂时原样返回。
+Widget _withVerified(Widget avatar, double radius, bool verified) {
+  if (!verified) return avatar;
+  final d = (radius * 0.62).clamp(14.0, 26.0);
+  return Stack(
+    clipBehavior: Clip.none,
+    children: [
+      avatar,
+      Positioned(
+        right: -1,
+        bottom: -1,
+        child: Container(
+          width: d,
+          height: d,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE53935),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 1.5),
+          ),
+          child: Icon(Icons.check, size: d * 0.62, color: Colors.white),
+        ),
+      ),
+    ],
   );
 }
 

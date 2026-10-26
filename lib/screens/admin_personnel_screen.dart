@@ -70,6 +70,7 @@ class AdminPersonnelScreen extends StatelessWidget {
                       nickname: a.nickname,
                       radius: 20,
                       frame: a.avatarFrame,
+                      verified: isSpecialAccount(a),
                     ),
                     title: Text(a.nickname,
                         style: const TextStyle(fontWeight: FontWeight.bold)),

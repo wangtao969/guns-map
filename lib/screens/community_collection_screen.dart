@@ -7,6 +7,7 @@ import '../data.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/community_theme.dart';
+import '../widgets/scale_tap.dart';
 import 'community_account_dialogs.dart';
 import 'gun_picker_dialog.dart';
 
@@ -147,6 +148,33 @@ class CommunityCollectionScreen extends StatelessWidget {
     }
   }
 
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'owned':
+        return communityAccent;
+      case 'handled':
+        return const Color(0xFF7FA8BC);
+      default:
+        return const Color(0xFF8A8D91);
+    }
+  }
+
+  Widget _actionChip(Widget child, VoidCallback onTap, {bool filled = false}) {
+    return ScaleTap(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: filled ? communityAccent : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: filled ? communityAccent : communityAccent),
+        ),
+        child: child,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -160,18 +188,6 @@ class CommunityCollectionScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Row(
-                children: [
-                  const Spacer(),
-                  if (me != null)
-                    OutlinedButton.icon(
-                      onPressed: () => _shareCard(context, me),
-                      icon: const Icon(Icons.share_outlined, size: 18),
-                      label: const Text('分享卡面'),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
               if (me == null)
                 Card(
                   child: Padding(
@@ -201,105 +217,285 @@ class CommunityCollectionScreen extends StatelessWidget {
                   ),
                 )
               else ...[
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
+                // 柜顶总览：深铜渐变卡 + 完成度进度条 + 三态统计，不再是干巴巴的一行字。
+                Builder(builder: (_) {
+                  final owned = me.collection
+                      .where((c) => c.status == 'owned')
+                      .length;
+                  final handled = me.collection
+                      .where((c) => c.status == 'handled')
+                      .length;
+                  final wanted = me.collection
+                      .where((c) => c.status == 'wanted')
+                      .length;
+                  final totalRounds = me.collection
+                      .fold<int>(0, (s, c) => s + c.rounds);
+                  final progress = guns.isEmpty
+                      ? 0.0
+                      : me.collection.length / guns.length;
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFF6B5B3E),
+                          Color(0xFFE86A1C),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.inventory_2_outlined,
-                            color: communityAccent),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            '收藏完成度 ${me.collection.length} / ${guns.length}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16),
+                        Row(
+                          children: [
+                            const Icon(Icons.inventory_2_outlined,
+                                color: Colors.white),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '收藏完成度 ${me.collection.length} / ${guns.length}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.white),
+                              ),
+                            ),
+                            Text('${(progress * 100).toStringAsFixed(0)}%',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 6,
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.3),
+                            valueColor:
+                                const AlwaysStoppedAnimation(Colors.white),
                           ),
                         ),
-                        OutlinedButton(
-                          onPressed: () => _addGun(context),
-                          child: const Text('登记一把'),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _statChip('拥有 $owned'),
+                            _statChip('上手过 $handled'),
+                            _statChip('想收集 $wanted'),
+                            _statChip('已打 $totalRounds 发'),
+                          ],
                         ),
                       ],
                     ),
-                  ),
+                  );
+                }),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    _actionChip(
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, size: 18, color: communityAccent),
+                          SizedBox(width: 4),
+                          Text('登记一把',
+                              style: TextStyle(color: communityAccent)),
+                        ],
+                      ),
+                      () => _addGun(context),
+                    ),
+                    const Spacer(),
+                    _actionChip(
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.share_outlined,
+                              size: 18, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text('分享卡面',
+                              style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                      () => _shareCard(context, me),
+                      filled: true,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 for (final status in ['owned', 'handled', 'wanted']) ...[
                   Builder(builder: (_) {
                     final items = me.collection
                         .where((c) => c.status == status)
                         .toList();
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: ExpansionTile(
-                        initiallyExpanded: true,
-                        title: Text(
-                            '${_statusName(status)}（${items.length}）',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold)),
-                        children: items.isEmpty
-                            ? [
-                                const ListTile(
-                                    title: Text('还没有登记这一类的枪'))
-                              ]
-                            : items.map((item) {
-                                final lv = communityStore
-                                    .masteryForGun(me, item.gunName);
-                                return ListTile(
-                                  title: Text(item.gunName),
-                                  subtitle: Text(
-                                      '${item.vendor} · ${item.caliber} · ${item.category}${lv > 0 ? ' · 精通${masteryNames[lv]}' : ''}${item.rounds > 0 ? ' · 已打 ${item.rounds} 发' : ''}'),
-                                  trailing: PopupMenuButton<String>(
-                                    onSelected: (v) {
-                                      if (v == 'delete') {
-                                        communityStore.removeCollectionItem(
-                                            item.gunName);
-                                      } else if (v == 'rounds10') {
-                                        communityStore.addCollectionRounds(
-                                            item.gunName, 10);
-                                      } else if (v == 'rounds50') {
-                                        communityStore.addCollectionRounds(
-                                            item.gunName, 50);
-                                      } else if (v == 'rounds_clear') {
-                                        communityStore.clearCollectionRounds(
-                                            item.gunName);
-                                      } else {
-                                        communityStore.setCollectionStatus(
-                                            item.gunName, v);
-                                      }
-                                    },
-                                    itemBuilder: (_) => [
-                                      const PopupMenuItem(
-                                          value: 'owned',
-                                          child: Text('改成拥有')),
-                                      const PopupMenuItem(
-                                          value: 'handled',
-                                          child: Text('改成上手过')),
-                                      const PopupMenuItem(
-                                          value: 'wanted',
-                                          child: Text('改成想收集')),
-                                      const PopupMenuItem(
-                                          value: 'rounds10',
-                                          child: Text('弹数 +10 发')),
-                                      const PopupMenuItem(
-                                          value: 'rounds50',
-                                          child: Text('弹数 +50 发')),
-                                      const PopupMenuItem(
-                                          value: 'rounds_clear',
-                                          child: Text('弹数清零')),
-                                      const PopupMenuItem(
-                                          value: 'delete',
-                                          child: Text('删除')),
+                    final sc = _statusColor(status);
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                    color: sc, shape: BoxShape.circle)),
+                            const SizedBox(width: 8),
+                            Text(
+                                '${_statusName(status)}（${items.length}）',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        if (items.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Text('还没有登记这一类的枪',
+                                style: TextStyle(color: grey)),
+                          )
+                        else
+                          ...items.asMap().entries.map((entry) {
+                            final idx = entry.key;
+                            final item = entry.value;
+                            final lv = communityStore
+                                .masteryForGun(me, item.gunName);
+                            return TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0.0, end: 1.0),
+                              duration: Duration(
+                                  milliseconds: 220 + idx * 60),
+                              builder: (_, v, child) => Opacity(
+                                opacity: v,
+                                child: Transform.translate(
+                                  offset: Offset(0, (1 - v) * 12),
+                                  child: child,
+                                ),
+                              ),
+                              child: Card(
+                                margin:
+                                    const EdgeInsets.only(bottom: 10),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(16),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        width: 4,
+                                        height: 56,
+                                        decoration: BoxDecoration(
+                                          color: sc,
+                                          borderRadius:
+                                              BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(item.gunName,
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                    fontSize: 15)),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                                '${item.vendor} · ${item.caliber} · ${item.category}',
+                                                style: TextStyle(
+                                                    color: grey,
+                                                    fontSize: 12)),
+                                            if (lv > 0 ||
+                                                item.rounds > 0) ...[
+                                              const SizedBox(height: 6),
+                                              Wrap(
+                                                spacing: 6,
+                                                children: [
+                                                  if (lv > 0)
+                                                    _miniChip(
+                                                        '精通${masteryNames[lv]}',
+                                                        communityAccent),
+                                                  if (item.rounds > 0)
+                                                    _miniChip(
+                                                        '已打 ${item.rounds} 发',
+                                                        grey),
+                                                ],
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      PopupMenuButton<String>(
+                                        onSelected: (v) {
+                                          if (v == 'delete') {
+                                            communityStore
+                                                .removeCollectionItem(
+                                                    item.gunName);
+                                          } else if (v == 'rounds10') {
+                                            communityStore
+                                                .addCollectionRounds(
+                                                    item.gunName, 10);
+                                          } else if (v == 'rounds50') {
+                                            communityStore
+                                                .addCollectionRounds(
+                                                    item.gunName, 50);
+                                          } else if (v ==
+                                              'rounds_clear') {
+                                            communityStore
+                                                .clearCollectionRounds(
+                                                    item.gunName);
+                                          } else {
+                                            communityStore
+                                                .setCollectionStatus(
+                                                    item.gunName, v);
+                                          }
+                                        },
+                                        itemBuilder: (_) => [
+                                          const PopupMenuItem(
+                                              value: 'owned',
+                                              child: Text('改成拥有')),
+                                          const PopupMenuItem(
+                                              value: 'handled',
+                                              child: Text('改成上手过')),
+                                          const PopupMenuItem(
+                                              value: 'wanted',
+                                              child: Text('改成想收集')),
+                                          const PopupMenuItem(
+                                              value: 'rounds10',
+                                              child: Text('弹数 +10 发')),
+                                          const PopupMenuItem(
+                                              value: 'rounds50',
+                                              child: Text('弹数 +50 发')),
+                                          const PopupMenuItem(
+                                              value: 'rounds_clear',
+                                              child: Text('弹数清零')),
+                                          const PopupMenuItem(
+                                              value: 'delete',
+                                              child: Text('删除')),
+                                        ],
+                                      ),
                                     ],
                                   ),
-                                );
-                              }).toList(),
-                      ),
+                                ),
+                              ),
+                            );
+                          }),
+                        const SizedBox(height: 8),
+                      ],
                     );
                   }),
                 ],
-                const SizedBox(height: 8),
                 Text(
                   '精通等级：想收集 = 了解，上手过 = 熟悉，拥有 = 上手，拥有且发过该枪动态或记过该枪成绩 = 精通；5 级权威需词条维护权限，接后端后开放。',
                   style: TextStyle(color: grey, fontSize: 12),
@@ -309,6 +505,29 @@ class CommunityCollectionScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _statChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(label,
+          style: const TextStyle(color: Colors.white, fontSize: 12)),
+    );
+  }
+
+  Widget _miniChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(label, style: TextStyle(color: color, fontSize: 11)),
     );
   }
 }

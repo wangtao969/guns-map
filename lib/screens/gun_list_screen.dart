@@ -58,6 +58,10 @@ class GunListScreen extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
+                collapsedShape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                childrenPadding: const EdgeInsets.only(bottom: 8),
                 title: Text(vendor,
                     style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text(modelsCountText(models.length),

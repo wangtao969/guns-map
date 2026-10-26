@@ -202,7 +202,17 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
                 reloadLoads.where((l) => l.caliber == c.caliber).toList();
             return Card(
               margin: const EdgeInsets.only(bottom: 10),
-              child: ExpansionTile(
+              child: Theme(
+                data: Theme.of(context)
+                    .copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                collapsedShape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                childrenPadding: const EdgeInsets.only(bottom: 8),
                 title: Text(c.caliber,
                     style: const TextStyle(fontWeight: FontWeight.bold)),
                 onExpansionChanged: (_) => tapHaptic(),
@@ -230,6 +240,7 @@ class _ReloadingScreenState extends State<ReloadingScreen> {
                     const SizedBox(height: 8),
                   ],
                 ],
+              ),
               ),
             );
           }),

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/app_top_bar.dart';
 
 /// 靶场换算：只算你输入的数，不画弹道、不给装药建议。
@@ -15,12 +17,59 @@ class RangeToolsScreen extends StatefulWidget {
 }
 
 class _RangeToolsScreenState extends State<RangeToolsScreen> {
+  static const _prefsChannel = MethodChannel('gunsmap/prefs');
+  static const _prefsKey = 'range_tools_inputs_v1';
   final _groupCtrl = TextEditingController();
   final _distCtrl = TextEditingController(text: '100');
   final _moaCtrl = TextEditingController();
   final _hDevCtrl = TextEditingController();
   final _vDevCtrl = TextEditingController();
   String _clickUnit = '1/4 MOA';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final raw = await _prefsChannel
+          .invokeMethod<String>('getString', {'key': _prefsKey})
+          .timeout(const Duration(seconds: 2));
+      if (raw == null || raw.isEmpty || !mounted) return;
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      setState(() {
+        void set(TextEditingController c, String k) {
+          final v = m[k] as String?;
+          if (v != null) c.text = v;
+        }
+        set(_groupCtrl, 'group');
+        set(_distCtrl, 'dist');
+        set(_moaCtrl, 'moa');
+        set(_hDevCtrl, 'hDev');
+        set(_vDevCtrl, 'vDev');
+        final u = m['clickUnit'] as String?;
+        if (u != null) _clickUnit = u;
+      });
+    } catch (_) {}
+  }
+
+  void _save() {
+    try {
+      _prefsChannel.invokeMethod('setString', {
+        'key': _prefsKey,
+        'value': jsonEncode({
+          'group': _groupCtrl.text,
+          'dist': _distCtrl.text,
+          'moa': _moaCtrl.text,
+          'hDev': _hDevCtrl.text,
+          'vDev': _vDevCtrl.text,
+          'clickUnit': _clickUnit,
+        }),
+      });
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -94,12 +143,12 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
           _NumberField(
               controller: _groupCtrl,
               label: '散布（厘米，取最远两发中心距）',
-              onChanged: (_) => setState(() {})),
+              onChanged: (_) { setState(() {}); _save(); }),
           const SizedBox(height: 8),
           _NumberField(
               controller: _distCtrl,
               label: '距离（米）',
-              onChanged: (_) => setState(() {})),
+              onChanged: (_) { setState(() {}); _save(); }),
           if (groupCm > 0 && distM > 0) ...[
             _ResultLine(
                 '散布 = ${_fmt(moaValue)} MOA（${_fmt(mradValue)} 密位）'),
@@ -113,7 +162,7 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
           _NumberField(
               controller: _moaCtrl,
               label: 'MOA 值',
-              onChanged: (_) => setState(() {})),
+              onChanged: (_) { setState(() {}); _save(); }),
           if (moa > 0 && distM > 0)
             _ResultLine(
                 '${_fmt(moa)} MOA 在 ${_fmt(distM)} 米处 ≈ ${_fmt(moaGroupCm)} 厘米'),
@@ -134,7 +183,7 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
                   DropdownMenuItem(value: '0.1 密位', child: Text('0.1 密位')),
                 ],
                 onChanged: (v) {
-                  if (v != null) setState(() => _clickUnit = v);
+                  if (v != null) { setState(() => _clickUnit = v); _save(); }
                 },
               ),
             ],
@@ -143,12 +192,12 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
           _NumberField(
               controller: _hDevCtrl,
               label: '水平偏差（厘米，绝对值）',
-              onChanged: (_) => setState(() {})),
+              onChanged: (_) { setState(() {}); _save(); }),
           const SizedBox(height: 8),
           _NumberField(
               controller: _vDevCtrl,
               label: '垂直偏差（厘米，绝对值）',
-              onChanged: (_) => setState(() {})),
+              onChanged: (_) { setState(() {}); _save(); }),
           if ((hDev > 0 || vDev > 0) && distM > 0)
             _ResultLine(
                 '水平约 ${_fmt(hClicks, 1)} 格，垂直约 ${_fmt(vClicks, 1)} 格（$_clickUnit/格，四舍五入到整格后以实测为准）'),

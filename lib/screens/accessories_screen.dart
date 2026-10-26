@@ -3,7 +3,11 @@ import '../data.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../models.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart';
 import '../widgets/app_top_bar.dart';
+import '../widgets/app_toast.dart';
+import '../widgets/scale_tap.dart';
 
 class AccessoriesScreen extends StatefulWidget {
   const AccessoriesScreen({super.key});
@@ -198,12 +202,80 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
 }
 
 /// 配件详情：点卡片进来才能看到适配枪械、售价与购买渠道。
-class AccessoryDetailScreen extends StatelessWidget {
+/// 入库：把配件记进本机配件库（key accessory_inventory_v1），不登录、不交易；
+/// 入库按钮带按压缩放 + 已入库对勾切换动画。
+class AccessoryDetailScreen extends StatefulWidget {
   final AccessoryItem item;
   const AccessoryDetailScreen({super.key, required this.item});
 
   @override
+  State<AccessoryDetailScreen> createState() => _AccessoryDetailScreenState();
+}
+
+class _AccessoryDetailScreenState extends State<AccessoryDetailScreen> {
+  static const _prefsChannel = MethodChannel('gunsmap/prefs');
+  static const _prefsKey = 'accessory_inventory_v1';
+  int _count = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final raw = await _prefsChannel
+          .invokeMethod<String>('getString', {'key': _prefsKey})
+          .timeout(const Duration(seconds: 2));
+      if (raw == null || raw.isEmpty || !mounted) return;
+      final list = jsonDecode(raw) as List;
+      for (final e in list) {
+        final m = e as Map<String, dynamic>;
+        if (m['name'] == widget.item.name) {
+          setState(() => _count = (m['count'] as num?)?.toInt() ?? 0);
+          return;
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _add() async {
+    try {
+      final raw = await _prefsChannel
+          .invokeMethod<String>('getString', {'key': _prefsKey})
+          .timeout(const Duration(seconds: 2));
+      final list = <Map<String, dynamic>>[];
+      if (raw != null && raw.isNotEmpty) {
+        for (final e in jsonDecode(raw) as List) {
+          list.add(Map<String, dynamic>.from(e as Map));
+        }
+      }
+      var found = false;
+      for (final m in list) {
+        if (m['name'] == widget.item.name) {
+          m['count'] = ((m['count'] as num?)?.toInt() ?? 0) + 1;
+          found = true;
+        }
+      }
+      if (!found) {
+        list.add({
+          'name': widget.item.name,
+          'vendor': widget.item.vendor,
+          'type': widget.item.type,
+          'count': 1,
+        });
+      }
+      await _prefsChannel.invokeMethod(
+          'setString', {'key': _prefsKey, 'value': jsonEncode(list)});
+      if (mounted) setState(() => _count += 1);
+    } catch (_) {}
+    if (mounted) showAppToast(context, '已入库：${widget.item.name}');
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final item = widget.item;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
     final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
@@ -220,6 +292,45 @@ class AccessoryDetailScreen extends StatelessWidget {
               style: TextStyle(color: grey)),
           const SizedBox(height: 12),
           Text(item.description),
+          const SizedBox(height: 20),
+          ScaleTap(
+            onTap: _add,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Container(
+                key: ValueKey(_count),
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE86A1C),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                        _count > 0
+                            ? Icons.check_circle_outline
+                            : Icons.inventory_outlined,
+                        color: Colors.white,
+                        size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                        _count > 0
+                            ? '已入库 $_count 件 · 再入库一件'
+                            : '加入我的配件库（入库）',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text('入库只记在本机配件库，不登录、不交易；配件库与枪械收藏柜分开记。',
+              style: TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 20),
           Text(tr('price'), style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
           const SizedBox(height: 4),

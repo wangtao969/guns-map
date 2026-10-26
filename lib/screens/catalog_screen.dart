@@ -13,6 +13,9 @@ import 'community_tasks_screen.dart';
 import 'gun_list_screen.dart';
 import 'gun_detail_screen.dart';
 import 'legend_list_screen.dart';
+import '../knife_data.dart';
+import 'knife_detail_screen.dart';
+import 'knife_list_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
@@ -40,6 +43,16 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 g.name.toLowerCase().contains(q) ||
                 g.vendor.toLowerCase().contains(q) ||
                 g.caliber.toLowerCase().contains(q))
+            .toList();
+    // 刀具搜索与枪械搜索并列：搜刀名、英文名、国家、分类都能命中。
+    final knifeResults = q.isEmpty
+        ? <Knife>[]
+        : knives
+            .where((k) =>
+                k.name.toLowerCase().contains(q) ||
+                k.nameEn.toLowerCase().contains(q) ||
+                k.country.toLowerCase().contains(q) ||
+                k.type.toLowerCase().contains(q))
             .toList();
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -267,11 +280,39 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       },
                     ),
                   )),
-              if (results.isEmpty)
+              if (knifeResults.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text('刀具',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: ink)),
+                const SizedBox(height: 8),
+                ...knifeResults.map((k) => Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: ListTile(
+                        title: Text(k.name),
+                        subtitle: Text('${k.country} · ${k.type}'),
+                        onTap: () {
+                          tapHaptic();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    KnifeDetailScreen(knife: k)),
+                          );
+                        },
+                      ),
+                    )),
+              ],
+              if (results.isEmpty && knifeResults.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 24),
                   child: Center(
-                    child: Text('没有找到相关枪械',
+                    child: Text('没有找到相关枪械或刀具',
                         style: TextStyle(color: grey)),
                   ),
                 ),
@@ -357,6 +398,65 @@ class _CatalogScreenState extends State<CatalogScreen> {
               const SizedBox(height: 6),
               Text('品类图片来源：Wikimedia Commons（免费授权）',
                   style: TextStyle(color: grey, fontSize: 11)),
+              // 刀具图鉴：枪械品类下方单独的大类入口，不进 categories 列表
+              //（该列表驱动枪械网格与计数，混入会串位）。
+              const SizedBox(height: 24),
+              Text('刀具图鉴',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: ink)),
+              const SizedBox(height: 4),
+              Text('各国军刀与知名实用刀，按分类与国家筛选',
+                  style: TextStyle(color: grey, fontSize: 13)),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  tapHaptic();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const KnifeListScreen()),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('走进刀具图鉴',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: ink)),
+                            const SizedBox(height: 4),
+                            Text(
+                                '卡巴军刀、M9 刺刀、莫拉伴侣刀……共 ${knives.length} 把',
+                                style:
+                                    TextStyle(color: grey, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: grey),
+                    ],
+                  ),
+                ),
+              ),
               // 停售名枪鉴赏：首页下方的大类入口。
               const SizedBox(height: 24),
               Text(tr('legends'),

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/app_top_bar.dart';
 
 /// 装药工具：只做物理换算，不给装药建议。
@@ -14,6 +16,8 @@ class LoadToolsScreen extends StatefulWidget {
 }
 
 class _LoadToolsScreenState extends State<LoadToolsScreen> {
+  static const _prefsChannel = MethodChannel('gunsmap/prefs');
+  static const _prefsKey = 'load_tools_inputs_v1';
   final _grainsCtrl = TextEditingController();
   final _fpsCtrl = TextEditingController();
   final _inchCtrl = TextEditingController();
@@ -24,6 +28,58 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
   final _velocityCtrl = TextEditingController(text: '2800');
   final _powderCtrl = TextEditingController(text: '45');
   final _gunWeightCtrl = TextEditingController(text: '4');
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final raw = await _prefsChannel
+          .invokeMethod<String>('getString', {'key': _prefsKey})
+          .timeout(const Duration(seconds: 2));
+      if (raw == null || raw.isEmpty || !mounted) return;
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      setState(() {
+        void set(TextEditingController c, String k) {
+          final v = m[k] as String?;
+          if (v != null) c.text = v;
+        }
+        set(_grainsCtrl, 'grains');
+        set(_fpsCtrl, 'fps');
+        set(_inchCtrl, 'inch');
+        set(_mmCtrl, 'mm');
+        set(_psiCtrl, 'psi');
+        set(_yardCtrl, 'yard');
+        set(_bulletCtrl, 'bullet');
+        set(_velocityCtrl, 'velocity');
+        set(_powderCtrl, 'powder');
+        set(_gunWeightCtrl, 'gunWeight');
+      });
+    } catch (_) {}
+  }
+
+  void _save() {
+    try {
+      _prefsChannel.invokeMethod('setString', {
+        'key': _prefsKey,
+        'value': jsonEncode({
+          'grains': _grainsCtrl.text,
+          'fps': _fpsCtrl.text,
+          'inch': _inchCtrl.text,
+          'mm': _mmCtrl.text,
+          'psi': _psiCtrl.text,
+          'yard': _yardCtrl.text,
+          'bullet': _bulletCtrl.text,
+          'velocity': _velocityCtrl.text,
+          'powder': _powderCtrl.text,
+          'gunWeight': _gunWeightCtrl.text,
+        }),
+      });
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -92,7 +148,7 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
           _NumberField(
             controller: _grainsCtrl,
             label: '格令（gr）',
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) { setState(() {}); _save(); },
           ),
           if (grains > 0)
             _ResultLine('= ${_fmt(grains * _grToG, 3)} 克'),
@@ -100,7 +156,7 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
           _NumberField(
             controller: _fpsCtrl,
             label: '初速（英尺/秒 fps）',
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) { setState(() {}); _save(); },
           ),
           if (fps > 0)
             _ResultLine('= ${_fmt(fps * _fpsToMs, 2)} 米/秒'),
@@ -108,7 +164,7 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
           _NumberField(
             controller: _inchCtrl,
             label: '长度（英寸）',
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) { setState(() {}); _save(); },
           ),
           if (inch > 0)
             _ResultLine('= ${_fmt(inch * 2.54, 2)} 厘米'),
@@ -116,7 +172,7 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
           _NumberField(
             controller: _mmCtrl,
             label: '弹头直径（毫米）',
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) { setState(() {}); _save(); },
           ),
           if (mm > 0)
             _ResultLine('= ${_fmt(mm / 25.4, 3)} 英寸'),
@@ -124,7 +180,7 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
           _NumberField(
             controller: _psiCtrl,
             label: '膛压（psi）',
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) { setState(() {}); _save(); },
           ),
           if (psi > 0)
             _ResultLine('= ${_fmt(psi * 0.00689476, 2)} 兆帕（MPa）'),
@@ -132,7 +188,7 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
           _NumberField(
             controller: _yardCtrl,
             label: '距离（码）',
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) { setState(() {}); _save(); },
           ),
           if (yard > 0)
             _ResultLine('= ${_fmt(yard * 0.9144, 2)} 米'),
@@ -143,13 +199,13 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
           _NumberField(
             controller: _bulletCtrl,
             label: '弹头重（格令）',
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) { setState(() {}); _save(); },
           ),
           const SizedBox(height: 8),
           _NumberField(
             controller: _velocityCtrl,
             label: '初速（英尺/秒）',
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) { setState(() {}); _save(); },
           ),
           const SizedBox(height: 8),
           _ResultLine(
@@ -161,13 +217,13 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
           _NumberField(
             controller: _powderCtrl,
             label: '装药量（格令）',
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) { setState(() {}); _save(); },
           ),
           const SizedBox(height: 8),
           _NumberField(
             controller: _gunWeightCtrl,
             label: '枪重（千克）',
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) { setState(() {}); _save(); },
           ),
           const SizedBox(height: 8),
           _ResultLine(

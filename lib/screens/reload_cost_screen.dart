@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/app_top_bar.dart';
 
 /// 复装成本：只算你输入的价格，不提供任何厂商报价、不给装药建议。
@@ -12,12 +14,58 @@ class ReloadCostScreen extends StatefulWidget {
 }
 
 class _ReloadCostScreenState extends State<ReloadCostScreen> {
+  static const _prefsChannel = MethodChannel('gunsmap/prefs');
+  static const _prefsKey = 'reload_cost_inputs_v1';
   final _bulletCtrl = TextEditingController();
   final _primerCtrl = TextEditingController();
   final _powderPriceCtrl = TextEditingController();
   final _powderGrCtrl = TextEditingController();
   final _brassCtrl = TextEditingController();
   final _reuseCtrl = TextEditingController(text: '5');
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final raw = await _prefsChannel
+          .invokeMethod<String>('getString', {'key': _prefsKey})
+          .timeout(const Duration(seconds: 2));
+      if (raw == null || raw.isEmpty || !mounted) return;
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      setState(() {
+        void set(TextEditingController c, String k) {
+          final v = m[k] as String?;
+          if (v != null) c.text = v;
+        }
+        set(_bulletCtrl, 'bullet');
+        set(_primerCtrl, 'primer');
+        set(_powderPriceCtrl, 'powderPrice');
+        set(_powderGrCtrl, 'powderGr');
+        set(_brassCtrl, 'brass');
+        set(_reuseCtrl, 'reuse');
+      });
+    } catch (_) {}
+  }
+
+  void _save() {
+    try {
+      _prefsChannel.invokeMethod('setString', {
+        'key': _prefsKey,
+        'value': jsonEncode({
+          'bullet': _bulletCtrl.text,
+          'primer': _primerCtrl.text,
+          'powderPrice': _powderPriceCtrl.text,
+          'powderGr': _powderGrCtrl.text,
+          'brass': _brassCtrl.text,
+          'reuse': _reuseCtrl.text,
+        }),
+      });
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -63,32 +111,32 @@ class _ReloadCostScreenState extends State<ReloadCostScreen> {
           _NumberField(
               controller: _bulletCtrl,
               label: '弹头单价（元/颗）',
-              onChanged: (_) => setState(() {})),
+              onChanged: (_) { setState(() {}); _save(); }),
           const SizedBox(height: 8),
           _NumberField(
               controller: _primerCtrl,
               label: '底火单价（元/颗）',
-              onChanged: (_) => setState(() {})),
+              onChanged: (_) { setState(() {}); _save(); }),
           const SizedBox(height: 8),
           _NumberField(
               controller: _powderPriceCtrl,
               label: '火药单价（元/克）',
-              onChanged: (_) => setState(() {})),
+              onChanged: (_) { setState(() {}); _save(); }),
           const SizedBox(height: 8),
           _NumberField(
               controller: _powderGrCtrl,
               label: '装药量（格令，仅用来算火药钱）',
-              onChanged: (_) => setState(() {})),
+              onChanged: (_) { setState(() {}); _save(); }),
           const SizedBox(height: 8),
           _NumberField(
               controller: _brassCtrl,
               label: '弹壳单价（元/颗）',
-              onChanged: (_) => setState(() {})),
+              onChanged: (_) { setState(() {}); _save(); }),
           const SizedBox(height: 8),
           _NumberField(
               controller: _reuseCtrl,
               label: '弹壳复用次数（填 1 表示一次性）',
-              onChanged: (_) => setState(() {})),
+              onChanged: (_) { setState(() {}); _save(); }),
           const SizedBox(height: 16),
           _ResultLine('每发成本：${_fmt(perRound)} 元'),
           const SizedBox(height: 4),

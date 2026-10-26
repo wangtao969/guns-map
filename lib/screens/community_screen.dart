@@ -220,6 +220,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   nickname: p.authorNickname,
                   radius: 18,
                   frame: p.authorFrame,
+                  verified: isVerifiedAuthorId(p.authorId),
                 ),
               ),
               const SizedBox(width: 12),
@@ -554,6 +555,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     nickname: current.nickname,
                     radius: 16,
                     frame: current.avatarFrame,
+                    verified: isSpecialAccount(current),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -585,6 +587,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         nickname: accounts[i].nickname,
                         radius: 14,
                         frame: accounts[i].avatarFrame,
+                        verified: isSpecialAccount(accounts[i]),
                       ),
                       const SizedBox(width: 8),
                       Expanded(

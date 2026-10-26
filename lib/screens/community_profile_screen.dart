@@ -68,6 +68,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                         nickname: a.nickname,
                         radius: 16,
                         frame: a.avatarFrame,
+                        verified: isSpecialAccount(a),
                       ),
                       title: Text(a.nickname),
                       subtitle:
@@ -130,7 +131,17 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                 medals.where((m) => earnedIds.contains(m.id)).length;
             return Card(
               margin: const EdgeInsets.only(bottom: 10),
-              child: ExpansionTile(
+              child: Theme(
+                data: Theme.of(context)
+                    .copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                collapsedShape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                childrenPadding: const EdgeInsets.only(bottom: 8),
                 title: Text('$g（$got/${medals.length}）',
                     style: const TextStyle(fontWeight: FontWeight.bold)),
                 children: medals.map((m) {
@@ -152,6 +163,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                             fontSize: 12)),
                   );
                 }).toList(),
+              ),
               ),
             );
           }),
@@ -228,6 +240,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                           nickname: account.nickname,
                           radius: 32,
                           frame: account.avatarFrame,
+                          verified: isSpecialAccount(account),
                         ),
                         const SizedBox(height: 8),
                         LevelBadge(account: account, nicknameFontSize: 14),

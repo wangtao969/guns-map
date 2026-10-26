@@ -93,6 +93,7 @@ class MyScreen extends StatelessWidget {
                           nickname: me.nickname,
                           radius: 32,
                           frame: me.avatarFrame,
+                          verified: isSpecialAccount(me),
                         ),
                         const SizedBox(height: 8),
                         LevelBadge(account: me, nicknameFontSize: 14),
