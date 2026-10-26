@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../tools_units.dart';
 import '../widgets/app_top_bar.dart';
 
 /// 装药工具：只做物理换算，不给装药建议。
@@ -29,9 +30,15 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
   final _powderCtrl = TextEditingController(text: '45');
   final _gunWeightCtrl = TextEditingController(text: '4');
 
+  void _onUnitsChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
+    loadUnitSystem();
+    unitSystemNotifier.addListener(_onUnitsChanged);
     _load();
   }
 
@@ -83,6 +90,7 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
 
   @override
   void dispose() {
+    unitSystemNotifier.removeListener(_onUnitsChanged);
     _grainsCtrl.dispose();
     _fpsCtrl.dispose();
     _inchCtrl.dispose();
@@ -116,10 +124,19 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
     final mm = double.tryParse(_mmCtrl.text) ?? 0;
     final psi = double.tryParse(_psiCtrl.text) ?? 0;
     final yard = double.tryParse(_yardCtrl.text) ?? 0;
-    final bulletGr = double.tryParse(_bulletCtrl.text) ?? 0;
-    final velocityFps = double.tryParse(_velocityCtrl.text) ?? 0;
-    final powderGr = double.tryParse(_powderCtrl.text) ?? 0;
-    final gunKg = double.tryParse(_gunWeightCtrl.text) ?? 0;
+    // 动能与后坐力的输入单位跟随工具页单位制：公制时弹头重按克、
+    // 初速按米/秒、装药按克、枪重按千克输入，内部换算回格令/英尺/秒
+    // 再套原公式；英制时沿用原来的格令/英尺/秒/千克。
+    final metric = isMetricUnits;
+    final bulletGr = (double.tryParse(_bulletCtrl.text) ?? 0) *
+        (metric ? 1 / _grToG : 1);
+    final velocityFps = (double.tryParse(_velocityCtrl.text) ?? 0) *
+        (metric ? 1 / _fpsToMs : 1);
+    final powderGr = (double.tryParse(_powderCtrl.text) ?? 0) *
+        (metric ? 1 / _grToG : 1);
+    final gunInput = double.tryParse(_gunWeightCtrl.text) ?? 0;
+    // 枪重：公制按千克，英制按磅（旧版默认 4 千克，切换到英制后
+    // 请按磅重填；结果同时显示焦耳与英尺·磅，不受此影响）。
 
     final bulletKg = bulletGr * _grToG / 1000;
     final velocityMs = velocityFps * _fpsToMs;
@@ -127,13 +144,16 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
     final energyFtLb = energyJ * 0.737562;
 
     final powderKg = powderGr * _grToG / 1000;
+    final gunKg = metric ? gunInput : gunInput * 0.45359237;
     final recoilV = gunKg > 0
         ? (bulletKg * velocityMs + powderKg * velocityMs * 1.75) / gunKg
         : 0.0;
     final recoilJ = 0.5 * gunKg * recoilV * recoilV;
     final recoilFtLb = recoilJ * 0.737562;
 
-    return Scaffold(
+    return ValueListenableBuilder<String>(
+      valueListenable: unitSystemNotifier,
+      builder: (_, __, ___) => Scaffold(
       appBar: SubPageAppBar(title: '装药工具'),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -198,13 +218,13 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
           const SizedBox(height: 8),
           _NumberField(
             controller: _bulletCtrl,
-            label: '弹头重（格令）',
+            label: metric ? '弹头重（克）' : '弹头重（格令）',
             onChanged: (_) { setState(() {}); _save(); },
           ),
           const SizedBox(height: 8),
           _NumberField(
             controller: _velocityCtrl,
-            label: '初速（英尺/秒）',
+            label: metric ? '初速（米/秒）' : '初速（英尺/秒）',
             onChanged: (_) { setState(() {}); _save(); },
           ),
           const SizedBox(height: 8),
@@ -216,13 +236,13 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
           const SizedBox(height: 8),
           _NumberField(
             controller: _powderCtrl,
-            label: '装药量（格令）',
+            label: metric ? '装药量（克）' : '装药量（格令）',
             onChanged: (_) { setState(() {}); _save(); },
           ),
           const SizedBox(height: 8),
           _NumberField(
             controller: _gunWeightCtrl,
-            label: '枪重（千克）',
+            label: metric ? '枪重（千克）' : '枪重（磅）',
             onChanged: (_) { setState(() {}); _save(); },
           ),
           const SizedBox(height: 8),
@@ -231,7 +251,10 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
           const SizedBox(height: 8),
           const Text('火药燃气速度按 1.75 倍初速估算，结果为参考值。',
               style: TextStyle(color: Colors.grey, fontSize: 12)),
+          Text('动能与后坐力的输入单位跟随工具页单位制（当前：${metric ? '公制' : '英制'}）。',
+              style: TextStyle(color: Colors.grey, fontSize: 12)),
         ],
+      ),
       ),
     );
   }

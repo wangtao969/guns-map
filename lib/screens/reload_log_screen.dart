@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/app_top_bar.dart';
+import '../widgets/glass_dialog.dart';
 import '../i18n.dart';
 
 /// 复装记录：按 SOP 一步步打勾执行，并记下每次复装的实际参数。
@@ -26,6 +28,8 @@ class ReloadLogEntry {
   final String firearm;
   final String lot;
   final String weather;
+  // 放行标记：只有通过完整性与 SOP 检测的记录才会保存，旧记录默认已放行。
+  final bool released;
   ReloadLogEntry({
     required this.date,
     required this.caliber,
@@ -43,6 +47,7 @@ class ReloadLogEntry {
     this.firearm = '',
     this.lot = '',
     this.weather = '',
+    this.released = true,
   });
 
   Map<String, dynamic> toJson() => {
@@ -62,6 +67,7 @@ class ReloadLogEntry {
         'firearm': firearm,
         'lot': lot,
         'weather': weather,
+        'released': released,
       };
 
   factory ReloadLogEntry.fromJson(Map<String, dynamic> j) => ReloadLogEntry(
@@ -81,6 +87,7 @@ class ReloadLogEntry {
         firearm: j['firearm'] as String? ?? '',
         lot: j['lot'] as String? ?? '',
         weather: j['weather'] as String? ?? '',
+        released: j['released'] as bool? ?? true,
       );
 }
 
@@ -169,6 +176,126 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
     return '${n.year}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
   }
 
+  /// 放行检测：SOP 必须全部打勾；配方、组件与试射字段必须填完整；
+  /// 装药量、弹长、数量、弹壳使用次数必须是大于 0 的数字。
+  /// 返回缺失/不合格项，空表即放行。
+  List<String> _missing() {
+    final miss = <String>[];
+    final doneCount = _done.where((d) => d).length;
+    if (doneCount != reloadSopSteps.length) {
+      miss.add('SOP 未全部打勾（$doneCount/${reloadSopSteps.length}）');
+    }
+    if (_caliber == null) miss.add('口径');
+    final fields = {
+      '弹头': _bulletCtrl.text.trim(),
+      '火药': _powderCtrl.text.trim(),
+      '装药量': _chargeCtrl.text.trim(),
+      '弹长 COL': _colCtrl.text.trim(),
+      '数量': _roundsCtrl.text.trim(),
+      '底火': _primerCtrl.text.trim(),
+      '火药/底火批号': _lotCtrl.text.trim(),
+      '弹壳品牌': _caseBrandCtrl.text.trim(),
+      '弹壳使用次数': _caseTimesCtrl.text.trim(),
+      '初速': _velocityCtrl.text.trim(),
+      '散布': _groupCtrl.text.trim(),
+      '试射枪械': _firearmCtrl.text.trim(),
+      '天气/温度': _weatherCtrl.text.trim(),
+    };
+    fields.forEach((k, v) {
+      if (v.isEmpty) miss.add(k);
+    });
+    double? num(String v) => double.tryParse(v);
+    if (_chargeCtrl.text.trim().isNotEmpty &&
+        (num(_chargeCtrl.text.trim()) ?? 0) <= 0) {
+      miss.add('装药量须为大于 0 的数字');
+    }
+    if (_colCtrl.text.trim().isNotEmpty &&
+        (num(_colCtrl.text.trim()) ?? 0) <= 0) {
+      miss.add('弹长 COL 须为大于 0 的数字');
+    }
+    if (_roundsCtrl.text.trim().isNotEmpty &&
+        (num(_roundsCtrl.text.trim()) ?? 0) <= 0) {
+      miss.add('数量须为大于 0 的数字');
+    }
+    if (_caseTimesCtrl.text.trim().isNotEmpty &&
+        (num(_caseTimesCtrl.text.trim()) ?? 0) < 1) {
+      miss.add('弹壳使用次数须为大于等于 1 的数字');
+    }
+    return miss;
+  }
+
+  void _clearForm() {
+    _bulletCtrl.clear();
+    _powderCtrl.clear();
+    _chargeCtrl.clear();
+    _colCtrl.clear();
+    _roundsCtrl.clear();
+    _noteCtrl.clear();
+    _primerCtrl.clear();
+    _caseBrandCtrl.clear();
+    _caseTimesCtrl.clear();
+    _velocityCtrl.clear();
+    _groupCtrl.clear();
+    _firearmCtrl.clear();
+    _lotCtrl.clear();
+    _weatherCtrl.clear();
+    _caliber = null;
+    _done = List<bool>.filled(reloadSopSteps.length, false);
+  }
+
+  Future<void> _tryRelease() async {
+    final miss = _missing();
+    if (miss.isNotEmpty) {
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (ctx) => GlassDialog(
+          title: '未通过放行检测',
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('以下内容未填完整或不符合 SOP，补齐后才能放行记录：'),
+              const SizedBox(height: 8),
+              ...miss.map((m) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text('· $m'),
+                  )),
+            ],
+          ),
+          actions: [glassPrimaryButton(ctx, '知道了')],
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _logs.insert(
+          0,
+          ReloadLogEntry(
+            date: _today(),
+            caliber: _caliber!,
+            bullet: _bulletCtrl.text.trim(),
+            powder: _powderCtrl.text.trim(),
+            charge: _chargeCtrl.text.trim(),
+            col: _colCtrl.text.trim(),
+            rounds: _roundsCtrl.text.trim(),
+            note: _noteCtrl.text.trim(),
+            primer: _primerCtrl.text.trim(),
+            caseBrand: _caseBrandCtrl.text.trim(),
+            caseTimes: _caseTimesCtrl.text.trim(),
+            velocity: _velocityCtrl.text.trim(),
+            group: _groupCtrl.text.trim(),
+            firearm: _firearmCtrl.text.trim(),
+            lot: _lotCtrl.text.trim(),
+            weather: _weatherCtrl.text.trim(),
+            released: true,
+          ));
+      _save();
+      _clearForm();
+    });
+    if (mounted) showAppToast(context, '已通过 SOP 检测，放行并保存记录');
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -184,7 +311,7 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
           const Text('复装记录 · SOP 执行',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text('按步骤打勾，全部完成才能记一条；记录保存在本机，重启不丢。',
+          Text('按步骤打勾，全部完成才能记一条；记录保存在本机，重启不丢。Tick off the SOP steps; all must be complete before a record can be released. Records stay on this device.',
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 12),
           Row(
@@ -245,11 +372,16 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
           const SizedBox(height: 24),
           Text(tr('log_new'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text('四步填完：配方 → 组件 → 试射 → 放行检测。带 * 的必须填完整，备注选填；弹头、火药、底火、弹壳、枪械边输边从数据库里搜，点一下即填入，数据库里没有的也可手动填写。Complete in four steps: Recipe → Components → Test Results → Release Check. Fields marked * are required; Notes are optional.',
+              style: TextStyle(color: grey, fontSize: 12)),
+          const SizedBox(height: 12),
+          const Text('配方 Load Recipe *', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             initialValue: _caliber,
             decoration: const InputDecoration(
-              labelText: '口径',
+              labelText: '口径 * / Caliber',
               border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
             items: reloadCalibers
@@ -259,29 +391,18 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
             onChanged: (v) => setState(() => _caliber = v),
           ),
           const SizedBox(height: 8),
-          TextField(
-            controller: _bulletCtrl,
-            decoration: const InputDecoration(
-              labelText: '弹头（品牌/重量/型号）',
-              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-            ),
-          ),
+          _SuggestField(controller: _bulletCtrl, label: '弹头 * / Bullet（品牌/重量/型号）', kind: '弹头'),
           const SizedBox(height: 8),
-          TextField(
-            controller: _powderCtrl,
-            decoration: const InputDecoration(
-              labelText: '火药（品牌/型号）',
-              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-            ),
-          ),
+          _SuggestField(controller: _powderCtrl, label: '火药 * / Powder（品牌/型号）', kind: '火药'),
           const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _chargeCtrl,
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: '装药量（gr）',
+                    labelText: '装药量 * / Powder Charge（gr）',
                     border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
@@ -290,8 +411,9 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
               Expanded(
                 child: TextField(
                   controller: _colCtrl,
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: '弹长 COL（″）',
+                    labelText: '弹长 COL * / Overall Length（″）',
                     border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
@@ -301,8 +423,21 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: _roundsCtrl,
+            keyboardType: TextInputType.number,
             decoration: const InputDecoration(
-              labelText: '数量（发）',
+              labelText: '数量 * / Rounds（发）',
+              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text('组件与批号 Components & Lot *', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          _SuggestField(controller: _primerCtrl, label: '底火 * / Primer（品牌/型号）', kind: '底火'),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _lotCtrl,
+            decoration: const InputDecoration(
+              labelText: '火药/底火批号 * / Powder & Primer Lot',
               border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
           ),
@@ -310,49 +445,29 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _primerCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '底火（品牌/型号）',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                  ),
-                ),
+                child: _SuggestField(controller: _caseBrandCtrl, label: '弹壳品牌 * / Case Brand', kind: '弹壳'),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
-                  controller: _lotCtrl,
+                  controller: _caseTimesCtrl,
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: '火药/底火批号',
+                    labelText: '弹壳使用次数 * / Case Firings',
                     border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          const Text('试射结果 Test Results *', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _caseBrandCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '弹壳品牌',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _caseTimesCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '弹壳使用次数',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                  ),
-                ),
-              ),
-            ],
+          _SuggestField(
+            controller: _firearmCtrl,
+            label: '试射枪械 * / Test Firearm',
+            kind: '',
+            customItems: guns.map((g) => '${g.vendor} ${g.name}').toList(),
           ),
           const SizedBox(height: 8),
           Row(
@@ -360,8 +475,9 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
               Expanded(
                 child: TextField(
                   controller: _velocityCtrl,
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: '初速（fps）',
+                    labelText: '初速 * / Muzzle Velocity（fps）',
                     border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
@@ -370,32 +486,9 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
               Expanded(
                 child: TextField(
                   controller: _groupCtrl,
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: '散布（100 码，″）',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _firearmCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '试射枪械',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _weatherCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '天气/温度',
+                    labelText: '散布 * / Group Size（100 码，″）',
                     border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                   ),
                 ),
@@ -404,66 +497,65 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
           ),
           const SizedBox(height: 8),
           TextField(
-            controller: _noteCtrl,
-            maxLines: 2,
+            controller: _weatherCtrl,
             decoration: const InputDecoration(
-              labelText: '备注（批次、试射结果等）',
+              labelText: '天气/温度 * / Weather & Temperature',
               border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
           ),
           const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: (!allDone || _caliber == null)
-                ? null
-                : () {
-                    setState(() {
-                      _logs.insert(
-                          0,
-                          ReloadLogEntry(
-                            date: _today(),
-                            caliber: _caliber!,
-                            bullet: _bulletCtrl.text.trim(),
-                            powder: _powderCtrl.text.trim(),
-                            charge: _chargeCtrl.text.trim(),
-                            col: _colCtrl.text.trim(),
-                            rounds: _roundsCtrl.text.trim(),
-                            note: _noteCtrl.text.trim(),
-                            primer: _primerCtrl.text.trim(),
-                            caseBrand: _caseBrandCtrl.text.trim(),
-                            caseTimes: _caseTimesCtrl.text.trim(),
-                            velocity: _velocityCtrl.text.trim(),
-                            group: _groupCtrl.text.trim(),
-                            firearm: _firearmCtrl.text.trim(),
-                            lot: _lotCtrl.text.trim(),
-                            weather: _weatherCtrl.text.trim(),
-                          ));
-                      _save();
-                      _bulletCtrl.clear();
-                      _powderCtrl.clear();
-                      _chargeCtrl.clear();
-                      _colCtrl.clear();
-                      _roundsCtrl.clear();
-                      _noteCtrl.clear();
-                      _primerCtrl.clear();
-                      _caseBrandCtrl.clear();
-                      _caseTimesCtrl.clear();
-                      _velocityCtrl.clear();
-                      _groupCtrl.clear();
-                      _firearmCtrl.clear();
-                      _lotCtrl.clear();
-                      _weatherCtrl.clear();
-                      _done = List<bool>.filled(
-                          reloadSopSteps.length, false);
-                    });
-                  },
-            child: const Text('保存这条记录'),
-          ),
-          if (!allDone)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text('SOP 未全部打勾时不能保存记录',
-                  style: TextStyle(color: grey, fontSize: 12)),
+          TextField(
+            controller: _noteCtrl,
+            maxLines: 2,
+            decoration: const InputDecoration(
+              labelText: '备注 / Notes（选填 Optional：批次、试射结果等）',
+              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
             ),
+          ),
+          const SizedBox(height: 12),
+          Builder(builder: (_) {
+            final miss = _missing();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      miss.isEmpty ? Icons.verified_outlined : Icons.pending_outlined,
+                      size: 18,
+                      color: miss.isEmpty ? Colors.green : grey,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        miss.isEmpty
+                            ? '放行检测已通过：SOP 全部完成，必填项齐全'
+                            : '放行检测：还差 ${miss.length} 项（${miss.take(3).join('、')}${miss.length > 3 ? '…' : ''}）',
+                        style: TextStyle(
+                            color: miss.isEmpty ? Colors.green : grey,
+                            fontSize: 13,
+                            fontWeight: miss.isEmpty ? FontWeight.bold : FontWeight.normal),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _tryRelease,
+                    child: const Text('检测并放行记录 / Verify & Release'),
+                  ),
+                ),
+                if (miss.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text('点“检测并放行记录”会列出全部未通过项',
+                        style: TextStyle(color: grey, fontSize: 12)),
+                  ),
+              ],
+            );
+          }),
           const SizedBox(height: 16),
           Text('已记 ${_logs.length} 条',
               style:
@@ -485,9 +577,27 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: Text('${l.date} · ${l.caliber}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
+                            child: Row(
+                              children: [
+                                Text('${l.date} · ${l.caliber}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                                if (l.released) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Text('已放行',
+                                        style: TextStyle(
+                                            color: Colors.green, fontSize: 11)),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline, size: 20),
@@ -518,6 +628,119 @@ class _ReloadLogScreenState extends State<ReloadLogScreen> {
               )),
         ],
       ),
+    );
+  }
+}
+
+/// 边输边搜输入框：输入时从复装组件库（弹头/火药/底火/弹壳）或自定义列表
+/// （试射枪械用图鉴枪名）里实时过滤，最多显示 6 条，点一下即填入；
+/// 数据库里没有的仍可手动填写，不卡保存。
+class _SuggestField extends StatefulWidget {
+  final TextEditingController controller;
+  final String label;
+  final String kind;
+  final List<String>? customItems;
+  const _SuggestField({
+    required this.controller,
+    required this.label,
+    this.kind = '',
+    this.customItems,
+  });
+
+  @override
+  State<_SuggestField> createState() => _SuggestFieldState();
+}
+
+class _SuggestFieldState extends State<_SuggestField> {
+  final _focus = FocusNode();
+  String _query = '';
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      if (mounted) setState(() => _focused = _focus.hasFocus);
+    });
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  List<String> _suggestions() {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return const [];
+    if (widget.customItems != null) {
+      return widget.customItems!
+          .where((s) => s.toLowerCase().contains(q))
+          .take(6)
+          .toList();
+    }
+    return reloadComponents
+        .where((c) =>
+            c.kind == widget.kind &&
+            ('${c.vendor} ${c.name} ${c.spec}'.toLowerCase().contains(q)))
+        .map((c) => '${c.vendor} ${c.name}')
+        .take(6)
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sug = _suggestions();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: widget.controller,
+          focusNode: _focus,
+          onChanged: (v) => setState(() => _query = v),
+          decoration: InputDecoration(
+            labelText: widget.label,
+            border: const OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12))),
+            suffixIcon: widget.controller.text.isEmpty
+                ? null
+                : IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () {
+                      widget.controller.clear();
+                      setState(() => _query = '');
+                    },
+                  ),
+          ),
+        ),
+        if (_focused && _query.trim().isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: sug.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Text('数据库里没有这个型号，仍可手动填写',
+                        style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  )
+                : Column(
+                    children: sug
+                        .map((s) => ListTile(
+                              dense: true,
+                              title: Text(s, style: const TextStyle(fontSize: 14)),
+                              onTap: () {
+                                widget.controller.text = s;
+                                setState(() => _query = '');
+                                _focus.unfocus();
+                              },
+                            ))
+                        .toList(),
+                  ),
+          ),
+      ],
     );
   }
 }

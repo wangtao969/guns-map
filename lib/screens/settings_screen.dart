@@ -16,7 +16,7 @@ import 'admin_home_screen.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '2.1.5';
+const String appVersion = '2.1.6';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -76,6 +76,76 @@ class SettingsScreen extends StatelessWidget {
                 Text('内核版本：Flutter 3.47.8',
                     style: TextStyle(color: grey, fontSize: 12)),
               ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // 快捷操作面板：把最常用的四项（检查更新、清理缓存、导出数据、
+          // 管理员/版主的后台入口）从下面抽到顶部单独成面板，一眼可见。
+          // 后台入口仍只对管理员/版主显示，普通用户看不到这一行。
+          Card(
+            color: dark
+                ? const Color(0xFF3A2E1E)
+                : const Color(0xFFF3E9D8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                  color: const Color(0xFFE86A1C).withValues(alpha: 0.35)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.bolt_outlined,
+                            size: 22, color: Color(0xFFE86A1C)),
+                        SizedBox(width: 8),
+                        Text('快捷操作',
+                            style: TextStyle(
+                                fontSize: 17, fontWeight: FontWeight.bold)),
+                        SizedBox(width: 6),
+                        Text('Quick Actions',
+                            style: TextStyle(
+                                color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.system_update_alt, size: 22),
+                    title: Text(tr('check_update')),
+                    subtitle: Text(tr('check_update_sub')),
+                    onTap: () => _checkUpdate(context),
+                  ),
+                  const _ClearCacheTile(),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.file_download_outlined, size: 22),
+                    title: const Text('导出我的数据'),
+                    subtitle: const Text(
+                        '收藏柜、靶场成绩、等级与勋章，分享为 JSON 文本'),
+                    onTap: () => _exportData(context),
+                  ),
+                  if (communityStore.isAdmin || communityStore.isModerator)
+                    ListTile(
+                      leading: const Icon(
+                          Icons.admin_panel_settings_outlined,
+                          size: 22,
+                          color: Color(0xFFE86A1C)),
+                      title: const Text('后台管理',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text('人员、帖子、板块与公告'),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AdminHomeScreen()),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 24),
@@ -185,15 +255,6 @@ class SettingsScreen extends StatelessWidget {
             subtitle: Text('${tr('version_prefix')}v$appVersion${tr('version_suffix')}'),
           ),
           ListTile(
-            leading: const Icon(Icons.system_update_alt, size: 22),
-            title: Text(tr('check_update')),
-            subtitle: Text(tr('check_update_sub')),
-            onTap: () => _checkUpdate(context),
-          ),
-          // 清理缓存：与本页其他行同款 ListTile（22 号前置图标 + 标题 + 副标题），
-          // 确认用毛玻璃弹窗、结果用 showAppToast，与 App 其余提示统一。
-          const _ClearCacheTile(),
-          ListTile(
             leading: const Icon(Icons.feedback_outlined, size: 22),
             title: Text(tr('feedback')),
             subtitle: Text(tr('feedback_sub')),
@@ -220,17 +281,6 @@ class SettingsScreen extends StatelessWidget {
               }
             },
           ),
-          if (communityStore.isAdmin || communityStore.isModerator)
-            ListTile(
-              leading:
-                  const Icon(Icons.admin_panel_settings_outlined, size: 22),
-              title: const Text('后台管理'),
-              subtitle: const Text('人员、帖子、板块与公告'),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AdminHomeScreen()),
-              ),
-            ),
           ListTile(
             leading: const Icon(Icons.book_outlined, size: 22),
             title: const Text('项目手册'),
@@ -239,45 +289,6 @@ class SettingsScreen extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (_) => const AboutScreen()),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.file_download_outlined, size: 22),
-            title: const Text('导出我的数据'),
-            subtitle: const Text('收藏柜、靶场成绩、等级与勋章，分享为 JSON 文本'),
-            onTap: () async {
-              final me = communityStore.current;
-              if (me == null) {
-                showAppToast(context, '请先登录，再导出我的数据');
-                return;
-              }
-              final data = {
-                'app': 'Ordnance',
-                'version': appVersion,
-                'exportedAt': DateTime.now().toIso8601String(),
-                'account': {
-                  'id': me.id,
-                  'nickname': me.nickname,
-                  'level': me.level,
-                  'totalXp': me.totalXp,
-                },
-                'collection': me.collection.map((c) => c.toJson()).toList(),
-                'rangeScores': me.rangeScores.map((r) => r.toJson()).toList(),
-                'earnedMedals': communityStore
-                    .earnedMedals(me)
-                    .map((m) => m.id)
-                    .toList(),
-              };
-              try {
-                const share = MethodChannel('gunsmap/share');
-                final ok = await share.invokeMethod<bool>('shareText',
-                    {'text': jsonEncode(data)});
-                if (ok != true && context.mounted) {
-                  showAppToast(context, '分享未完成，请重试');
-                }
-              } catch (_) {
-                if (context.mounted) showAppToast(context, '导出失败，请重试');
-              }
-            },
           ),
           ListTile(
             title: Text(tr('data_note')),
@@ -290,6 +301,40 @@ class SettingsScreen extends StatelessWidget {
       ),
       ),
     );
+  }
+
+  /// 导出我的数据：与快捷操作面板里的“导出我的数据”共用同一份逻辑。
+  Future<void> _exportData(BuildContext context) async {
+    final me = communityStore.current;
+    if (me == null) {
+      showAppToast(context, '请先登录，再导出我的数据');
+      return;
+    }
+    final data = {
+      'app': 'Ordnance',
+      'version': appVersion,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'account': {
+        'id': me.id,
+        'nickname': me.nickname,
+        'level': me.level,
+        'totalXp': me.totalXp,
+      },
+      'collection': me.collection.map((c) => c.toJson()).toList(),
+      'rangeScores': me.rangeScores.map((r) => r.toJson()).toList(),
+      'earnedMedals':
+          communityStore.earnedMedals(me).map((m) => m.id).toList(),
+    };
+    try {
+      const share = MethodChannel('gunsmap/share');
+      final ok =
+          await share.invokeMethod<bool>('shareText', {'text': jsonEncode(data)});
+      if (ok != true && context.mounted) {
+        showAppToast(context, '分享未完成，请重试');
+      }
+    } catch (_) {
+      if (context.mounted) showAppToast(context, '导出失败，请重试');
+    }
   }
 
   /// 邀请好友：邀请码就是自己的 ID；新用户注册时填码，

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../tools_units.dart';
 import '../widgets/app_top_bar.dart';
 import 'accessories_screen.dart';
 import 'community_collection_screen.dart';
@@ -14,8 +15,19 @@ import 'reloading_screen.dart';
 /// 配件目录、复装手册、收藏柜是已有页面的入口；
 /// 装药工具只做单位换算与用户输入的动能/后坐力计算，不查手册、不推算装药；
 /// 两枪参数对比只对照纸面参数，不画弹道曲线（初速与弹道系数未收录）。
-class ToolsScreen extends StatelessWidget {
+class ToolsScreen extends StatefulWidget {
   const ToolsScreen({super.key});
+
+  @override
+  State<ToolsScreen> createState() => _ToolsScreenState();
+}
+
+class _ToolsScreenState extends State<ToolsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    loadUnitSystem();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +41,49 @@ class ToolsScreen extends StatelessWidget {
           const Text('查数据、算单位、对照参数都在这里；讨论请去社区板块。',
               style: TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 16),
+          // 单位制选择：靶场距离与散布、装药动能与后坐力的输入单位跟随它。
+          Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.straighten_outlined,
+                          color: Color(0xFF8C6A2F)),
+                      SizedBox(width: 8),
+                      Text('单位制 Unit System',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text('靶场距离与散布、装药动能与后坐力的输入单位跟随此设置；单位换算页本身双向换算，不受影响。',
+                      style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<String>(
+                    valueListenable: unitSystemNotifier,
+                    builder: (_, system, __) => Wrap(
+                      spacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('英制 Imperial（gr · fps · 码）'),
+                          selected: system == 'imperial',
+                          onSelected: (_) => saveUnitSystem('imperial'),
+                        ),
+                        ChoiceChip(
+                          label: const Text('公制 Metric（g · m/s · 米）'),
+                          selected: system == 'metric',
+                          onSelected: (_) => saveUnitSystem('metric'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           _ToolTile(
             icon: Icons.handyman_outlined,
             title: '配件目录',

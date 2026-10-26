@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../tools_units.dart';
 import '../widgets/app_top_bar.dart';
 
 /// 靶场换算：只算你输入的数，不画弹道、不给装药建议。
@@ -26,9 +27,15 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
   final _vDevCtrl = TextEditingController();
   String _clickUnit = '1/4 MOA';
 
+  void _onUnitsChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
+    loadUnitSystem();
+    unitSystemNotifier.addListener(_onUnitsChanged);
     _load();
   }
 
@@ -73,6 +80,7 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
 
   @override
   void dispose() {
+    unitSystemNotifier.removeListener(_onUnitsChanged);
     _groupCtrl.dispose();
     _distCtrl.dispose();
     _moaCtrl.dispose();
@@ -92,11 +100,19 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final groupCm = double.tryParse(_groupCtrl.text) ?? 0;
-    final distM = double.tryParse(_distCtrl.text) ?? 0;
+    // 单位制跟随工具页设置：英制时散布与偏差按英寸输入、距离按码输入，
+    // 内部统一换算成厘米与米再套原公式；公制时沿用原来的厘米与米。
+    final metric = isMetricUnits;
+    final groupCm = (double.tryParse(_groupCtrl.text) ?? 0) *
+        (metric ? 1 : 2.54);
+    final distM = (double.tryParse(_distCtrl.text) ?? 0) *
+        (metric ? 1 : 0.9144);
+    final distInput = double.tryParse(_distCtrl.text) ?? 0;
     final moa = double.tryParse(_moaCtrl.text) ?? 0;
-    final hDev = double.tryParse(_hDevCtrl.text) ?? 0;
-    final vDev = double.tryParse(_vDevCtrl.text) ?? 0;
+    final hDev = (double.tryParse(_hDevCtrl.text) ?? 0) *
+        (metric ? 1 : 2.54);
+    final vDev = (double.tryParse(_vDevCtrl.text) ?? 0) *
+        (metric ? 1 : 2.54);
 
     // 1 MOA 在 dist 米处 ≈ dist * 0.02909 厘米；1 密位 = dist * 0.1 厘米。
     final moaValue = distM > 0 ? groupCm / (distM * 0.02909) : 0.0;
@@ -129,7 +145,9 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
             : (vDev / (distM * 0.1)) / perClickMrad)
         : 0.0;
 
-    return Scaffold(
+    return ValueListenableBuilder<String>(
+      valueListenable: unitSystemNotifier,
+      builder: (_, __, ___) => Scaffold(
       appBar: const SubPageAppBar(title: '靶场换算'),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -142,12 +160,12 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
           const SizedBox(height: 8),
           _NumberField(
               controller: _groupCtrl,
-              label: '散布（厘米，取最远两发中心距）',
+              label: metric ? '散布（厘米，取最远两发中心距）' : '散布（英寸，取最远两发中心距）',
               onChanged: (_) { setState(() {}); _save(); }),
           const SizedBox(height: 8),
           _NumberField(
               controller: _distCtrl,
-              label: '距离（米）',
+              label: metric ? '距离（米）' : '距离（码）',
               onChanged: (_) { setState(() {}); _save(); }),
           if (groupCm > 0 && distM > 0) ...[
             _ResultLine(
@@ -165,7 +183,7 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
               onChanged: (_) { setState(() {}); _save(); }),
           if (moa > 0 && distM > 0)
             _ResultLine(
-                '${_fmt(moa)} MOA 在 ${_fmt(distM)} 米处 ≈ ${_fmt(moaGroupCm)} 厘米'),
+                '${_fmt(moa)} MOA 在 ${_fmt(distInput)} ${metric ? '米' : '码'}处 ≈ ${_fmt(moaGroupCm)} 厘米'),
           const SizedBox(height: 20),
           const Text('瞄具调节格数',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
@@ -191,20 +209,21 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
           const SizedBox(height: 8),
           _NumberField(
               controller: _hDevCtrl,
-              label: '水平偏差（厘米，绝对值）',
+              label: metric ? '水平偏差（厘米，绝对值）' : '水平偏差（英寸，绝对值）',
               onChanged: (_) { setState(() {}); _save(); }),
           const SizedBox(height: 8),
           _NumberField(
               controller: _vDevCtrl,
-              label: '垂直偏差（厘米，绝对值）',
+              label: metric ? '垂直偏差（厘米，绝对值）' : '垂直偏差（英寸，绝对值）',
               onChanged: (_) { setState(() {}); _save(); }),
           if ((hDev > 0 || vDev > 0) && distM > 0)
             _ResultLine(
                 '水平约 ${_fmt(hClicks, 1)} 格，垂直约 ${_fmt(vClicks, 1)} 格（$_clickUnit/格，四舍五入到整格后以实测为准）'),
           const SizedBox(height: 8),
-          const Text('本页距离统一用米；靶场记录里的散布和距离可以直接拿来算。',
+          Text('距离与散布单位跟随工具页单位制（当前：${metric ? '公制' : '英制'}）；靶场记录里的散布和距离可以直接拿来算。',
               style: TextStyle(color: Colors.grey, fontSize: 12)),
         ],
+      ),
       ),
     );
   }
