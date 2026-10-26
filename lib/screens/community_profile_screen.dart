@@ -100,7 +100,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
     final earnedIds = earned.map((m) => m.id).toSet();
     const groups = ['签到', '收藏', '发帖', '获赞', '靶场', '品类', '挑战', '彩蛋'];
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
         Card(
           child: Padding(
@@ -368,50 +368,60 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                 ),
               ],
               const SizedBox(height: 12),
+              // 资料页四栏改成文字 Tab：大字 + 选中下划线，贴近截图样式；
+              // 下划线用 App 主色铜橙，不用截图的红，保持品牌一致；
+              // 不加锁图标：各栏可见规则没变（收藏按对方开关），不凭空暗示私密。
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: AnimatedBuilder(
                   animation: _tabs,
                   builder: (_, __) {
                     const labels = ['帖子', '收藏', '勋章墙', '历史'];
-                    return Row(
+                    return Column(
                       children: [
-                        for (var i = 0; i < labels.length; i++)
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(
-                                  left: i == 0 ? 0 : 4,
-                                  right: i == labels.length - 1 ? 0 : 4),
-                              child: SizedBox(
-                                height: 44,
+                        Row(
+                          children: [
+                            for (var i = 0; i < labels.length; i++)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                    right: i == labels.length - 1 ? 0 : 28),
                                 child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
                                   onTap: () => _tabs.animateTo(i),
-                                  child: Container(
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: _tabs.index == i
-                                          ? communityAccent
-                                          : Colors.transparent,
-                                      borderRadius:
-                                          BorderRadius.circular(12),
-                                      border: Border.all(
+                                  child: Column(
+                                    children: [
+                                      Text(labels[i],
+                                          style: TextStyle(
+                                              fontSize: 17,
+                                              fontWeight:
+                                                  _tabs.index == i
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal,
+                                              color: _tabs.index == i
+                                                  ? null
+                                                  : grey)),
+                                      const SizedBox(height: 6),
+                                      Container(
+                                        width: 26,
+                                        height: 3,
+                                        decoration: BoxDecoration(
                                           color: _tabs.index == i
                                               ? communityAccent
-                                              : grey.withValues(
-                                                  alpha: 0.35)),
-                                    ),
-                                    child: Text(labels[i],
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: _tabs.index == i
-                                                ? Colors.white
-                                                : null)),
+                                              : Colors.transparent,
+                                          borderRadius:
+                                              BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            ),
-                          ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          height: 0.5,
+                          color: grey.withValues(alpha: 0.25),
+                        ),
                       ],
                     );
                   },
@@ -427,7 +437,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                             child: Text('还没有发过帖子',
                                 style: TextStyle(color: grey)))
                         : ListView.builder(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                             itemCount: myPosts.length,
                             itemBuilder: (_, i) {
                               final p = myPosts[i];
@@ -469,7 +479,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                                 child: Text('还没有收藏',
                                     style: TextStyle(color: grey)))
                             : ListView.builder(
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                                 itemCount: myFavorites.length,
                                 itemBuilder: (_, i) {
                                   final p = myFavorites[i];
@@ -511,7 +521,7 @@ class _CommunityProfileScreenState extends State<CommunityProfileScreen>
                             child: Text('还没有评论记录',
                                 style: TextStyle(color: grey)))
                         : ListView.builder(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                             itemCount: myComments.length,
                             itemBuilder: (_, i) {
                               final entry = myComments[i];

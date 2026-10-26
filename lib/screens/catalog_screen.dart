@@ -49,7 +49,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         top: true,
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8 + kToolbarHeight, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 8 + kToolbarHeight, 16, 110),
           children: [
             // 枪械资讯入口：页头太空，补一条厂商与弹药商资讯快讯；搜索时隐藏。
             if (_query.isEmpty)

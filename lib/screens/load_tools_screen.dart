@@ -17,6 +17,9 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
   final _grainsCtrl = TextEditingController();
   final _fpsCtrl = TextEditingController();
   final _inchCtrl = TextEditingController();
+  final _mmCtrl = TextEditingController();
+  final _psiCtrl = TextEditingController();
+  final _yardCtrl = TextEditingController();
   final _bulletCtrl = TextEditingController(text: '150');
   final _velocityCtrl = TextEditingController(text: '2800');
   final _powderCtrl = TextEditingController(text: '45');
@@ -27,6 +30,9 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
     _grainsCtrl.dispose();
     _fpsCtrl.dispose();
     _inchCtrl.dispose();
+    _mmCtrl.dispose();
+    _psiCtrl.dispose();
+    _yardCtrl.dispose();
     _bulletCtrl.dispose();
     _velocityCtrl.dispose();
     _powderCtrl.dispose();
@@ -51,6 +57,9 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
     final grains = double.tryParse(_grainsCtrl.text) ?? 0;
     final fps = double.tryParse(_fpsCtrl.text) ?? 0;
     final inch = double.tryParse(_inchCtrl.text) ?? 0;
+    final mm = double.tryParse(_mmCtrl.text) ?? 0;
+    final psi = double.tryParse(_psiCtrl.text) ?? 0;
+    final yard = double.tryParse(_yardCtrl.text) ?? 0;
     final bulletGr = double.tryParse(_bulletCtrl.text) ?? 0;
     final velocityFps = double.tryParse(_velocityCtrl.text) ?? 0;
     final powderGr = double.tryParse(_powderCtrl.text) ?? 0;
@@ -103,6 +112,30 @@ class _LoadToolsScreenState extends State<LoadToolsScreen> {
           ),
           if (inch > 0)
             _ResultLine('= ${_fmt(inch * 2.54, 2)} 厘米'),
+          const SizedBox(height: 8),
+          _NumberField(
+            controller: _mmCtrl,
+            label: '弹头直径（毫米）',
+            onChanged: (_) => setState(() {}),
+          ),
+          if (mm > 0)
+            _ResultLine('= ${_fmt(mm / 25.4, 3)} 英寸'),
+          const SizedBox(height: 8),
+          _NumberField(
+            controller: _psiCtrl,
+            label: '膛压（psi）',
+            onChanged: (_) => setState(() {}),
+          ),
+          if (psi > 0)
+            _ResultLine('= ${_fmt(psi * 0.00689476, 2)} 兆帕（MPa）'),
+          const SizedBox(height: 8),
+          _NumberField(
+            controller: _yardCtrl,
+            label: '距离（码）',
+            onChanged: (_) => setState(() {}),
+          ),
+          if (yard > 0)
+            _ResultLine('= ${_fmt(yard * 0.9144, 2)} 米'),
           const SizedBox(height: 20),
           const Text('枪口动能',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),

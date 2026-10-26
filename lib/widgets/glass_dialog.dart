@@ -117,11 +117,14 @@ Widget glassCancelButton(BuildContext context, String label) {
 
 Widget glassPrimaryButton(BuildContext context, String label,
     {VoidCallback? onPressed, bool popTrue = false}) {
+  // 以前没传 onPressed 且 popTrue 为 false 时 onPressed 是 null，
+  // 按钮会直接变灰禁用（等级/身份弹窗的“知道了”就是这么坏的）。
+  // 现在默认就是关弹窗，popTrue 时带回 true。
   return FilledButton(
     style: FilledButton.styleFrom(
         backgroundColor: const Color(0xFFE86A1C)),
     onPressed: onPressed ??
-        (popTrue ? () => Navigator.of(context).pop(true) : null),
+        () => Navigator.of(context).pop(popTrue ? true : null),
     child: Text(label, style: const TextStyle(color: Colors.white)),
   );
 }

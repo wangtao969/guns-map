@@ -4,6 +4,8 @@ import 'accessories_screen.dart';
 import 'community_collection_screen.dart';
 import 'gun_compare_screen.dart';
 import 'load_tools_screen.dart';
+import 'range_tools_screen.dart';
+import 'reload_cost_screen.dart';
 import 'reloading_screen.dart';
 
 /// 工具 Tab：底部 Tab = 工具，板块 = 讨论，分工定死。
@@ -17,10 +19,10 @@ class ToolsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: const GunsMapAppBar(),
+      appBar: const OrdnanceAppBar(),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
-            16, MediaQuery.of(context).padding.top + kToolbarHeight + 16, 16, 16),
+            16, MediaQuery.of(context).padding.top + kToolbarHeight + 16, 16, 110),
         children: [
           const Text('查数据、算单位、对照参数都在这里；讨论请去社区板块。',
               style: TextStyle(color: Colors.grey, fontSize: 12)),
@@ -60,6 +62,24 @@ class ToolsScreen extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const LoadToolsScreen()),
+            ),
+          ),
+          _ToolTile(
+            icon: Icons.gps_fixed,
+            title: '靶场换算',
+            subtitle: '散布换算 MOA/密位、瞄具调节格数，只算你输入的数',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const RangeToolsScreen()),
+            ),
+          ),
+          _ToolTile(
+            icon: Icons.attach_money_outlined,
+            title: '复装成本',
+            subtitle: '按你输入的组件价格算每发成本，不提供报价、不给装药建议',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ReloadCostScreen()),
             ),
           ),
           _ToolTile(

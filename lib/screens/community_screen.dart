@@ -345,7 +345,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Widget _feedView(CommunityAccount? current, Color grey) {
     final feed = _feedPosts(current);
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
       children: [
         if (!kReleaseMode) ...[
           Text(tr('community_note'),
@@ -713,7 +713,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   Widget _homeView(CommunityAccount? current, Color grey) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
       children: [
         _sectionTitle('平台活动'),
         const SizedBox(height: 10),
