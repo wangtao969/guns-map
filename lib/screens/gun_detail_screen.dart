@@ -4,6 +4,7 @@ import '../haptics.dart';
 import '../i18n.dart';
 import '../models.dart';
 import '../widgets/parametric_silhouette.dart';
+import '../widgets/family_diagram.dart';
 import '../widgets/app_top_bar.dart';
 import 'gun_compare_screen.dart';
 import 'dope_screen.dart';
@@ -49,6 +50,10 @@ class _GunDetailScreenState extends State<GunDetailScreen>
   @override
   Widget build(BuildContext context) {
     final gun = widget.gun;
+    // 图区三层：实物照片 > 族系识别图 > 参数化轮廓。
+    final diagramKey = familyDiagramOf(gun);
+    final diagramInfo =
+        diagramKey == null ? null : familyDiagramInfo[diagramKey];
     return Scaffold(
       appBar: SubPageAppBar(title: gun.name),
       body: ListView(
@@ -81,14 +86,25 @@ class _GunDetailScreenState extends State<GunDetailScreen>
                     },
                     child: gun.image != null
                         ? Image.asset(gun.image!, fit: BoxFit.contain)
-                        : ParametricSilhouette(
-                            gun: gun,
-                            width:
-                                MediaQuery.of(context).size.width - 72,
-                            height:
-                                (MediaQuery.of(context).size.width - 72) *
-                                    0.44,
-                          ),
+                        : diagramKey != null
+                            ? FamilyDiagram(
+                                family: diagramKey,
+                                width: MediaQuery.of(context).size.width -
+                                    72,
+                                height:
+                                    (MediaQuery.of(context).size.width -
+                                            72) *
+                                        0.5,
+                              )
+                            : ParametricSilhouette(
+                                gun: gun,
+                                width: MediaQuery.of(context).size.width -
+                                    72,
+                                height:
+                                    (MediaQuery.of(context).size.width -
+                                            72) *
+                                        0.44,
+                              ),
                   ),
                 ),
                 Positioned.fill(
@@ -144,8 +160,23 @@ class _GunDetailScreenState extends State<GunDetailScreen>
             ],
           ),
           if (gun.image == null)
-            const Text('注：本枪暂无实物照片，当前为按全长与枪管长比例生成的示意轮廓，非实物。',
-                style: TextStyle(color: Colors.grey, fontSize: 12)),
+            if (diagramInfo != null)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('族系识别图 · ${diagramInfo.$1}：图中为该族系的标志性特征，非本枪实物。',
+                      style:
+                          const TextStyle(color: Colors.grey, fontSize: 12)),
+                  for (final p in diagramInfo.$2)
+                    Text('· $p',
+                        style: const TextStyle(
+                            color: Colors.grey, fontSize: 12)),
+                ],
+              )
+            else
+              const Text(
+                  '注：本枪暂无实物照片，当前为按全长与枪管长比例生成的示意轮廓，非实物。',
+                  style: TextStyle(color: Colors.grey, fontSize: 12)),
           if (_assembled.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
