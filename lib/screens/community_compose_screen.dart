@@ -3,9 +3,12 @@ import '../widgets/app_toast.dart';
 import 'package:flutter/services.dart';
 import '../community_store.dart';
 import '../i18n.dart';
-import '../widgets/app_top_bar.dart';
+import '../widgets/liquid_glass_nav.dart';
 
-/// 发帖器：标题、板块、图文混排（文字 + 多张图片）、话题标签、自动草稿。
+/// 发帖器（Threads 风格排版）：顶部左边取消、右边液态玻璃发布按钮；
+/// 下方头像 + 用户名一行，配大面积无边框纯文本输入框；附件行只留
+/// 编辑器已有的选图能力；不加回复权限选择器（原先就没有）。
+/// 标题（可选）、板块选择、自动草稿与清除草稿等已有能力全部保留。
 /// 每敲一个字都更新草稿：写一半切后台再回来，内容还在；
 /// 发布成功自动清草稿；草稿保存在本机。
 class CommunityComposeScreen extends StatefulWidget {
@@ -102,126 +105,250 @@ class _CommunityComposeScreenState extends State<CommunityComposeScreen> {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
+    final fg = dark ? const Color(0xFFF5F0E6) : const Color(0xFF1E1B16);
+    final me = communityStore.current;
     final hasDraft = communityStore.draft != null;
+    final boards = communityBoards
+        .where((b) => !communityStore.disabledBoards.contains(b))
+        .toList();
     return Scaffold(
-      appBar: SubPageAppBar(title: tr('post_new')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Row(
-            children: [
-              const Spacer(),
-              if (hasDraft)
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            // 顶行：左边取消，右边液态玻璃发布按钮。
+            Row(
+              children: [
                 TextButton(
-                  onPressed: () {
-                    communityStore.clearDraft();
-                    setState(() {
-                      _titleCtrl.clear();
-                      _contentCtrl.clear();
-                      _board = '综合';
-                      _images.clear();
-                    });
-                  },
-                  child: const Text('清除草稿'),
-                ),
-              ElevatedButton(
-                onPressed: _publish,
-                child: const Text('发布'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _titleCtrl,
-            onChanged: (_) => _saveDraft(),
-            decoration: const InputDecoration(
-              hintText: '标题（可选）',
-              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text('板块', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: communityBoards
-                .where((b) => !communityStore.disabledBoards.contains(b))
-                .map((b) => ChoiceChip(
-                      label: Text(b),
-                      selected: _board == b,
-                      onSelected: (_) {
-                        setState(() => _board = b);
-                        _saveDraft();
-                      },
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _contentCtrl,
-            onChanged: (_) => _saveDraft(),
-            maxLines: 12,
-            decoration: const InputDecoration(
-              hintText: '写点什么……\n话题用 #话题# 的形式，@ID 可以提醒对方',
-              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text('话题用 #xxx# 包起来，发布后会变成可点击的标签；@对方 ID 可发提醒。',
-              style: TextStyle(color: grey, fontSize: 12)),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Text('图片', style: TextStyle(fontWeight: FontWeight.bold)),
-              const Spacer(),
-              OutlinedButton.icon(
-                onPressed: _addImage,
-                icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
-                label: const Text('添加图片'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (_images.isEmpty)
-            Text('暂无图片，可添加多张', style: TextStyle(color: grey, fontSize: 12)),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _images.asMap().entries.map((e) {
-              return Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(
-                      e.value,
-                      width: 110,
-                      height: 110,
-                      fit: BoxFit.cover,
-                    ),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(48, 40),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  Positioned(
-                    right: 2,
-                    top: 2,
-                    child: GestureDetector(
-                      onTap: () => setState(() => _images.removeAt(e.key)),
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.black54,
-                          shape: BoxShape.circle,
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(tr('cancel'),
+                      style: TextStyle(color: fg, fontSize: 16)),
+                ),
+                const Spacer(),
+                // 只监听正文变化刷新按钮的可用外观，不整页重建。
+                AnimatedBuilder(
+                  animation: _contentCtrl,
+                  builder: (_, __) => _GlassPublishButton(
+                    enabled: _contentCtrl.text.trim().isNotEmpty,
+                    onTap: _publish,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // 头像 + 用户名一行。
+            Row(
+              children: [
+                communityAvatar(
+                  bytes: me?.avatarBytes,
+                  color: me?.avatarColor ?? const Color(0xFFB8B8B8),
+                  nickname: me?.nickname ?? '',
+                  radius: 20,
+                  frame: me?.avatarFrame ?? '',
+                  verified: me == null ? false : isSpecialAccount(me),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    me?.nickname ?? tr('login'),
+                    style: TextStyle(
+                        color: fg,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // 标题（可选）：无边框单行，保留原有能力。
+            TextField(
+              controller: _titleCtrl,
+              onChanged: (_) => _saveDraft(),
+              style: TextStyle(
+                  color: fg, fontSize: 16, fontWeight: FontWeight.bold),
+              decoration: const InputDecoration(
+                hintText: '标题（可选）',
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+            // 板块：中性文字选项，选中加粗，不用彩色填充。
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: boards.map((b) {
+                  final selected = _board == b;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _board = b);
+                      _saveDraft();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 16, top: 10),
+                      child: Text(
+                        b,
+                        style: TextStyle(
+                          color: selected ? fg : grey,
+                          fontSize: 13,
+                          fontWeight:
+                              selected ? FontWeight.bold : FontWeight.normal,
                         ),
-                        child: const Icon(Icons.close,
-                            size: 18, color: Colors.white),
                       ),
                     ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // 正文：大面积无边框纯文本输入框。
+            TextField(
+              controller: _contentCtrl,
+              onChanged: (_) => _saveDraft(),
+              minLines: 10,
+              maxLines: null,
+              keyboardType: TextInputType.multiline,
+              style: TextStyle(color: fg, fontSize: 16, height: 1.5),
+              decoration: const InputDecoration(
+                hintText: '写点什么……\n话题用 #话题# 的形式，@ID 可以提醒对方',
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text('话题用 #xxx# 包起来，发布后会变成可点击的标签；@对方 ID 可发提醒。',
+                style: TextStyle(color: grey, fontSize: 12)),
+            const SizedBox(height: 16),
+            // 附件行：只保留已有的选图能力。
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: _addImage,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_photo_alternate_outlined,
+                          size: 22, color: grey),
+                      const SizedBox(width: 6),
+                      Text(
+                        _images.isEmpty
+                            ? '添加图片'
+                            : '添加图片（${_images.length}）',
+                        style: TextStyle(color: grey, fontSize: 14),
+                      ),
+                    ],
                   ),
-                ],
-              );
-            }).toList(),
+                ),
+              ],
+            ),
+            if (_images.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _images.asMap().entries.map((e) {
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          e.value,
+                          width: 110,
+                          height: 110,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        right: 2,
+                        top: 2,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _images.removeAt(e.key)),
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close,
+                                size: 18, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ],
+            const SizedBox(height: 24),
+            // 底部：草稿说明 + 清除草稿（仅有草稿时出现）。
+            Row(
+              children: [
+                Expanded(
+                  child: Text('草稿会自动保存，下次打开可以继续写。',
+                      style: TextStyle(color: grey, fontSize: 12)),
+                ),
+                if (hasDraft)
+                  GestureDetector(
+                    onTap: () {
+                      communityStore.clearDraft();
+                      setState(() {
+                        _titleCtrl.clear();
+                        _contentCtrl.clear();
+                        _board = '综合';
+                        _images.clear();
+                      });
+                    },
+                    child: Text('清除草稿',
+                        style: TextStyle(color: grey, fontSize: 12)),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 液态玻璃发布按钮：药丸形，底只用 [LiquidGlassBackdrop] 的折射
+/// （着色器不可用时自动退回毛玻璃），不设任何背景色与描边；
+/// 文字用主题前景色（白天近黑、夜晚近白）；内容为空时只把文字
+/// 降透明度，不换颜色。
+class _GlassPublishButton extends StatelessWidget {
+  const _GlassPublishButton({required this.enabled, required this.onTap});
+
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final fg = dark ? const Color(0xFFF5F0E6) : const Color(0xFF1E1B16);
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: LiquidGlassBackdrop(
+          radius: 18,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Text(
+              '发布',
+              style: TextStyle(
+                color: fg.withValues(alpha: enabled ? 1 : 0.4),
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          Text('草稿会自动保存，下次打开可以继续写。',
-              style: TextStyle(color: grey, fontSize: 12)),
-        ],
+        ),
       ),
     );
   }

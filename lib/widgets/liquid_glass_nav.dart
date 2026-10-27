@@ -1,33 +1,49 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
-/// 真折射液态玻璃悬浮导航条（v2，对标酷安底栏的做法）。
+/// 液态玻璃折射底（v2，对标酷安底栏的做法），供 App 真实底部导航用。
 ///
 /// 原理：不用矩阵放大冒充折射，而是走 Impeller 的 [ui.ImageFilter.shader]，
 /// 片元着色器直接采样底栏后方的实时画面，按圆角 SDF 的法线做边缘折射位移
 /// + 红蓝错位色散 + 边缘高光。着色器在 shaders/liquid_glass.frag。
-/// 不支持着色器的后端（非 Impeller）加载会失败，自动退回 v1 毛玻璃外观。
-class LiquidGlassNavBar extends StatefulWidget {
-  const LiquidGlassNavBar({
+///
+/// 用法：把它包在导航条内容外面，只换底的渲染方式，内容本身（图标、
+/// 选中药丸、渐变底色、边框、阴影）一律由 child 自己画，不动。
+/// 着色器在不支持的后端（非 Impeller）加载会失败，自动退回原来的
+/// 毛玻璃 blur，加载完成前也先显示毛玻璃，绝不崩、不出白条。
+class LiquidGlassBackdrop extends StatefulWidget {
+  const LiquidGlassBackdrop({
     super.key,
-    required this.items,
-    required this.selectedIndex,
-    required this.onTap,
-    this.height = 64,
-    this.radius = 32,
+    required this.child,
+    this.radius = 34,
+    this.refraction = 14.0,
+    this.chroma = 0.35,
+    this.tint = 0.08,
+    this.fallbackSigma = 28.0,
   });
 
-  final List<IconData> items;
-  final int selectedIndex;
-  final ValueChanged<int> onTap;
-  final double height;
+  final Widget child;
+
+  /// 药丸圆角半径 px，需与外层 ClipRRect 一致，着色器用它算 SDF 法线。
   final double radius;
 
+  /// 边缘折射位移 px（与演示页一致）。
+  final double refraction;
+
+  /// 红蓝错位色散系数（与演示页一致）。
+  final double chroma;
+
+  /// 白色 veil 量（与演示页一致）。
+  final double tint;
+
+  /// 着色器不可用时的毛玻璃 blur（与原来底部导航的 28 一致）。
+  final double fallbackSigma;
+
   @override
-  State<LiquidGlassNavBar> createState() => _LiquidGlassNavBarState();
+  State<LiquidGlassBackdrop> createState() => _LiquidGlassBackdropState();
 }
 
-class _LiquidGlassNavBarState extends State<LiquidGlassNavBar> {
+class _LiquidGlassBackdropState extends State<LiquidGlassBackdrop> {
   ui.FragmentProgram? _program;
 
   @override
@@ -45,56 +61,23 @@ class _LiquidGlassNavBarState extends State<LiquidGlassNavBar> {
 
   @override
   Widget build(BuildContext context) {
-    Widget bar = Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        for (int i = 0; i < widget.items.length; i++)
-          GestureDetector(
-            onTap: () => widget.onTap(i),
-            behavior: HitTestBehavior.opaque,
-            child: SizedBox(
-              width: 56,
-              height: widget.height,
-              child: Icon(
-                widget.items[i],
-                color: i == widget.selectedIndex
-                    ? const Color(0xFFE86A1C)
-                    : Colors.white,
-                size: i == widget.selectedIndex ? 28 : 24,
-              ),
-            ),
-          ),
-      ],
-    );
-
     if (_program != null) {
       final shader = _program!.fragmentShader();
-      // 引擎自动占位：u_size 占 float 索引 0、1；自定义 uniform 从 2 开始。
+      // 引擎自动占位：u_size 占 float 索引 0、1；自定义 uniform 从 2 开始，
+      // 顺序与 liquid_glass.frag 声明一致：radius、refraction、chroma、tint。
       shader.setFloat(2, widget.radius);
-      shader.setFloat(3, 14.0); // 折射位移 px
-      shader.setFloat(4, 0.35); // 色散系数
-      shader.setFloat(5, 0.08); // 白色 veil
-      bar = ClipRRect(
-        borderRadius: BorderRadius.circular(widget.radius),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.shader(shader),
-          child: Container(color: Colors.transparent, child: bar),
-        ),
-      );
-    } else {
-      // 退路：v1 毛玻璃外观。
-      bar = ClipRRect(
-        borderRadius: BorderRadius.circular(widget.radius),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            color: Colors.white.withValues(alpha: 0.18),
-            child: bar,
-          ),
-        ),
+      shader.setFloat(3, widget.refraction);
+      shader.setFloat(4, widget.chroma);
+      shader.setFloat(5, widget.tint);
+      return BackdropFilter(
+        filter: ui.ImageFilter.shader(shader),
+        child: widget.child,
       );
     }
-
-    return SizedBox(height: widget.height, child: bar);
+    return BackdropFilter(
+      filter: ui.ImageFilter.blur(
+          sigmaX: widget.fallbackSigma, sigmaY: widget.fallbackSigma),
+      child: widget.child,
+    );
   }
 }

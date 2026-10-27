@@ -9,6 +9,7 @@ import 'screens/catalog_screen.dart';
 import 'screens/community_screen.dart';
 import 'screens/my_screen.dart';
 import 'screens/tools_screen.dart';
+import 'widgets/liquid_glass_nav.dart';
 import 'widgets/page_transitions.dart';
 
 /// 主题选择状态：设置页写入，MaterialApp 监听切换。
@@ -20,9 +21,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 先从本机读回社区数据（带超时兜底，不阻塞启动太久），再进首页。
   await communityStore.init();
-  // 启动图标：读回偏好，冷启动按当前主题应用一次正确图标；
+  // 启动图标：昼夜自动，冷启动按当前主题应用一次正确图标；
   // 此后主题切换（设置页）与平台亮度变化都同步切图标。
-  await loadAppIconPreference();
   themeModeNotifier.addListener(
       () => syncAppIcon(themeModeNotifier.value));
   PlatformDispatcher.instance.onPlatformBrightnessChanged =
@@ -253,8 +253,11 @@ class _FloatingNavBar extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return ClipRRect(
           borderRadius: BorderRadius.circular(34),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+          // 底改走 v2 真折射：着色器采样条后实时画面做边缘折射；
+          // 加载失败或不支持的设备自动退回原来的 blur 28 毛玻璃。
+          child: LiquidGlassBackdrop(
+            radius: 34,
+            fallbackSigma: 28,
             child: Stack(
               children: [
                 Container(
