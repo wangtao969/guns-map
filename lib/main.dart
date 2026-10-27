@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app_icon.dart';
@@ -21,13 +20,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 先从本机读回社区数据（带超时兜底，不阻塞启动太久），再进首页。
   await communityStore.init();
-  // 启动图标：昼夜自动，冷启动按当前主题应用一次正确图标；
-  // 此后主题切换（设置页）与平台亮度变化都同步切图标。
-  themeModeNotifier.addListener(
-      () => syncAppIcon(themeModeNotifier.value));
-  PlatformDispatcher.instance.onPlatformBrightnessChanged =
-      () => syncAppIcon(themeModeNotifier.value);
-  await syncAppIcon(themeModeNotifier.value);
+  // 启动图标：固定黑底色，冷启动应用一次；不再跟随主题或平台亮度变化。
+  await syncAppIcon();
   runApp(const FirearmsApp());
 }
 
@@ -199,6 +193,9 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Scaffold(
         extendBody: true,
+        // 输入法弹起时主壳不收缩：底部悬浮导航钉在屏幕底部，
+        // 不再跟键盘一起上移；各子页有自己的 Scaffold，底部输入条不受影响。
+        resizeToAvoidBottomInset: false,
         // 导航栏不再占底部槽位：以悬浮层盖在页面之上，
         // 各页内容从玻璃栏下面滑过，不再被顶出整整一个底部。
         body: Stack(

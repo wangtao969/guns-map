@@ -353,57 +353,55 @@ class _CommunityScreenState extends State<CommunityScreen> {
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 10),
         ],
-        // 搜索收进小药丸，点击展开输入框；发动态与草稿箱在右下角小圆钮。
-        InkWell(
-          onTap: () => setState(() => _showSearch = !_showSearch),
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.search, size: 18),
-                const SizedBox(width: 8),
-                Text('搜索帖子标题、内容、话题',
-                    style: TextStyle(color: grey, fontSize: 13)),
-                const Spacer(),
-                if (_showSearch) const Icon(Icons.close, size: 18),
-              ],
-            ),
+        // 搜索：上面这一个药丸框就是输入框，点开后直接在里面输入，
+        // 不再在下面另起一个搜索框；收起用框内叉号。
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
           ),
-        ),
-        if (_showSearch) ...[
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchCtrl,
-                  autofocus: true,
-                  onSubmitted: _search,
-                  decoration: const InputDecoration(
-                    hintText: '搜索帖子标题、内容、话题',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
+          child: _showSearch
+              ? Row(
+                  children: [
+                    const Icon(Icons.search, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchCtrl,
+                        autofocus: true,
+                        onSubmitted: _search,
+                        decoration: const InputDecoration(
+                          hintText: '搜索帖子标题、内容、话题',
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
                     ),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () {
+                        _searchCtrl.clear();
+                        setState(() => _showSearch = false);
+                      },
+                      child: const Icon(Icons.close, size: 18),
+                    ),
+                  ],
+                )
+              : InkWell(
+                  onTap: () => setState(() => _showSearch = true),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.search, size: 18),
+                      const SizedBox(width: 8),
+                      Text('搜索帖子标题、内容、话题',
+                          style: TextStyle(color: grey, fontSize: 13)),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: () {
-                  _searchCtrl.clear();
-                  setState(() => _showSearch = false);
-                },
-                icon: const Icon(Icons.close),
-              ),
-            ],
-          ),
-        ],
+        ),
         const SizedBox(height: 16),
         // 内容流三档：最新 / 推荐 / 关注。
         Row(

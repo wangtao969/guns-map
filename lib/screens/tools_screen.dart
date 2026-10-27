@@ -41,46 +41,45 @@ class _ToolsScreenState extends State<ToolsScreen> {
           const Text('查数据、算单位、对照参数都在这里；讨论请去社区板块。',
               style: TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 16),
-          // 单位制选择：靶场距离与散布、装药动能与后坐力的输入单位跟随它。
+          // 单位制选择：精简成一行小开关（左英制、右公制），
+          // 切换行为与存储 key（tools_units_v1）不动，各工具的单位跟随逻辑不动。
           Card(
             margin: const EdgeInsets.only(bottom: 10),
             child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.straighten_outlined,
-                          color: Color(0xFF8C6A2F)),
-                      SizedBox(width: 8),
-                      Text('单位制 Unit System',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  const Text('靶场距离与散布、装药动能与后坐力的输入单位跟随此设置；单位换算页本身双向换算，不受影响。',
-                      style: TextStyle(color: Colors.grey, fontSize: 12)),
-                  const SizedBox(height: 8),
-                  ValueListenableBuilder<String>(
-                    valueListenable: unitSystemNotifier,
-                    builder: (_, system, __) => Wrap(
-                      spacing: 8,
-                      children: [
-                        ChoiceChip(
-                          label: const Text('英制 Imperial（gr · fps · 码）'),
-                          selected: system == 'imperial',
-                          onSelected: (_) => saveUnitSystem('imperial'),
-                        ),
-                        ChoiceChip(
-                          label: const Text('公制 Metric（g · m/s · 米）'),
-                          selected: system == 'metric',
-                          onSelected: (_) => saveUnitSystem('metric'),
-                        ),
-                      ],
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: ValueListenableBuilder<String>(
+                valueListenable: unitSystemNotifier,
+                builder: (_, system, __) => Row(
+                  children: [
+                    const Icon(Icons.straighten_outlined,
+                        color: Color(0xFF8C6A2F), size: 20),
+                    const SizedBox(width: 8),
+                    const Text('单位制',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Spacer(),
+                    Text('英制',
+                        style: TextStyle(
+                            color: system == 'imperial'
+                                ? null
+                                : Colors.grey,
+                            fontSize: 13)),
+                    Transform.scale(
+                      scale: 0.8,
+                      child: Switch(
+                        value: system == 'metric',
+                        activeThumbColor: const Color(0xFF8C6A2F),
+                        onChanged: (v) =>
+                            saveUnitSystem(v ? 'metric' : 'imperial'),
+                      ),
                     ),
-                  ),
-                ],
+                    Text('公制',
+                        style: TextStyle(
+                            color:
+                                system == 'metric' ? null : Colors.grey,
+                            fontSize: 13)),
+                  ],
+                ),
               ),
             ),
           ),

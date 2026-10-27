@@ -292,33 +292,21 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 ],
               )
             else
+              // 展开后是无边输入框：不套卡片底与阴影，不带放大镜前缀，
+              // 只留提示文字与光标；收起仍用右边圆钮。
               Row(
                 children: [
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: cardBg,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                    child: TextField(
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: tr('search_gun_hint'),
+                        hintStyle: TextStyle(color: grey),
+                        border: InputBorder.none,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: TextField(
-                        autofocus: true,
-                        decoration: InputDecoration(
-                          hintText: tr('search_gun_hint'),
-                          hintStyle: TextStyle(color: grey),
-                          prefixIcon: Icon(Icons.search, color: bronze),
-                          border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        onChanged: (v) => setState(() => _query = v),
-                      ),
+                      onChanged: (v) => setState(() => _query = v),
                     ),
                   ),
                   const SizedBox(width: 8),
