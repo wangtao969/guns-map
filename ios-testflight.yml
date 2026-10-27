@@ -1,0 +1,131 @@
+# iOS TestFlight 构建与上传（手动触发）。
+#
+# 前置条件（缺一不可，全部在仓库 Settings → Secrets and variables → Actions 里配，
+# 绝不要把任何 Secret 值写进代码或聊天记录）：
+#   APP_STORE_CONNECT_API_KEY_ID       App Store Connect API Key ID
+#   APP_STORE_CONNECT_ISSUER_ID        App Store Connect Issuer ID
+#   APP_STORE_CONNECT_PRIVATE_KEY      API 密钥 .p8 文件的全部内容
+#   IOS_DIST_CERT_P12                  App Store 分发证书 .p12 的 base64
+#   IOS_DIST_CERT_PASSWORD             上面 .p12 的密码
+#   IOS_PROVISIONING_PROFILE           App Store 分发描述文件 .mobileprovision 的 base64，
+#                                      必须是 com.wangtao969.ordnance 的 App Store 描述文件
+# 另需：Apple 开发者账号下已在 App Store Connect 建好该 Bundle ID 的应用记录。
+# 本工作流不编造任何签名值：描述文件名从用户自己的描述文件里读出后写入导出配置。
+#
+# 注意：本机（Linux）编不出 iOS 包；此工作流只在 macOS runner 上跑。
+# 触发方式：Actions 页手动 Run workflow（不随安卓 Tag 自动跑，避免无 Secret 时反复失败）。
+
+name: iOS TestFlight
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-upload:
+    name: Build IPA and upload to TestFlight
+    runs-on: macos-latest
+    env:
+      BUNDLE_ID: com.wangtao969.ordnance
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required secrets
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          CERT_P12: ${{ secrets.IOS_DIST_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: |
+          MISSING=""
+          [ -z "$KEY_ID" ] && MISSING="$MISSING APP_STORE_CONNECT_API_KEY_ID"
+          [ -z "$ISSUER_ID" ] && MISSING="$MISSING APP_STORE_CONNECT_ISSUER_ID"
+          [ -z "$PRIVATE_KEY" ] && MISSING="$MISSING APP_STORE_CONNECT_PRIVATE_KEY"
+          [ -z "$CERT_P12" ] && MISSING="$MISSING IOS_DIST_CERT_P12"
+          [ -z "$CERT_PASSWORD" ] && MISSING="$MISSING IOS_DIST_CERT_PASSWORD"
+          [ -z "$PROFILE" ] && MISSING="$MISSING IOS_PROVISIONING_PROFILE"
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing required GitHub Secrets:$MISSING"
+            echo "请在仓库 Settings → Secrets and variables → Actions 中补齐上述 Secret 后再跑。"
+            echo "注意：目前若还没有 Apple 开发者账号，Secret 无法配齐，上传会卡在这一步，先做源码适配即可。"
+            exit 1
+          fi
+          echo "All required secrets are present."
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer || true
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.8"
+          channel: stable
+
+      - name: Install signing assets
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          CERT_P12: ${{ secrets.IOS_DIST_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: |
+          set -euo pipefail
+          # API 密钥（altool 上传用，文件名必须含 Key ID）
+          mkdir -p ~/.private_keys
+          printf '%s' "$PRIVATE_KEY" > ~/.private_keys/AuthKey_${KEY_ID}.p8
+          chmod 600 ~/.private_keys/AuthKey_${KEY_ID}.p8
+          # 分发证书进临时钥匙串
+          echo "$CERT_P12" | base64 --decode > $RUNNER_TEMP/cert.p12
+          KEYCHAIN=$RUNNER_TEMP/build.keychain
+          security create-keychain -p "" "$KEYCHAIN"
+          security default-keychain -s "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          security import $RUNNER_TEMP/cert.p12 -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$KEYCHAIN"
+          # 描述文件装到系统位置，并从文件本身读出它的 Name（不编造）
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/ordnance.mobileprovision
+          security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/ordnance.mobileprovision > $RUNNER_TEMP/profile.plist
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" $RUNNER_TEMP/profile.plist)
+          echo "PROFILE_NAME=$PROFILE_NAME" >> $GITHUB_ENV
+
+      - name: Generate ExportOptions.plist
+        run: |
+          cat > ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>$BUNDLE_ID</key>
+              <string>$PROFILE_NAME</string>
+            </dict>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>manageAppVersionAndBuildNumber</key>
+            <false/>
+          </dict>
+          </plist>
+          EOF
+          echo "ExportOptions.plist generated for $BUNDLE_ID with profile: $PROFILE_NAME"
+
+      - name: Build IPA
+        run: flutter build ipa --release --export-options-plist=ExportOptions.plist
+
+      - name: Upload to TestFlight
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          IPA=$(ls build/ios/ipa/*.ipa | head -n 1)
+          echo "Uploading $IPA"
+          xcrun altool --upload-app -f "$IPA" -t ios --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
