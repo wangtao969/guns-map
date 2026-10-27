@@ -45,6 +45,10 @@ const Map<String, (String, List<String>)> familyDiagramInfo = {
     'SIG系',
     ['SIG 手枪家族的套筒与握把轮廓', '多为紧凑型手枪', '底把前有附件导轨（部分型号）', '以 P250、P238 为代表'],
   ),
+  'sigbolt': (
+    'SIG 栓动步枪系',
+    ['大物镜瞄准镜', '旋转后拉枪机', '可调贴腮枪托', '可拆弹匣'],
+  ),
   'savage': (
     '萨维奇系',
     ['浮动枪管与 AccuTrigger', '可拆弹匣', '合成枪托', '旋转后拉枪机'],
@@ -134,10 +138,12 @@ String? familyDiagramOf(Gun gun) {
     return 'mauser98';
   }
   // 第 6-20 族（顺序即特例优先：先于 AR 系与 SIG 系余量）。
-  if (n.contains('M14') ||
-      RegExp(r'M1A(?![0-9])').hasMatch(n) ||
-      RegExp(r'M21(?![ASC])').hasMatch(n) ||
-      n.contains('M25')) {
+  // XM214 是通用电气转管机枪，名字含 M21 子串，不得误中 M14 分支。
+  if ((n.contains('M14') ||
+          RegExp(r'M1A(?![0-9])').hasMatch(n) ||
+          RegExp(r'M21(?![ASC])').hasMatch(n) ||
+          n.contains('M25')) &&
+      !n.contains('XM214')) {
     return 'm14';
   }
   if (n.contains('切塔克') || n.contains('CHEYTAC')) return 'cheytac';
@@ -193,6 +199,11 @@ String? familyDiagramOf(Gun gun) {
     '卡梅尔', 'SFAR', 'MSR10', 'M4E1', 'M5E1',
   ];
   if (arStart || arWord || arMarks.any(n.contains)) return 'ar';
+  // SIG 栓动步枪系：Cross / SSG 3000 一系，须在通用 SIG 手枪分支之前，
+  // 否则 4 支栓动步枪会误中手枪图。
+  if (n.contains('CROSS') || n.contains('SSG3000')) {
+    return 'sigbolt';
+  }
   // SIG 系余量：SG550、MCX、P365 另有其系，M400 是 AR 构型，MPX 是冲锋枪，
   // 这些都不画 SIG 手枪图，退回参数化轮廓。
   if ((n.contains('SIG') || n.contains('西格')) &&
@@ -826,6 +837,33 @@ class _FamilyPainter extends CustomPainter {
           _circle(39, 19, 2), // 球头
           _guardRing(40, 32, 10, 7),
           _rect(46, 34, 2, 4), // 扳机
+        ];
+      case 'sigbolt':
+        // SIG 栓动步枪（Cross / SSG 3000 一系）：瞄准镜、自由浮置护木、
+        // 可调贴腮枪托、可拆弹匣、后拉枪机拉柄；与手枪图一眼可区分。
+        return [
+          _rrect(34, 13, 28, 5, 2.5), // 瞄准镜筒
+          _rrect(60, 11, 8, 9, 2), // 大物镜
+          _rrect(30, 13, 4, 5, 2), // 目镜
+          _rect(40, 18, 3, 2), // 镜座
+          _rect(56, 18, 3, 2),
+          _rect(66, 25, 46, 2.5), // 枪管
+          _rrect(112, 23.5, 6, 5.5, 1), // 制退器
+          _rrect(66, 28.5, 30, 3, 1), // 自由浮置护木（与枪管留空隙）
+          _rrect(28, 24, 38, 9, 2), // 机匣
+          Path() // 可调贴腮枪托
+            ..moveTo(28, 24)
+            ..quadraticBezierTo(14, 23, 6, 26)
+            ..lineTo(6, 36)
+            ..lineTo(12, 38)
+            ..lineTo(28, 33)
+            ..close(),
+          _rrect(8, 20, 14, 3, 1.5), // 可调贴腮板
+          _rect(36, 20, 2.5, 4), // 枪机拉柄杆
+          _circle(37, 19, 2), // 拉柄球头
+          _rect(44, 33, 9, 9), // 可拆弹匣
+          _guardRing(40, 33, 10, 7),
+          _rect(46, 35, 2, 4), // 扳机
         ];
       default:
         return [];

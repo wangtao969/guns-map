@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../english_terms.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
@@ -50,10 +51,10 @@ class LegendListScreen extends StatelessWidget {
                       width: 90, fit: BoxFit.contain)
                   : const Icon(Icons.image_not_supported,
                       size: 36, color: Color(0xFF9A917F)),
-              title: Text(l.name,
+              title: Text(l.nameEn,
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text(
-                  '${l.nameEn} · ${l.vendor} · ${l.years}\n${l.caliber}',
+                  '${vendorDisplay(l.vendor)} · ${l.years}\n${l.caliber}',
                   style: TextStyle(color: grey)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {

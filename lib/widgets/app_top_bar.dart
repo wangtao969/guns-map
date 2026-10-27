@@ -47,8 +47,8 @@ class OrdnanceAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Text(
         "Ordnance",
         style: TextStyle(
-          // 线衬体（系统 serif）：比无衬线多一点设计感。
-          fontFamily: 'serif',
+          // 字标随全 App 统一走 Manrope。
+          fontFamily: 'Manrope',
           fontSize: 22,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.3,
@@ -116,7 +116,7 @@ class SubPageAppBar extends StatelessWidget implements PreferredSizeWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          fontFamily: 'Roboto',
+          fontFamily: 'Manrope',
           fontSize: 19,
           fontWeight: FontWeight.w800,
           letterSpacing: -0.3,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../english_terms.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
 
@@ -40,6 +41,7 @@ class _ReloadToolsScreenState extends State<ReloadToolsScreen> {
       return t.name.toLowerCase().contains(q) ||
           t.vendor.toLowerCase().contains(q) ||
           t.category.toLowerCase().contains(q) ||
+          toolCategoryDisplay(t.category).toLowerCase().contains(q) ||
           t.function.toLowerCase().contains(q);
     }).toList();
     return Scaffold(
@@ -77,7 +79,7 @@ class _ReloadToolsScreenState extends State<ReloadToolsScreen> {
           const SizedBox(height: 16),
           for (final cat in _order)
             if (filtered.any((t) => t.category == cat)) ...[
-              Text(cat,
+              Text(toolCategoryDisplay(cat),
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),

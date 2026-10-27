@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../english_terms.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../models.dart';
@@ -103,7 +104,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                 ...types.map((t) => Padding(
                       padding: const EdgeInsets.only(left: 6),
                       child: ChoiceChip(
-                        label: Text(t),
+                        label: Text(accessoryTypeDisplay(t)),
                         selected: _type == t,
                         onSelected: (_) =>
                             setState(() => _type = _type == t ? null : t),
@@ -131,7 +132,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                 ...categories.map((c) => Padding(
                       padding: const EdgeInsets.only(left: 6),
                       child: ChoiceChip(
-                        label: Text(c),
+                        label: Text(categoryDisplay(c)),
                         selected: _category == c,
                         onSelected: (_) => setState(
                             () => _category = _category == c ? null : c),
@@ -174,7 +175,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(a.name,
+                          Text(accessoryDisplay(a.name),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -270,7 +271,8 @@ class _AccessoryDetailScreenState extends State<AccessoryDetailScreen> {
           'setString', {'key': _prefsKey, 'value': jsonEncode(list)});
       if (mounted) setState(() => _count += 1);
     } catch (_) {}
-    if (mounted) showAppToast(context, '已入库：${widget.item.name}');
+    if (mounted)
+      showAppToast(context, '已入库：${accessoryDisplay(widget.item.name)}');
   }
 
   @override
@@ -280,15 +282,15 @@ class _AccessoryDetailScreenState extends State<AccessoryDetailScreen> {
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
     final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
     return Scaffold(
-      appBar: SubPageAppBar(title: item.name),
+      appBar: SubPageAppBar(title: accessoryDisplay(item.name)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(item.name,
+          Text(accessoryDisplay(item.name),
               style:
                   const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text('${item.vendor} · ${item.type}',
+          Text('${item.vendor} · ${accessoryTypeDisplay(item.type)}',
               style: TextStyle(color: grey)),
           const SizedBox(height: 12),
           Text(item.description),
@@ -348,7 +350,7 @@ class _AccessoryDetailScreenState extends State<AccessoryDetailScreen> {
           if (item.fitGuns.isEmpty)
             Text(tr('generic_unbound'), style: TextStyle(color: grey)),
           if (item.fitGuns.isNotEmpty)
-            Text(item.fitGuns.join('、'),
+            Text(item.fitGuns.map(gunNameEnOf).join(', '),
                 style: TextStyle(color: grey, fontSize: 13)),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../english_terms.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../models.dart';
@@ -20,7 +21,7 @@ class GunListScreen extends StatelessWidget {
     }
     final vendors = byVendor.keys.toList()..sort();
     return Scaffold(
-      appBar: SubPageAppBar(title: trCategory(category)),
+      appBar: SubPageAppBar(title: categoryDisplay(category)),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -29,11 +30,11 @@ class GunListScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(trCategory(category),
+                Text(categoryDisplay(category),
                     style: const TextStyle(
                         fontSize: 20, fontWeight: FontWeight.bold)),
                 Text(
-                    '${categoryEn[category] ?? ''} · ${list.length} 支',
+                    '${categoryDisplay(category)} · ${list.length} 支',
                     style: const TextStyle(color: Colors.grey)),
               ],
             ),
@@ -62,7 +63,7 @@ class GunListScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 childrenPadding: const EdgeInsets.only(bottom: 8),
-                title: Text(vendor,
+                title: Text(vendorDisplay(vendor),
                     style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text(modelsCountText(models.length),
                     style: const TextStyle(color: Color(0xFF9A917F))),
@@ -73,7 +74,7 @@ class GunListScreen extends StatelessWidget {
                                   width: 90, fit: BoxFit.contain)
                               : const Icon(Icons.image_not_supported,
                                   size: 36, color: Color(0xFF9A917F)),
-                          title: Text(g.name),
+                          title: Text(gunDisplayName(g)),
                           subtitle: Text(g.caliber),
                           onTap: () {
                             tapHaptic();

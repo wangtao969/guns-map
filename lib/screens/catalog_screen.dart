@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../community_store.dart';
 import '../data.dart';
+import '../english_terms.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../models.dart';
@@ -41,6 +42,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         : guns
             .where((g) =>
                 g.name.toLowerCase().contains(q) ||
+                (g.nameEn ?? '').toLowerCase().contains(q) ||
                 g.vendor.toLowerCase().contains(q) ||
                 g.caliber.toLowerCase().contains(q))
             .toList();
@@ -174,7 +176,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                       fontSize: 14)),
                               const SizedBox(height: 2),
                               Text(
-                                '${todayGun.name} · ${todayGun.caliber}',
+                                '${gunDisplayName(todayGun)} · ${todayGun.caliber}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -299,10 +301,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   Expanded(
                     child: TextField(
                       autofocus: true,
+                      // TextField 本身任何状态都不画框：focusedBorder 不写会
+                      // 回落全局主题的橙色聚焦边，聚焦时裸输入框里会再冒出
+                      // 一个橙色框。
                       decoration: InputDecoration(
                         hintText: tr('search_gun_hint'),
                         hintStyle: TextStyle(color: grey),
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
                         contentPadding:
                             const EdgeInsets.symmetric(vertical: 14),
                       ),
@@ -391,8 +400,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: ListTile(
-                      title: Text(g.name),
-                      subtitle: Text('${g.vendor} · ${g.caliber}'),
+                      title: Text(gunDisplayName(g)),
+                      subtitle: Text('${vendorDisplay(g.vendor)} · ${g.caliber}'),
                       onTap: () {
                         tapHaptic();
                         Navigator.push(
@@ -417,8 +426,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: ListTile(
-                        title: Text(k.name),
-                        subtitle: Text('${k.country} · ${k.type}'),
+                        title: Text(k.nameEn),
+                        subtitle: Text(
+                            '${countryDisplay(k.country)} · ${knifeTypeDisplay(k.type)}'),
                         onTap: () {
                           tapHaptic();
                           Navigator.push(
@@ -500,7 +510,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          Text(trCategory(c),
+                          Text(categoryDisplay(c),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

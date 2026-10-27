@@ -243,12 +243,28 @@ class _CommunityBoardScreenState extends State<CommunityBoardScreen> {
                         autofocus: true,
                         onChanged: (v) =>
                             setState(() => _query = v.trim()),
-                        decoration: const InputDecoration(
+                        // 聚焦边与未聚焦同一支（圆角 20 灰边）：只写 border 时
+                        // 聚焦会回落全局橙色圆角 12 边，框里再冒一个框。
+                        decoration: InputDecoration(
                           hintText: '搜索本板块的帖子标题、内容、话题',
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder(
+                          prefixIcon: const Icon(Icons.search),
+                          border: const OutlineInputBorder(
                             borderRadius:
                                 BorderRadius.all(Radius.circular(20)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: const BorderRadius.all(
+                                Radius.circular(20)),
+                            borderSide: BorderSide(
+                                color:
+                                    Colors.grey.withValues(alpha: 0.35)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: const BorderRadius.all(
+                                Radius.circular(20)),
+                            borderSide: BorderSide(
+                                color:
+                                    Colors.grey.withValues(alpha: 0.35)),
                           ),
                         ),
                       ),

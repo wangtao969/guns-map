@@ -371,9 +371,16 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         controller: _searchCtrl,
                         autofocus: true,
                         onSubmitted: _search,
+                        // TextField 本身任何状态都不画框，只剩外层药丸容器一个框：
+                        // focusedBorder 不写会回落全局主题的橙色聚焦边，聚焦时
+                        // 药丸里会再冒出一个橙色框。
                         decoration: const InputDecoration(
                           hintText: '搜索帖子标题、内容、话题',
                           border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -774,6 +781,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
           final current = communityStore.current;
           _maybeOnboarding(current);
           return Scaffold(
+            // 内层 Scaffold 不跟键盘走：键盘弹起时 body 不收缩，
+            // 右下角发帖钮（Positioned bottom: 100）不再跟着上移。
+            resizeToAvoidBottomInset: false,
             extendBodyBehindAppBar: true,
             appBar: const OrdnanceAppBar(),
             body: Padding(

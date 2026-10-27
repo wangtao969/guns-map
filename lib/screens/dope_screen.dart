@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../community_store.dart';
 import '../data.dart';
+import '../english_terms.dart';
+import '../i18n.dart';
 import '../models.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/app_top_bar.dart';
+import '../widgets/bar_chart.dart';
 import '../widgets/glass_dialog.dart';
 import '../widgets/zero_assistant_card.dart';
 import 'ammo_inventory_screen.dart';
@@ -234,7 +237,7 @@ class _DopeScreenState extends State<DopeScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => GlassDialog(
           title: existing == null ? '记一张归零卡' : '改归零卡',
-          subtitle: widget.gun.name,
+          subtitle: gunDisplayName(widget.gun),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,6 +382,14 @@ class _DopeScreenState extends State<DopeScreen> {
     final scores = (account?.rangeScores ?? [])
         .where((s) => s.gunName == gun.name)
         .toList();
+    // 分组 MOA 趋势图：取可算 MOA 的成绩按日期正序，最近 20 组。
+    final moaScores = scores
+        .where((s) => s.groupSize > 0 && s.distance > 0)
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+    final moaChartScores = moaScores.length > 20
+        ? moaScores.sublist(moaScores.length - 20)
+        : moaScores;
     // 常用弹药：按该枪成绩里的弹药名计频，前 5。
     final ammoCount = <String, int>{};
     for (final s in scores) {
@@ -395,14 +406,16 @@ class _DopeScreenState extends State<DopeScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      appBar: SubPageAppBar(title: '${gun.name} · DOPE数据本'),
+      appBar: SubPageAppBar(title: '${gunDisplayName(gun)} · DOPE数据本'),
       body: SafeArea(
         top: true,
         bottom: false,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8 + kToolbarHeight, 16, 110),
           children: [
-            Text(gun.vendor.isNotEmpty ? '${gun.vendor} · ${gun.caliber}' : gun.caliber,
+            Text(gun.vendor.isNotEmpty
+                ? '${vendorDisplay(gun.vendor)} · ${gun.caliber}'
+                : gun.caliber,
                 style: TextStyle(color: grey, fontSize: 13)),
             const SizedBox(height: 16),
             ZeroAssistantCard(
@@ -469,6 +482,32 @@ class _DopeScreenState extends State<DopeScreen> {
             else if (scores.isEmpty)
               Text('这把枪还没有靶场成绩，去靶场成绩里记一组就会出现在这里。',
                   style: TextStyle(color: grey, fontSize: 13)),
+            if (moaChartScores.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(tr('chart_moa_title'),
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 6),
+                  Text('（${tr('chart_moa_unit')}）',
+                      style: TextStyle(color: grey, fontSize: 12)),
+                ],
+              ),
+              const SizedBox(height: 4),
+              SimpleBarChart(
+                entries: moaChartScores
+                    .map((s) => BarChartEntry(
+                          label:
+                              '${s.date.month.toString().padLeft(2, '0')}-${s.date.day.toString().padLeft(2, '0')}',
+                          value: s.groupSize / (s.distance * 0.02909),
+                          valueText: (s.groupSize / (s.distance * 0.02909))
+                              .toStringAsFixed(2),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 8),
+            ],
             for (final s in scores.take(20))
               Card(
                 margin: const EdgeInsets.only(bottom: 6),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../english_terms.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/knife_silhouette.dart';
@@ -14,14 +15,14 @@ class KnifeDetailScreen extends StatelessWidget {
     final ink = dark ? const Color(0xFFEDE8DF) : const Color(0xFF2E2A24);
     final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
     final rows = [
-      ('国家', knife.country),
-      ('分类', knife.type),
-      ('刃长', knife.bladeLength),
-      ('钢材', knife.steel),
-      ('年代/服役', knife.year),
+      ('Country', countryDisplay(knife.country)),
+      ('Type', knifeTypeDisplay(knife.type)),
+      ('Blade Length', knife.bladeLength),
+      ('Steel', knife.steel),
+      ('Year / Service', knife.year),
     ];
     return Scaffold(
-      appBar: SubPageAppBar(title: knife.name),
+      appBar: SubPageAppBar(title: knife.nameEn),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
         children: [
@@ -40,11 +41,11 @@ class KnifeDetailScreen extends StatelessWidget {
           Text('示意图为刀形剪影，非实物照片',
               style: TextStyle(color: grey, fontSize: 11)),
           const SizedBox(height: 16),
-          Text(knife.name,
+          Text(knife.nameEn,
               style: TextStyle(
                   fontSize: 22, fontWeight: FontWeight.bold, color: ink)),
           const SizedBox(height: 4),
-          Text(knife.nameEn, style: TextStyle(color: grey, fontSize: 14)),
+          Text(knife.name, style: TextStyle(color: grey, fontSize: 14)),
           const SizedBox(height: 16),
           ...rows.map((r) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),

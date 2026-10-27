@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../english_terms.dart';
 import '../models.dart';
 
 /// 从图鉴选一把枪：搜索框 + 列表，收藏柜与靶场成绩共用。
@@ -16,6 +17,7 @@ Future<Gun?> showGunPickerDialog(BuildContext context) async {
             : guns
                 .where((g) =>
                     g.name.toLowerCase().contains(q) ||
+                    (g.nameEn ?? '').toLowerCase().contains(q) ||
                     g.vendor.toLowerCase().contains(q) ||
                     g.caliber.toLowerCase().contains(q))
                 .take(60)
@@ -30,10 +32,23 @@ Future<Gun?> showGunPickerDialog(BuildContext context) async {
                 TextField(
                   controller: ctrl,
                   onChanged: (v) => setDialogState(() => query = v),
-                  decoration: const InputDecoration(
+                  // 聚焦边与未聚焦同一支：只写 border 时聚焦会回落全局橙色边。
+                  decoration: InputDecoration(
                     hintText: '搜枪名、厂商、口径',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                    prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius:
+                          const BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide(
+                          color: Colors.grey.withValues(alpha: 0.35)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius:
+                          const BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide(
+                          color: Colors.grey.withValues(alpha: 0.35)),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -45,9 +60,9 @@ Future<Gun?> showGunPickerDialog(BuildContext context) async {
                           itemBuilder: (_, i) {
                             final g = results[i];
                             return ListTile(
-                              title: Text(g.name),
-                              subtitle:
-                                  Text('${g.vendor} · ${g.caliber}'),
+                              title: Text(gunDisplayName(g)),
+                              subtitle: Text(
+                                  '${vendorDisplay(g.vendor)} · ${g.caliber}'),
                               onTap: () => Navigator.of(dialogContext)
                                   .pop(g),
                             );

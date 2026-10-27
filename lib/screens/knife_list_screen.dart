@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../english_terms.dart';
 import '../haptics.dart';
 import '../knife_data.dart';
 import '../models.dart';
@@ -33,7 +34,9 @@ class _KnifeListScreenState extends State<KnifeListScreen> {
       return k.name.toLowerCase().contains(q) ||
           k.nameEn.toLowerCase().contains(q) ||
           k.country.toLowerCase().contains(q) ||
-          k.type.toLowerCase().contains(q);
+          countryDisplay(k.country).toLowerCase().contains(q) ||
+          k.type.toLowerCase().contains(q) ||
+          knifeTypeDisplay(k.type).toLowerCase().contains(q);
     }).toList();
     return Scaffold(
       appBar: const SubPageAppBar(title: '刀具图鉴'),
@@ -41,9 +44,20 @@ class _KnifeListScreenState extends State<KnifeListScreen> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
         children: [
           TextField(
-            decoration: const InputDecoration(
+            // 聚焦边与未聚焦同一支：不写 focusedBorder 会回落全局橙色边。
+            decoration: InputDecoration(
               hintText: '搜索刀具、国家或分类',
-              prefixIcon: Icon(Icons.search),
+              prefixIcon: const Icon(Icons.search),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    BorderSide(color: Colors.grey.withValues(alpha: 0.35)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    BorderSide(color: Colors.grey.withValues(alpha: 0.35)),
+              ),
             ),
             onChanged: (v) => setState(() => _query = v),
           ),
@@ -54,7 +68,7 @@ class _KnifeListScreenState extends State<KnifeListScreen> {
             children: ['全部', ...knifeTypes].map((t) {
               final selected = _type == t;
               return ChoiceChip(
-                label: Text(t),
+                label: Text(t == '全部' ? t : knifeTypeDisplay(t)),
                 selected: selected,
                 selectedColor: bronze,
                 labelStyle: TextStyle(
@@ -72,7 +86,7 @@ class _KnifeListScreenState extends State<KnifeListScreen> {
             children: ['全部', ...knifeCountries].map((c) {
               final selected = _country == c;
               return ChoiceChip(
-                label: Text(c),
+                label: Text(c == '全部' ? c : countryDisplay(c)),
                 selected: selected,
                 selectedColor: bronze,
                 labelStyle: TextStyle(
@@ -113,8 +127,9 @@ class _KnifeListScreenState extends State<KnifeListScreen> {
                   ? const Color(0xFFC9A86A)
                   : const Color(0xFF6B5B3E)),
         ),
-        title: Text(k.name),
-        subtitle: Text('${k.country} · ${k.type} · 刃长 ${k.bladeLength}',
+        title: Text(k.nameEn),
+        subtitle: Text(
+            '${countryDisplay(k.country)} · ${knifeTypeDisplay(k.type)} · Blade Length ${k.bladeLength}',
             maxLines: 1, overflow: TextOverflow.ellipsis),
         onTap: () {
           tapHaptic();

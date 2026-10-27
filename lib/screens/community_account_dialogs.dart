@@ -3,6 +3,7 @@ import '../widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../community_store.dart';
+import '../theme_accent.dart';
 import '../i18n.dart';
 
 /// 社区账号对话框（注册 / 登录 / 编辑资料）：社区首屏、个人主页、
@@ -10,7 +11,6 @@ import '../i18n.dart';
 /// 样式：统一毛玻璃弹窗（模糊背景 + 半透明填充 + 圆角 + 细边），
 /// 不再用默认 AlertDialog 的毛坯样式。
 const _pickImageChannel = MethodChannel('gunsmap/pick_image');
-const _copper = Color(0xFF8C6A2F);
 
 Future<Uint8List?> _pickAvatar(BuildContext context) async {
   try {
@@ -154,18 +154,21 @@ Widget _dialogActions(
       ),
       const SizedBox(width: 8),
       Expanded(
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _copper,
-            foregroundColor: Colors.white,
-            minimumSize: const Size.fromHeight(48),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14)),
+        child: ValueListenableBuilder<Color>(
+          valueListenable: accentNotifier,
+          builder: (_, accent, __) => ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accent,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+            ),
+            onPressed: onPrimary,
+            child: Text(primaryLabel,
+                style: const TextStyle(
+                    fontSize: 15, fontWeight: FontWeight.bold)),
           ),
-          onPressed: onPrimary,
-          child: Text(primaryLabel,
-              style:
-                  const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
         ),
       ),
     ],
@@ -310,10 +313,13 @@ Widget _glassSwitchRow({
   return Row(
     children: [
       Expanded(child: Text(title, style: const TextStyle(fontSize: 14))),
-      Switch(
-        value: value,
-        activeColor: _copper,
-        onChanged: onChanged,
+      ValueListenableBuilder<Color>(
+        valueListenable: accentNotifier,
+        builder: (_, accent, __) => Switch(
+          value: value,
+          activeColor: accent,
+          onChanged: onChanged,
+        ),
       ),
     ],
   );
@@ -579,21 +585,24 @@ void askLoginDialog(BuildContext context) {
       actions: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _copper,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+          ValueListenableBuilder<Color>(
+            valueListenable: accentNotifier,
+            builder: (_, accent, __) => ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                showLoginDialog(context);
+              },
+              child: Text(tr('login'),
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.bold)),
             ),
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              showLoginDialog(context);
-            },
-            child: Text(tr('login'),
-                style:
-                    const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(height: 10),
           OutlinedButton(

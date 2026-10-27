@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme_accent.dart';
 import '../tools_units.dart';
 import '../widgets/app_top_bar.dart';
 import 'accessories_screen.dart';
@@ -66,11 +67,14 @@ class _ToolsScreenState extends State<ToolsScreen> {
                             fontSize: 13)),
                     Transform.scale(
                       scale: 0.8,
-                      child: Switch(
-                        value: system == 'metric',
-                        activeThumbColor: const Color(0xFF8C6A2F),
-                        onChanged: (v) =>
-                            saveUnitSystem(v ? 'metric' : 'imperial'),
+                      child: ValueListenableBuilder<Color>(
+                        valueListenable: accentNotifier,
+                        builder: (_, accent, __) => Switch(
+                          value: system == 'metric',
+                          activeThumbColor: accent,
+                          onChanged: (v) =>
+                              saveUnitSystem(v ? 'metric' : 'imperial'),
+                        ),
                       ),
                     ),
                     Text('公制',

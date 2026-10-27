@@ -12,12 +12,13 @@ import '../widgets/app_top_bar.dart';
 import '../widgets/glass_dialog.dart';
 import '../community_store.dart';
 import 'about_screen.dart';
+import 'theme_screen.dart';
 import 'app_log_screen.dart';
 import 'admin_home_screen.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '2.1.16';
+const String appVersion = '2.1.17';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -49,7 +50,7 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 const Text("Ordnance",
                     style: TextStyle(
-                        fontFamily: 'serif',
+                        fontFamily: 'Manrope',
                         fontSize: 20,
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
@@ -89,51 +90,28 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.bug_report_outlined, size: 22),
             title: const Text('设备日志'),
-            subtitle: const Text('语音、保存失败等关键事件，定位问题时可复制'),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AppLogScreen()),
             ),
           ),
           const SizedBox(height: 24),
-          Row(
-            children: [
-              const Icon(Icons.palette_outlined, size: 22),
-              const SizedBox(width: 8),
-              Text(tr('theme'),
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 8),
           ValueListenableBuilder<ThemeMode>(
             valueListenable: themeModeNotifier,
-            builder: (_, mode, __) => RadioGroup<ThemeMode>(
-              groupValue: mode,
-              onChanged: (v) => themeModeNotifier.value = v!,
-              child: Column(
-                children: [
-                  RadioListTile<ThemeMode>(
-                    title: Text(tr('theme_system')),
-                    subtitle: Text(tr('theme_system_sub')),
-                    value: ThemeMode.system,
-                  ),
-                  RadioListTile<ThemeMode>(
-                    title: Text(tr('theme_light')),
-                    subtitle: Text(tr('theme_light_sub')),
-                    value: ThemeMode.light,
-                  ),
-                  RadioListTile<ThemeMode>(
-                    title: Text(tr('theme_dark')),
-                    subtitle: Text(tr('theme_dark_sub')),
-                    value: ThemeMode.dark,
-                  ),
-                ],
+            builder: (_, mode, __) => ListTile(
+              leading: const Icon(Icons.palette_outlined, size: 22),
+              title: Text(tr('theme')),
+              subtitle: Text(mode == ThemeMode.system
+                  ? tr('theme_system')
+                  : mode == ThemeMode.light
+                      ? tr('theme_light')
+                      : tr('theme_dark')),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ThemeScreen()),
               ),
             ),
           ),
-          Text(tr('theme_note'),
-              style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -149,13 +127,10 @@ class SettingsScreen extends StatelessWidget {
             valueListenable: hapticsEnabledNotifier,
             builder: (_, enabled, __) => SwitchListTile(
               title: Text(tr('haptics_title')),
-              subtitle: Text(tr('haptics_sub')),
               value: enabled,
               onChanged: (v) => hapticsEnabledNotifier.value = v,
             ),
           ),
-          Text(tr('haptics_note'),
-              style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -183,8 +158,6 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
-          Text(tr('language_note'),
-              style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -204,7 +177,6 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.feedback_outlined, size: 22),
             title: Text(tr('feedback')),
-            subtitle: Text(tr('feedback_sub')),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const FeedbackScreen()),
@@ -213,7 +185,6 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.person_add_outlined, size: 22),
             title: const Text('邀请好友'),
-            subtitle: const Text('每邀请一位新用户，+100 经验'),
             onTap: () => _showInviteDialog(context),
           ),
           ListTile(
@@ -231,17 +202,9 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.book_outlined, size: 22),
             title: const Text('项目手册'),
-            subtitle: const Text('Ordnance 是什么、每块怎么用'),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AboutScreen()),
-            ),
-          ),
-          ListTile(
-            title: Text(tr('data_note')),
-            subtitle: Text(
-              tr('data_note_body'),
-              style: TextStyle(color: grey, fontSize: 13),
             ),
           ),
         ],
@@ -594,8 +557,7 @@ class _ClearCacheTileState extends State<_ClearCacheTile> {
       context: context,
       builder: (ctx) => GlassDialog(
         title: '清理缓存',
-        content: const Text(
-            '清理后会删除临时文件，包括更新时已下载的安装包（需要时重新下载即可）。账号、收藏柜、靶场成绩、弹药库存、保养记录与复装记录等本机数据不会被删除。'),
+        content: const Text('只删临时文件，本机数据不会被删除。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -784,16 +746,13 @@ class _QuickActionsCardState extends State<_QuickActionsCard> {
             ListTile(
               leading: const Icon(Icons.system_update_alt, size: 22),
               title: Text(tr('check_update')),
-              subtitle: Text(Platform.isIOS
-                  ? tr('ios_update_title')
-                  : tr('check_update_sub')),
+              subtitle: Platform.isIOS ? Text(tr('ios_update_title')) : null,
               onTap: () => widget.onCheckUpdate(context),
             ),
             const _ClearCacheTile(),
             ListTile(
               leading: const Icon(Icons.file_download_outlined, size: 22),
               title: const Text('导出我的数据'),
-              subtitle: const Text('收藏柜、靶场成绩、等级与勋章，分享为 JSON 文本'),
               onTap: () => widget.onExportData(context),
             ),
             if (communityStore.isAdmin || communityStore.isModerator)
@@ -802,7 +761,6 @@ class _QuickActionsCardState extends State<_QuickActionsCard> {
                     size: 22, color: Color(0xFFE86A1C)),
                 title: const Text('后台管理',
                     style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: const Text('人员、帖子、板块与公告'),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(

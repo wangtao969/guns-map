@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../english_terms.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../models.dart';
@@ -36,7 +37,7 @@ class _GunDetailScreenState extends State<GunDetailScreen> {
     final diagramInfo =
         diagramKey == null ? null : familyDiagramInfo[diagramKey];
     return Scaffold(
-      appBar: SubPageAppBar(title: gun.name),
+      appBar: SubPageAppBar(title: gunDisplayName(gun)),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
@@ -133,20 +134,20 @@ class _GunDetailScreenState extends State<GunDetailScreen> {
                 spacing: 6,
                 children: _assembled
                     .map((a) => Chip(
-                        label: Text('${tr('assembled_prefix')}$a'),
+                        label: Text(
+                            '${tr('assembled_prefix')}${accessoryDisplay(a)}'),
                         backgroundColor: Colors.amber.withOpacity(0.2)))
                     .toList(),
               ),
             ),
           const SizedBox(height: 12),
-          Text(gun.name,
+          Text(gunDisplayName(gun),
               style:
                   const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          Text('${gun.vendor} · ${gun.caliber}',
+          Text('${vendorDisplay(gun.vendor)} · ${gun.caliber}',
               style: const TextStyle(color: Colors.grey, fontSize: 16)),
-          if (gun.nameEn != null)
-            Text(gun.nameEn!,
-                style: const TextStyle(color: Colors.grey, fontSize: 14)),
+          Text(gun.name,
+              style: const TextStyle(color: Colors.grey, fontSize: 14)),
           if (gun.price != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -156,14 +157,14 @@ class _GunDetailScreenState extends State<GunDetailScreen> {
           const SizedBox(height: 12),
           Text(tr('params'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          _spec('口径', gun.caliber),
-          _spec('枪机方式', gun.action),
-          _spec('枪管长度', gun.barrel),
-          _spec('全长', gun.length),
-          _spec('空枪重', gun.weight),
-          _spec('弹容', gun.capacity),
-          _spec('产地', gun.origin),
-          _spec('年份', gun.year),
+          _spec('Caliber', gun.caliber),
+          _spec('Action', actionDisplay(gun.action)),
+          _spec('Barrel', gun.barrel),
+          _spec('Overall Length', gun.length),
+          _spec('Weight', gun.weight),
+          _spec('Capacity', gun.capacity),
+          _spec('Origin', originDisplay(gun.origin)),
+          _spec('Year', gun.year),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: () => Navigator.push(
@@ -243,7 +244,7 @@ class _GunDetailScreenState extends State<GunDetailScreen> {
           Text(tr('accessories_pick'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ...gun.accessories.map((a) => ListTile(
-                title: Text(a),
+                title: Text(accessoryDisplay(a)),
                 trailing: _assembled.contains(a)
                     ? Text(tr('assembled'), style: TextStyle(color: Colors.amber))
                     : TextButton(

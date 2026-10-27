@@ -194,43 +194,55 @@ class _CommunityDmScreenState extends State<CommunityDmScreen> {
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
                       curve: Curves.easeOutCubic,
-                      // 页面左右各 16 + 头像 40 + 间距 10，剩下全给展开后的搜索框。
+                      // 展开后：页面左右各 16 + 头像 40 + 间距 10，剩下全给搜索框；
+                      // 收起时只留一个放大镜按钮（48 宽），不带框与底色。
                       width: _searchExpanded
                           ? MediaQuery.sizeOf(context).width - 82
-                          : 160,
-                      child: TextField(
-                        controller: _searchCtrl,
-                        focusNode: _searchFocus,
-                        onChanged: (v) => setState(() => _query = v),
-                        decoration: InputDecoration(
-                          hintText: '搜索会话或用户',
-                          prefixIcon: const Icon(Icons.search, size: 20),
-                          suffixIcon: _query.isEmpty
-                              ? null
-                              : IconButton(
-                                  icon: const Icon(Icons.close, size: 18),
-                                  onPressed: () => setState(() {
-                                    _searchCtrl.clear();
-                                    _query = '';
-                                  }),
+                          : 48,
+                      child: _searchExpanded
+                          ? TextField(
+                              controller: _searchCtrl,
+                              focusNode: _searchFocus,
+                              autofocus: true,
+                              onChanged: (v) => setState(() => _query = v),
+                              decoration: InputDecoration(
+                                hintText: '搜索会话或用户',
+                                prefixIcon:
+                                    const Icon(Icons.search, size: 20),
+                                suffixIcon: _query.isEmpty
+                                    ? null
+                                    : IconButton(
+                                        icon: const Icon(Icons.close,
+                                            size: 18),
+                                        onPressed: () => setState(() {
+                                          _searchCtrl.clear();
+                                          _query = '';
+                                        }),
+                                      ),
+                                filled: true,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                  borderSide: BorderSide.none,
                                 ),
-                          filled: true,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          // 聚焦边框不再走全局橙色，改中性灰边；
-                          // 未聚焦沿用无边药丸。
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide(
-                                color:
-                                    Colors.grey.withValues(alpha: 0.4)),
-                          ),
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                      ),
+                                // 聚焦前后外观一致：与未聚焦同一支无边药丸，
+                                // 不再出现灰边框，也不再走全局橙色聚焦边。
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                  borderSide: BorderSide.none,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 10),
+                              ),
+                            )
+                          : IconButton(
+                              icon: const Icon(Icons.search, size: 20),
+                              onPressed: () =>
+                                  setState(() => _searchExpanded = true),
+                            ),
                     ),
                   ],
                 ),

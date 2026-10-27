@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data.dart';
+import '../english_terms.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../models.dart';
@@ -230,7 +231,9 @@ class _CaliberCatalogScreenState extends State<CaliberCatalogScreen> {
       if (_group != '全部' && _atlasGroup(c) != _group) return false;
       if (q.isEmpty) return true;
       if (c.caliber.toLowerCase().contains(q)) return true;
-      return c.bullets.any((b) => b.toLowerCase().contains(q));
+      return c.bullets.any((b) =>
+          b.toLowerCase().contains(q) ||
+          bulletDisplay(b).toLowerCase().contains(q));
     }).toList();
     return Scaffold(
       appBar: SubPageAppBar(title: tr('caliber_atlas')),
@@ -252,6 +255,16 @@ class _CaliberCatalogScreenState extends State<CaliberCatalogScreen> {
                     ),
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24)),
+              // 聚焦边与未聚焦同一支（圆角 24 灰边）：只写 border 时聚焦
+              // 会回落全局橙色圆角 12 边。
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(
+                      color: Colors.grey.withValues(alpha: 0.35))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(
+                      color: Colors.grey.withValues(alpha: 0.35))),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
@@ -262,7 +275,7 @@ class _CaliberCatalogScreenState extends State<CaliberCatalogScreen> {
             spacing: 6,
             children: ['全部', '手枪弹', '步枪弹', '马格南', '霰弹']
                 .map((g) => FilterChip(
-                      label: Text(g),
+                      label: Text(g == '全部' ? g : caliberGroupDisplay(g)),
                       selected: _group == g,
                       onSelected: (_) => setState(() => _group = g),
                     ))
@@ -309,7 +322,7 @@ class _CaliberCatalogScreenState extends State<CaliberCatalogScreen> {
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 13)),
                         const Spacer(),
-                        Text('弹头 ${c.bulletDiameter}',
+                        Text('Bullet ${c.bulletDiameter}',
                             style: TextStyle(color: grey, fontSize: 11)),
                       ],
                     ),
@@ -582,10 +595,13 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
             const Text('手册建议组件',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            _section('弹头选择', caliberEntry.bullets, bronze),
-            _section('弹壳选择', caliberEntry.cases, bronze),
-            _section('火药选择', caliberEntry.powders, bronze),
-            _section('底火选择', caliberEntry.primers, bronze),
+            _section('Bullet Selection',
+                caliberEntry.bullets.map(shotPelletDisplay).toList(), bronze),
+            _section('Case Selection',
+                caliberEntry.cases.map(caseDisplay).toList(), bronze),
+            _section('Powder Selection', caliberEntry.powders, bronze),
+            _section('Primer Selection',
+                caliberEntry.primers.map(primerDisplay).toList(), bronze),
             const SizedBox(height: 8),
             const Text('手册装药（只收录手册原文，查不到的口径刻意省略）',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
@@ -628,7 +644,7 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
             spacing: 6,
             children: ['弹头', '火药', '弹壳', '底火']
                 .map((k) => FilterChip(
-                      label: Text(k),
+                      label: Text(componentKindDisplay(k)),
                       selected: _libKind == k,
                       onSelected: (_) => setState(() => _libKind = k),
                     ))
@@ -641,6 +657,16 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24)),
+              // 聚焦边与未聚焦同一支（圆角 24 灰边）：只写 border 时聚焦
+              // 会回落全局橙色圆角 12 边。
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(
+                      color: Colors.grey.withValues(alpha: 0.35))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(
+                      color: Colors.grey.withValues(alpha: 0.35))),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
@@ -690,10 +716,10 @@ class _ReloadWorkbenchScreenState extends State<ReloadWorkbenchScreen> {
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text('弹头：${_picked['弹头'] ?? '未选'}'),
-                  Text('火药：${_picked['火药'] ?? '未选'}'),
-                  Text('弹壳：${_picked['弹壳'] ?? '未选'}'),
-                  Text('底火：${_picked['底火'] ?? '未选'}'),
+                  Text('Bullet: ${_picked['弹头'] ?? '未选'}'),
+                  Text('Powder: ${_picked['火药'] ?? '未选'}'),
+                  Text('Case: ${_picked['弹壳'] ?? '未选'}'),
+                  Text('Primer: ${_picked['底火'] ?? '未选'}'),
                   const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
@@ -928,11 +954,11 @@ class CaliberDetailScreen extends StatelessWidget {
               style:
                   const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          _detailRow('弹头直径', info.bulletDiameter),
-          _detailRow('弹壳长度', info.caseLength),
-          _detailRow('最大全弹长', info.maxOal),
-          _detailRow('常用弹头重', info.bulletWeightRange),
-          _detailRow('用途', info.use),
+          _detailRow('Bullet Diameter', info.bulletDiameter),
+          _detailRow('Case Length', info.caseLength),
+          _detailRow('Max OAL', info.maxOal),
+          _detailRow('Common Bullet Weight', info.bulletWeightRange),
+          _detailRow('Use', info.use),
           const SizedBox(height: 16),
           Text(tr('factory_price'),
               style: TextStyle(fontWeight: FontWeight.bold, color: bronze)),
@@ -948,7 +974,7 @@ class CaliberDetailScreen extends StatelessWidget {
             const SizedBox(height: 4),
             ...info.bullets.map((b) => Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: Text('· $b',
+                  child: Text('· ${bulletDisplay(b)}',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                 )),
           ],
@@ -960,7 +986,7 @@ class CaliberDetailScreen extends StatelessWidget {
             Text(tr('no_guns_for_caliber'),
                 style: TextStyle(color: grey)),
           if (info.fitGuns.isNotEmpty)
-            Text(info.fitGuns.join('、'),
+            Text(info.fitGuns.map(gunNameEnOf).join(', '),
                 style: TextStyle(color: grey, fontSize: 13)),
         ],
       ),

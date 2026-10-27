@@ -86,9 +86,20 @@ class CommunityCollectionScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     TextField(
-                      decoration: const InputDecoration(
+                      // 聚焦边与未聚焦同一支：不写 focusedBorder 会回落全局橙色边。
+                      decoration: InputDecoration(
                         hintText: '搜索配件、厂商或类型',
-                        prefixIcon: Icon(Icons.search, size: 20),
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                              color: Colors.grey.withValues(alpha: 0.35)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                              color: Colors.grey.withValues(alpha: 0.35)),
+                        ),
                       ),
                       onChanged: (v) => setState(() => query = v),
                     ),

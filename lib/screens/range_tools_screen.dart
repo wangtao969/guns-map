@@ -181,8 +181,8 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
               onChanged: (_) { setState(() {}); _save(); }),
           if (groupCm > 0 && distM > 0) ...[
             _ResultLine(
-                '散布 = ${_fmt(moaValue)} MOA（${_fmt(mradValue)} 密位）'),
-            Text('1 MOA 在该距离 ≈ ${_fmt(distM * 0.02909)} 厘米；1 密位 ≈ ${_fmt(distM * 0.1)} 厘米。',
+                '散布 = ${_fmt(moaValue)} MOA (${_fmt(mradValue)} Mil)'),
+            Text('1 MOA 在该距离 ≈ ${_fmt(distM * 0.02909)} 厘米；1 Mil ≈ ${_fmt(distM * 0.1)} 厘米。',
                 style: const TextStyle(color: Colors.grey, fontSize: 12)),
           ],
           const SizedBox(height: 8),
@@ -204,7 +204,7 @@ class _RangeToolsScreenState extends State<RangeToolsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Text(
-                  '${_fmt(d, 0)} 米：1 MOA ≈ ${_fmt(d * 0.02909)} 厘米，0.1 密位 = ${_fmt(d * 0.01)} 厘米'),
+                  '${_fmt(d, 0)} 米：1 MOA ≈ ${_fmt(d * 0.02909)} 厘米，0.1 Mil = ${_fmt(d * 0.01)} 厘米'),
             ),
           const SizedBox(height: 8),
           Text('距离与散布单位跟随工具页单位制（当前：${metric ? '公制' : '英制'}）。',

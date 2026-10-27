@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../english_terms.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
 import '../i18n.dart';
@@ -14,14 +15,14 @@ class LegendDetailScreen extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
     return Scaffold(
-      appBar: SubPageAppBar(title: l.name),
+      appBar: SubPageAppBar(title: l.nameEn),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(l.name,
+          Text(l.nameEn,
               style: const TextStyle(
                   fontSize: 22, fontWeight: FontWeight.bold)),
-          Text(l.nameEn,
+          Text(l.name,
               style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -37,9 +38,9 @@ class LegendDetailScreen extends StatelessWidget {
                 style: TextStyle(color: grey, fontSize: 11)),
           ],
           const SizedBox(height: 16),
-          _row('厂商', l.vendor),
-          _row('口径', l.caliber),
-          _row('生产年份', l.years),
+          _row('Manufacturer', vendorDisplay(l.vendor)),
+          _row('Caliber', l.caliber),
+          _row('Year', l.years),
           const SizedBox(height: 20),
           Text(tr('legend_story'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),

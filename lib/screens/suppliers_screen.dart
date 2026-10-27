@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../english_terms.dart';
 import '../widgets/app_top_bar.dart';
 import '../i18n.dart';
 
@@ -52,7 +53,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                 ...kinds.map((k) => Padding(
                       padding: const EdgeInsets.only(left: 6),
                       child: ChoiceChip(
-                        label: Text(k),
+                        label: Text(componentKindDisplay(k)),
                         selected: _kind == k,
                         onSelected: (_) =>
                             setState(() => _kind = _kind == k ? null : k),
@@ -74,7 +75,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                     title: Text('${c.vendor} ${c.name}'),
                     subtitle: Text(
                         '${c.spec}\n${c.feature}\n参考价：${c.price}'),
-                    trailing: Chip(label: Text(c.kind)),
+                    trailing:
+                        Chip(label: Text(componentKindDisplay(c.kind))),
                     isThreeLine: true,
                   ),
                 );

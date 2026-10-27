@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data.dart';
+import '../i18n.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/app_toast.dart';
+import '../widgets/bar_chart.dart';
 import 'reload_log_screen.dart';
 
 /// 弹药库存：工具向，不用登录，纯本机记录。
@@ -417,6 +419,33 @@ class _AmmoInventoryScreenState extends State<AmmoInventoryScreen> {
               child: Text('低于提醒线：$lowCount 种，标红的该补货了。',
                   style: const TextStyle(color: Colors.red, fontSize: 13)),
             ),
+          if (_items.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text(tr('chart_stock_title'),
+                    style: const TextStyle(
+                        fontSize: 17, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 6),
+                Text('（${tr('chart_stock_unit')}）',
+                    style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            SimpleBarChart(
+              entries: (groups.entries.map((entry) {
+                final groupTotal =
+                    entry.value.fold<int>(0, (s, e) => s + e.quantity);
+                return BarChartEntry(
+                  label: entry.key,
+                  value: groupTotal.toDouble(),
+                  valueText: '$groupTotal',
+                  warning: entry.value.any((e) => e.isLow),
+                );
+              }).toList()
+                ..sort((a, b) => b.value.compareTo(a.value))),
+            ),
+          ],
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: _importFromReloadLog,

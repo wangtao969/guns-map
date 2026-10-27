@@ -42,10 +42,21 @@ class _AdminPostsScreenState extends State<AdminPostsScreen> {
               TextField(
                 controller: _queryCtrl,
                 onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
+                // 聚焦边与未聚焦同一支：只写 border 时聚焦会回落全局橙色边。
+                decoration: InputDecoration(
                   labelText: '搜标题 / 作者 / 板块',
-                  border: OutlineInputBorder(
+                  border: const OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(12))),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius:
+                          const BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide(
+                          color: Colors.grey.withValues(alpha: 0.35))),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius:
+                          const BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide(
+                          color: Colors.grey.withValues(alpha: 0.35))),
                 ),
               ),
               const SizedBox(height: 12),

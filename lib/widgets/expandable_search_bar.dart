@@ -83,11 +83,21 @@ class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
             autofocus: true,
             onChanged: widget.onChanged,
             onSubmitted: widget.onSubmitted,
+            // 聚焦边与未聚焦同一支（与收起态药丸同款灰边、圆角 20）：
+            // 只写 border 时聚焦会回落全局橙色边。
             decoration: InputDecoration(
               hintText: widget.hint,
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(color: border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(color: border),
               ),
             ),
           ),

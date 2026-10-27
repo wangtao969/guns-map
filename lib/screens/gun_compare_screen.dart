@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data.dart';
+import '../english_terms.dart';
 import '../models.dart';
 import '../widgets/app_top_bar.dart';
 import 'gun_picker_dialog.dart';
@@ -44,14 +45,14 @@ class _GunCompareScreenState extends State<GunCompareScreen> {
   String _caliberSize(String caliber) {
     for (final c in caliberInfos) {
       if (c.caliber == caliber) {
-        return '弹头 ${c.bulletDiameter} · 弹壳 ${c.caseLength}';
+        return 'Bullet ${c.bulletDiameter} · Case ${c.caseLength}';
       }
     }
     return '未收录';
   }
 
   String _join(List<String> items) =>
-      items.isEmpty ? '—' : items.join('、');
+      items.isEmpty ? '—' : items.join(', ');
 
   @override
   Widget build(BuildContext context) {
@@ -59,21 +60,25 @@ class _GunCompareScreenState extends State<GunCompareScreen> {
     if (_a != null && _b != null) {
       void add(String label, String a, String b) =>
           rows.add(_RowData(label, a, b));
-      add('厂商', _a!.vendor, _b!.vendor);
-      add('品类', _a!.category, _b!.category);
-      add('口径', _a!.caliber, _b!.caliber);
-      add('口径尺寸', _caliberSize(_a!.caliber), _caliberSize(_b!.caliber));
-      add('动作方式', _a!.action, _b!.action);
-      add('枪管长', _a!.barrel, _b!.barrel);
-      add('全长', _a!.length, _b!.length);
-      add('重量', _a!.weight, _b!.weight);
-      add('弹容量', _a!.capacity, _b!.capacity);
-      add('适用弹药', _join(_a!.ammo), _join(_b!.ammo));
-      add('适配配件', _join(_a!.accessories), _join(_b!.accessories));
-      add('英文型号', _a!.nameEn ?? '未确认', _b!.nameEn ?? '未确认');
-      add('产地', _a!.origin, _b!.origin);
-      add('年代', _a!.year, _b!.year);
-      add('参考价', _a!.price ?? '未确认', _b!.price ?? '未确认');
+      add('Manufacturer', vendorDisplay(_a!.vendor), vendorDisplay(_b!.vendor));
+      add('Category', categoryDisplay(_a!.category),
+          categoryDisplay(_b!.category));
+      add('Caliber', _a!.caliber, _b!.caliber);
+      add('Caliber Dimensions', _caliberSize(_a!.caliber),
+          _caliberSize(_b!.caliber));
+      add('Action', actionDisplay(_a!.action), actionDisplay(_b!.action));
+      add('Barrel', _a!.barrel, _b!.barrel);
+      add('Overall Length', _a!.length, _b!.length);
+      add('Weight', _a!.weight, _b!.weight);
+      add('Capacity', _a!.capacity, _b!.capacity);
+      add('Compatible Ammo', _join(_a!.ammo), _join(_b!.ammo));
+      add('Compatible Accessories',
+          _a!.accessories.map(accessoryDisplay).join(', '),
+          _b!.accessories.map(accessoryDisplay).join(', '));
+      add('Model', _a!.nameEn ?? '未确认', _b!.nameEn ?? '未确认');
+      add('Origin', originDisplay(_a!.origin), originDisplay(_b!.origin));
+      add('Year', _a!.year, _b!.year);
+      add('Reference Price', _a!.price ?? '未确认', _b!.price ?? '未确认');
     }
     final diffRows = rows.where((r) => r.diff).toList();
     final shown = _diffOnly ? diffRows : rows;
@@ -90,7 +95,8 @@ class _GunCompareScreenState extends State<GunCompareScreen> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _pick(true),
-                  child: Text(_a == null ? '选第一把枪' : _a!.name,
+                  child: Text(
+                      _a == null ? '选第一把枪' : gunDisplayName(_a!),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
               ),
@@ -108,7 +114,8 @@ class _GunCompareScreenState extends State<GunCompareScreen> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _pick(false),
-                  child: Text(_b == null ? '选第二把枪' : _b!.name,
+                  child: Text(
+                      _b == null ? '选第二把枪' : gunDisplayName(_b!),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
               ),
@@ -117,7 +124,7 @@ class _GunCompareScreenState extends State<GunCompareScreen> {
           const SizedBox(height: 16),
           if (_a != null && _b != null) ...[
             Text(
-                '${rows.length} 项里 ${diffRows.length} 项不同${diffRows.isNotEmpty ? '：${diffRows.map((r) => r.label).join('、')}' : ''}',
+                '${rows.length} 项里 ${diffRows.length} 项不同${diffRows.isNotEmpty ? '：${diffRows.map((r) => r.label).join(', ')}' : ''}',
                 style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Align(
@@ -137,7 +144,7 @@ class _GunCompareScreenState extends State<GunCompareScreen> {
             const SizedBox(height: 12),
             if (_a!.description.isNotEmpty)
               ExpansionTile(
-                title: Text(_a!.name),
+                title: Text(gunDisplayName(_a!)),
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -147,7 +154,7 @@ class _GunCompareScreenState extends State<GunCompareScreen> {
               ),
             if (_b!.description.isNotEmpty)
               ExpansionTile(
-                title: Text(_b!.name),
+                title: Text(gunDisplayName(_b!)),
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),

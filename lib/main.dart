@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app_icon.dart';
+import 'theme_accent.dart';
 import 'community_store.dart';
 import 'haptics.dart';
 import 'i18n.dart';
@@ -22,6 +23,8 @@ void main() async {
   await communityStore.init();
   // 启动图标：固定黑底色，冷启动应用一次；不再跟随主题或平台亮度变化。
   await syncAppIcon();
+  // 主题强调色：读回上次选择，读不到则默认铜色。
+  await loadAccent();
   runApp(const FirearmsApp());
 }
 
@@ -29,8 +32,6 @@ void main() async {
 class FirearmsApp extends StatelessWidget {
   const FirearmsApp({super.key});
 
-  static const _bronze = Color(0xFF6B5B3E);
-  static const _bronzeLight = Color(0xFFC9A86A);
   static const _paper = Color(0xFFF7F2E9);
   static const _ink = Color(0xFF2E2A24);
   static const _night = Color(0xFF000000);
@@ -43,7 +44,9 @@ class FirearmsApp extends StatelessWidget {
       valueListenable: themeModeNotifier,
       builder: (_, mode, __) => ValueListenableBuilder<String>(
         valueListenable: localeNotifier,
-        builder: (_, ___, ____) => MaterialApp(
+        builder: (_, ___, ____) => ValueListenableBuilder<Color>(
+        valueListenable: accentNotifier,
+        builder: (_, accent, _____) => MaterialApp(
         title: "Ordnance",
         themeMode: mode,
       theme: ThemeData.light().copyWith(
@@ -58,9 +61,9 @@ class FirearmsApp extends StatelessWidget {
             TargetPlatform.fuchsia: FadeUpwardsPageTransitionsBuilder(),
           },
         ),
-        colorScheme: const ColorScheme.light(
-          primary: _bronze,
-          secondary: Color(0xFF8C7A5A),
+        colorScheme: ColorScheme.light(
+          primary: accent,
+          secondary: const Color(0xFF8C7A5A),
         ),
         scaffoldBackgroundColor: _paper,
         cardColor: Colors.white,
@@ -92,6 +95,7 @@ class FirearmsApp extends StatelessWidget {
         textTheme: ThemeData.light().textTheme.apply(
               bodyColor: _ink,
               displayColor: _ink,
+              fontFamily: 'Manrope',
             ),
       ),
       darkTheme: ThemeData.dark().copyWith(
@@ -106,9 +110,9 @@ class FirearmsApp extends StatelessWidget {
             TargetPlatform.fuchsia: FadeUpwardsPageTransitionsBuilder(),
           },
         ),
-        colorScheme: const ColorScheme.dark(
-          primary: _bronzeLight,
-          secondary: Color(0xFF8C7A5A),
+        colorScheme: ColorScheme.dark(
+          primary: lightenedAccent(accent),
+          secondary: const Color(0xFF8C7A5A),
           surface: Colors.black,
         ),
         scaffoldBackgroundColor: _night,
@@ -141,10 +145,12 @@ class FirearmsApp extends StatelessWidget {
         textTheme: ThemeData.dark().textTheme.apply(
               bodyColor: _nightInk,
               displayColor: _nightInk,
+              fontFamily: 'Manrope',
             ),
         ),
         home: HomePage(),
         ),
+      ),
       ),
     );
   }
@@ -322,28 +328,34 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final bronze = dark ? const Color(0xFFC9A86A) : const Color(0xFF6B5B3E);
     final grey = dark ? const Color(0xFF8A8578) : const Color(0xFF9A917F);
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Center(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
-          decoration: BoxDecoration(
-            color: selected ? bronze : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
+    return ValueListenableBuilder<Color>(
+      valueListenable: accentNotifier,
+      builder: (_, accent, __) {
+        final pill = dark ? lightenedAccent(accent) : accent;
+        return GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+              decoration: BoxDecoration(
+                color: selected ? pill : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                selected ? activeIcon : icon,
+                size: 26,
+                color: selected
+                    ? (dark ? const Color(0xFF000000) : Colors.white)
+                    : grey,
+              ),
+            ),
           ),
-          child: Icon(
-            selected ? activeIcon : icon,
-            size: 26,
-            color: selected
-                ? (dark ? const Color(0xFF000000) : Colors.white)
-                : grey,
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
