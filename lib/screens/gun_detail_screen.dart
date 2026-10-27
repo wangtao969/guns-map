@@ -17,11 +17,7 @@ class GunDetailScreen extends StatefulWidget {
   State<GunDetailScreen> createState() => _GunDetailScreenState();
 }
 
-class _GunDetailScreenState extends State<GunDetailScreen>
-    with SingleTickerProviderStateMixin {
-  double _dragAngle = 0;
-  bool _autoRotate = true;
-  late final AnimationController _controller;
+class _GunDetailScreenState extends State<GunDetailScreen> {
   final Set<String> _assembled = {};
 
   static const _hotspots = [
@@ -31,21 +27,6 @@ class _GunDetailScreenState extends State<GunDetailScreen>
     ('扳机', '击发机构', 0.55, 0.55),
     ('枪托', '抵肩部位', 0.88, 0.45),
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 12),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +40,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
-          // 立体预览查看器：拖动旋转 + 自动旋转
+          // 图区：静态展示，热点可点看部位说明
           Container(
             height: 220,
             decoration: BoxDecoration(
@@ -71,20 +52,7 @@ class _GunDetailScreenState extends State<GunDetailScreen>
             child: Stack(
               children: [
                 Center(
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (_, child) {
-                      final angle = _dragAngle +
-                          (_autoRotate ? _controller.value * 6.28 : 0);
-                      return Transform(
-                        transform: Matrix4.identity()
-                          ..setEntry(3, 2, 0.001)
-                          ..rotateY(angle * 0.35),
-                        alignment: Alignment.center,
-                        child: child,
-                      );
-                    },
-                    child: gun.image != null
+                  child: gun.image != null
                         ? Image.asset(gun.image!, fit: BoxFit.contain)
                         : diagramKey != null
                             ? FamilyDiagram(
@@ -105,13 +73,6 @@ class _GunDetailScreenState extends State<GunDetailScreen>
                                             72) *
                                         0.44,
                               ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: GestureDetector(
-                    onHorizontalDragUpdate: (d) =>
-                        setState(() => _dragAngle += d.delta.dx * 0.01),
-                  ),
                 ),
                 for (final h in _hotspots)
                   Positioned(
@@ -147,18 +108,6 @@ class _GunDetailScreenState extends State<GunDetailScreen>
             ),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              const Text('左右拖动旋转查看',
-                  style: TextStyle(color: Colors.grey)),
-              const Spacer(),
-              Text(tr('auto_rotate')),
-              Switch(
-                value: _autoRotate,
-                onChanged: (v) => setState(() => _autoRotate = v),
-              ),
-            ],
-          ),
           if (gun.image == null)
             if (diagramInfo != null)
               Column(

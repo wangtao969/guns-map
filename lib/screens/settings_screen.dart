@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../app_icon.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../main.dart';
@@ -17,7 +18,7 @@ import 'admin_home_screen.dart';
 import 'feedback_screen.dart';
 
 /// 当前版本：每次发版时与 pubspec.yaml 一起改。
-const String appVersion = '2.1.13';
+const String appVersion = '2.1.14';
 
 /// 设置页：主题切换与关于信息。
 class SettingsScreen extends StatelessWidget {
@@ -134,6 +135,42 @@ class SettingsScreen extends StatelessWidget {
           ),
           Text(tr('theme_note'),
               style: TextStyle(color: grey, fontSize: 12)),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              const Icon(Icons.apps_outlined, size: 22),
+              const SizedBox(width: 8),
+              Text(tr('app_icon'),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ValueListenableBuilder<String>(
+            valueListenable: appIconPrefNotifier,
+            builder: (_, pref, __) => RadioGroup<String>(
+              groupValue: pref,
+              onChanged: (v) {
+                if (v == null) return;
+                setAppIconPreference(
+                    v, Theme.of(context).brightness == Brightness.dark);
+              },
+              child: Column(
+                children: [
+                  RadioListTile<String>(
+                    title: Text(tr('app_icon_auto')),
+                    subtitle: Text(tr('app_icon_auto_sub')),
+                    value: appIconAuto,
+                  ),
+                  RadioListTile<String>(
+                    title: Text(tr('app_icon_legacy')),
+                    subtitle: Text(tr('app_icon_legacy_sub')),
+                    value: appIconLegacy,
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 24),
           Row(
             children: [

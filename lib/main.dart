@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'app_icon.dart';
 import 'community_store.dart';
 import 'haptics.dart';
 import 'i18n.dart';
@@ -19,6 +20,14 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 先从本机读回社区数据（带超时兜底，不阻塞启动太久），再进首页。
   await communityStore.init();
+  // 启动图标：读回偏好，冷启动按当前主题应用一次正确图标；
+  // 此后主题切换（设置页）与平台亮度变化都同步切图标。
+  await loadAppIconPreference();
+  themeModeNotifier.addListener(
+      () => syncAppIcon(themeModeNotifier.value));
+  PlatformDispatcher.instance.onPlatformBrightnessChanged =
+      () => syncAppIcon(themeModeNotifier.value);
+  await syncAppIcon(themeModeNotifier.value);
   runApp(const FirearmsApp());
 }
 
