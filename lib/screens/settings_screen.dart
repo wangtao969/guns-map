@@ -136,6 +136,8 @@ class SettingsScreen extends StatelessWidget {
           Text(tr('theme_note'),
               style: TextStyle(color: grey, fontSize: 12)),
           const SizedBox(height: 24),
+          // iOS 只有单主图标，不支持安卓 activity-alias 那套切换，整区隐藏。
+          if (!Platform.isIOS) ...[
           Row(
             children: [
               const Icon(Icons.apps_outlined, size: 22),
@@ -172,6 +174,7 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
+          ],
           Row(
             children: [
               const Icon(Icons.vibration_outlined, size: 22),
@@ -236,7 +239,7 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.apps_outlined, size: 22),
             title: const Text("Ordnance"),
-            subtitle: Text('${tr('version_prefix')}v$appVersion${tr('version_suffix')}'),
+            subtitle: Text('${tr('version_prefix')}v$appVersion${Platform.isIOS ? tr('version_suffix_ios') : tr('version_suffix')}'),
           ),
           ListTile(
             leading: const Icon(Icons.feedback_outlined, size: 22),
@@ -378,7 +381,24 @@ class SettingsScreen extends StatelessWidget {
   }
 
   /// 检查更新：只用 Dart 核心库查 GitHub 最新 Release，不引第三方包。
+  /// iOS 版不走这条路：点开即提示走 TestFlight 更新，不查 Release、不下载。
   Future<void> _checkUpdate(BuildContext context) async {
+    if (Platform.isIOS) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text(tr('ios_update_title')),
+          content: Text(tr('ios_update_body')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(tr('ok')),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -499,6 +519,25 @@ class SettingsScreen extends StatelessWidget {
   /// 再经 gunsmap/system 通道走 FileProvider 安装，不引第三方包。
   Future<void> _downloadAndInstall(
       BuildContext context, String apkUrl, String latest) async {
+    if (Platform.isIOS) {
+      // iOS 兜底：绝不调 installApk，统一提示走 TestFlight。
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(tr('ios_update_title')),
+            content: Text(tr('ios_update_body')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(tr('ok')),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
     if (!apkUrl.endsWith('.apk')) {
       if (context.mounted) {
         showAppToast(context, '未找到安装包，请复制链接到浏览器下载');
@@ -785,7 +824,9 @@ class _QuickActionsCardState extends State<_QuickActionsCard> {
             ListTile(
               leading: const Icon(Icons.system_update_alt, size: 22),
               title: Text(tr('check_update')),
-              subtitle: Text(tr('check_update_sub')),
+              subtitle: Text(Platform.isIOS
+                  ? tr('ios_update_title')
+                  : tr('check_update_sub')),
               onTap: () => widget.onCheckUpdate(context),
             ),
             const _ClearCacheTile(),
